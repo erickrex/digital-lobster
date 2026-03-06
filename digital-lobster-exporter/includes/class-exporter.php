@@ -18,6 +18,8 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class Digital_Lobster_Exporter_Exporter {
 
+	use Digital_Lobster_Exporter_Error_Logger;
+
 	/**
 	 * Export directory path.
 	 *
@@ -31,20 +33,6 @@ class Digital_Lobster_Exporter_Exporter {
 	 * @var array
 	 */
 	private $results = array();
-
-	/**
-	 * Error log.
-	 *
-	 * @var array
-	 */
-	private $errors = array();
-
-	/**
-	 * Warning log.
-	 *
-	 * @var array
-	 */
-	private $warnings = array();
 
 	/**
 	 * Schema version for JSON exports.
@@ -99,17 +87,8 @@ class Digital_Lobster_Exporter_Exporter {
 			// Export site blueprint (main manifest file)
 			$this->export_site_blueprint();
 
-			// Export content files (already handled by ContentScanner, but validate)
-			$this->validate_content_exports();
-
 			// Export settings files
 			$this->export_settings_files();
-
-			// Export taxonomies (already handled by TaxonomyScanner, but validate)
-			$this->validate_taxonomy_export();
-
-			// Export media map (already handled by MediaScanner, but validate)
-			$this->validate_media_export();
 
 			// Export error log if there are any errors or warnings
 			$this->export_error_log();
@@ -353,29 +332,6 @@ class Digital_Lobster_Exporter_Exporter {
 	}
 
 	/**
-	 * Validate content exports.
-	 *
-	 * Content files are created by ContentScanner, but we validate they exist.
-	 */
-	private function validate_content_exports() {
-		$content_dir = $this->export_dir . 'content/';
-		
-		if ( ! file_exists( $content_dir ) ) {
-			$this->log_error( 'content', 'Content directory not found', 'warning' );
-			return;
-		}
-
-		// Check if content was exported
-		if ( isset( $this->results['content'] ) && isset( $this->results['content']['exported_items'] ) ) {
-			$exported_count = count( $this->results['content']['exported_items'] );
-			
-			if ( $exported_count === 0 ) {
-				$this->log_error( 'content', 'No content items were exported', 'warning' );
-			}
-		}
-	}
-
-	/**
 	 * Export settings files.
 	 *
 	 * Exports various settings JSON files from scanner results.
@@ -476,32 +432,6 @@ class Digital_Lobster_Exporter_Exporter {
 				'schema_version' => self::SCHEMA_VERSION,
 				'block_usage'    => $this->results['content']['block_usage'],
 			) );
-		}
-	}
-
-	/**
-	 * Validate taxonomy export.
-	 *
-	 * Taxonomy file is created by TaxonomyScanner, but we validate it exists.
-	 */
-	private function validate_taxonomy_export() {
-		$taxonomy_file = $this->export_dir . 'taxonomies.json';
-		
-		if ( ! file_exists( $taxonomy_file ) && isset( $this->results['taxonomies'] ) ) {
-			$this->log_error( 'taxonomies', 'Taxonomies JSON file not found', 'warning' );
-		}
-	}
-
-	/**
-	 * Validate media export.
-	 *
-	 * Media files and map are created by MediaScanner, but we validate they exist.
-	 */
-	private function validate_media_export() {
-		$media_map_file = $this->export_dir . 'media_map.json';
-		
-		if ( ! file_exists( $media_map_file ) && isset( $this->results['media'] ) ) {
-			$this->log_error( 'media', 'Media map JSON file not found', 'warning' );
 		}
 	}
 
@@ -701,53 +631,4 @@ class Digital_Lobster_Exporter_Exporter {
 		return true;
 	}
 
-	/**
-	 * Log an error or warning.
-	 *
-	 * @param string $component Component identifier.
-	 * @param string $message Error message.
-	 * @param string $severity Severity level: 'error', 'warning', 'critical'.
-	 */
-	private function log_error( $component, $message, $severity = 'error' ) {
-		$log_entry = array(
-			'component'  => $component,
-			'message'    => $message,
-			'severity'   => $severity,
-			'timestamp'  => current_time( 'timestamp' ),
-		);
-
-		if ( $severity === 'warning' ) {
-			$this->warnings[] = $log_entry;
-		} else {
-			$this->errors[] = $log_entry;
-		}
-
-		// Also log to WordPress error log if WP_DEBUG is enabled
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf(
-				'Digital Lobster Exporter [%s] %s: %s',
-				strtoupper( $severity ),
-				$component,
-				$message
-			) );
-		}
-	}
-
-	/**
-	 * Get errors.
-	 *
-	 * @return array Error log entries.
-	 */
-	public function get_errors() {
-		return $this->errors;
-	}
-
-	/**
-	 * Get warnings.
-	 *
-	 * @return array Warning log entries.
-	 */
-	public function get_warnings() {
-		return $this->warnings;
-	}
 }

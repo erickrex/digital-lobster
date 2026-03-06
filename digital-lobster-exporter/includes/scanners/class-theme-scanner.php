@@ -17,14 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Theme Scanner Class
  */
-class Digital_Lobster_Exporter_Theme_Scanner {
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir;
+class Digital_Lobster_Exporter_Theme_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Theme directory path in export.
@@ -49,20 +42,14 @@ class Digital_Lobster_Exporter_Theme_Scanner {
 
 	/**
 	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct() {
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 		$this->theme = wp_get_theme();
 		$this->parent_theme = $this->theme->parent();
-		$this->setup_export_directories();
-	}
-
-	/**
-	 * Setup export directories.
-	 */
-	private function setup_export_directories() {
-		$upload_dir = wp_upload_dir();
-		$this->export_dir = trailingslashit( $upload_dir['basedir'] ) . 'ai_migration_artifacts/';
-		$this->theme_export_dir = $this->export_dir . 'theme/';
+		$this->theme_export_dir = trailingslashit( $this->export_dir ) . 'theme/';
 	}
 
 	/**

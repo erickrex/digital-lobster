@@ -18,6 +18,8 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class Digital_Lobster_Exporter_Packager {
 
+	use Digital_Lobster_Exporter_Error_Logger;
+
 	/**
 	 * Base artifacts directory path.
 	 *
@@ -45,20 +47,6 @@ class Digital_Lobster_Exporter_Packager {
 	 * @var string
 	 */
 	private $zip_filename = '';
-
-	/**
-	 * Error log.
-	 *
-	 * @var array
-	 */
-	private $errors = array();
-
-	/**
-	 * Warning log.
-	 *
-	 * @var array
-	 */
-	private $warnings = array();
 
 	/**
 	 * Cleanup after hours (configurable).
@@ -602,53 +590,4 @@ class Digital_Lobster_Exporter_Packager {
 		return $this->zip_filename;
 	}
 
-	/**
-	 * Log an error or warning.
-	 *
-	 * @param string $component Component identifier.
-	 * @param string $message Error message.
-	 * @param string $severity Severity level: 'error', 'warning', 'critical'.
-	 */
-	private function log_error( $component, $message, $severity = 'error' ) {
-		$log_entry = array(
-			'component' => $component,
-			'message'   => $message,
-			'severity'  => $severity,
-			'timestamp' => current_time( 'timestamp' ),
-		);
-
-		if ( $severity === 'warning' ) {
-			$this->warnings[] = $log_entry;
-		} else {
-			$this->errors[] = $log_entry;
-		}
-
-		// Also log to WordPress error log if WP_DEBUG is enabled
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf(
-				'Digital Lobster Packager [%s] %s: %s',
-				strtoupper( $severity ),
-				$component,
-				$message
-			) );
-		}
-	}
-
-	/**
-	 * Get errors.
-	 *
-	 * @return array Error log entries.
-	 */
-	public function get_errors() {
-		return $this->errors;
-	}
-
-	/**
-	 * Get warnings.
-	 *
-	 * @return array Warning log entries.
-	 */
-	public function get_warnings() {
-		return $this->warnings;
-	}
 }

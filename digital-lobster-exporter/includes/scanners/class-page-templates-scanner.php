@@ -12,14 +12,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class Page_Templates_Scanner
+ * Class Digital_Lobster_Exporter_Page_Templates_Scanner
  *
- * Collects and exports WordPress page templates including:
+ * Collects WordPress page templates including:
  * - All available page templates
  * - Template assignments for each page
  * - Template metadata and descriptions
  */
-class Page_Templates_Scanner {
+class Digital_Lobster_Exporter_Page_Templates_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
+	 */
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect page template data
@@ -140,33 +149,5 @@ class Page_Templates_Scanner {
 		}
 
 		return $assignments;
-	}
-
-	/**
-	 * Export page templates to JSON file
-	 *
-	 * @param string $export_dir Export directory path
-	 * @return bool Success status
-	 */
-	public function export( $export_dir ) {
-		$data = $this->scan();
-
-		$file_path = trailingslashit( $export_dir ) . 'page_templates.json';
-
-		$json = wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( false === $json ) {
-			error_log( 'Digital Lobster Exporter: Failed to encode page templates to JSON' );
-			return false;
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( false === $result ) {
-			error_log( 'Digital Lobster Exporter: Failed to write page_templates.json' );
-			return false;
-		}
-
-		return true;
 	}
 }

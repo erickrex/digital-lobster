@@ -8,7 +8,7 @@
  * progress tracking via WordPress transients, handles error logging, and
  * supports batch processing for large datasets.
  *
- * Scanner classes should implement:
+ * Scanner classes extend Digital_Lobster_Exporter_Scanner_Base and implement:
  * - scan() method (required): Returns scan results
  * - supports_batching() method (optional): Returns true if scanner supports batching
  * - scan_batch($batch_number, $batch_size) method (optional): Scans a single batch
@@ -29,6 +29,8 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class Digital_Lobster_Exporter_Scanner {
 
+	use Digital_Lobster_Exporter_Error_Logger;
+
 	/**
 	 * Registered scanner classes.
 	 *
@@ -42,20 +44,6 @@ class Digital_Lobster_Exporter_Scanner {
 	 * @var array
 	 */
 	private $results = array();
-
-	/**
-	 * Error log.
-	 *
-	 * @var array
-	 */
-	private $errors = array();
-
-	/**
-	 * Warning log.
-	 *
-	 * @var array
-	 */
-	private $warnings = array();
 
 	/**
 	 * Batch size for processing.
@@ -72,12 +60,20 @@ class Digital_Lobster_Exporter_Scanner {
 	private $export_dir = '';
 
 	/**
+	 * Security filters instance.
+	 *
+	 * @var Digital_Lobster_Exporter_Security_Filters
+	 */
+	private $security_filters;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		try {
 			$this->load_settings();
 			$this->setup_export_directory();
+			$this->security_filters = new Digital_Lobster_Exporter_Security_Filters();
 			$this->register_default_scanners();
 		} catch ( Exception $e ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -112,37 +108,52 @@ class Digital_Lobster_Exporter_Scanner {
 	}
 
 	/**
+	 * Get the declarative scanner registry.
+	 *
+	 * Returns an associative array mapping scanner names to their class
+	 * names and priorities. This replaces the old register_default_scanners()
+	 * approach with individual register_scanner() calls.
+	 *
+	 * @return array Scanner registry keyed by scanner name.
+	 */
+	private function get_scanner_registry() {
+		return array(
+			'site'           => array( 'class' => 'Digital_Lobster_Exporter_Site_Scanner',           'priority' => 10 ),
+			'theme'          => array( 'class' => 'Digital_Lobster_Exporter_Theme_Scanner',          'priority' => 20 ),
+			'plugins'        => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Scanner',         'priority' => 30 ),
+			'content'        => array( 'class' => 'Digital_Lobster_Exporter_Content_Scanner',        'priority' => 40 ),
+			'taxonomies'     => array( 'class' => 'Digital_Lobster_Exporter_Taxonomy_Scanner',       'priority' => 50 ),
+			'media'          => array( 'class' => 'Digital_Lobster_Exporter_Media_Scanner',          'priority' => 60 ),
+			'settings'       => array( 'class' => 'Digital_Lobster_Exporter_Settings_Scanner',       'priority' => 70 ),
+			'menus'          => array( 'class' => 'Digital_Lobster_Exporter_Menu_Scanner',           'priority' => 80 ),
+			'widgets'        => array( 'class' => 'Digital_Lobster_Exporter_Widget_Scanner',         'priority' => 90 ),
+			'user_roles'     => array( 'class' => 'Digital_Lobster_Exporter_User_Roles_Scanner',     'priority' => 100 ),
+			'site_options'   => array( 'class' => 'Digital_Lobster_Exporter_Site_Options_Scanner',   'priority' => 110 ),
+			'acf'            => array( 'class' => 'Digital_Lobster_Exporter_ACF_Scanner',            'priority' => 115 ),
+			'shortcodes'     => array( 'class' => 'Digital_Lobster_Exporter_Shortcode_Scanner',      'priority' => 120 ),
+			'forms'          => array( 'class' => 'Digital_Lobster_Exporter_Forms_Scanner',          'priority' => 125 ),
+			'hooks'          => array( 'class' => 'Digital_Lobster_Exporter_Hooks_Scanner',          'priority' => 130 ),
+			'assets'         => array( 'class' => 'Digital_Lobster_Exporter_Assets_Scanner',         'priority' => 132 ),
+			'page_templates' => array( 'class' => 'Digital_Lobster_Exporter_Page_Templates_Scanner', 'priority' => 135 ),
+			'block_patterns' => array( 'class' => 'Digital_Lobster_Exporter_Block_Patterns_Scanner', 'priority' => 140 ),
+			'rest_api'       => array( 'class' => 'Digital_Lobster_Exporter_REST_API_Scanner',       'priority' => 145 ),
+			'redirects'      => array( 'class' => 'Digital_Lobster_Exporter_Redirects_Scanner',      'priority' => 150 ),
+			'database'       => array( 'class' => 'Digital_Lobster_Exporter_Database_Scanner',       'priority' => 155 ),
+			'translations'   => array( 'class' => 'Digital_Lobster_Exporter_Translation_Scanner',    'priority' => 160 ),
+			'environment'    => array( 'class' => 'Digital_Lobster_Exporter_Environment_Scanner',    'priority' => 165 ),
+		);
+	}
+
+	/**
 	 * Register default scanner classes.
 	 */
 	private function register_default_scanners() {
 		// Load scanner classes
 		$this->load_scanner_classes();
-		
-		// Register scanners in priority order
-		$this->register_scanner( 'site', 'Digital_Lobster_Exporter_Site_Scanner', 10 );
-		$this->register_scanner( 'theme', 'Digital_Lobster_Exporter_Theme_Scanner', 20 );
-		$this->register_scanner( 'plugins', 'Digital_Lobster_Exporter_Plugin_Scanner', 30 );
-		$this->register_scanner( 'content', 'Digital_Lobster_Exporter_Content_Scanner', 40 );
-		$this->register_scanner( 'taxonomies', 'Digital_Lobster_Exporter_Taxonomy_Scanner', 50 );
-		$this->register_scanner( 'media', 'Digital_Lobster_Exporter_Media_Scanner', 60 );
-		$this->register_scanner( 'settings', 'Settings_Scanner', 70 );
-		$this->register_scanner( 'menus', 'Menu_Scanner', 80 );
-		$this->register_scanner( 'widgets', 'Widget_Scanner', 90 );
-		$this->register_scanner( 'user_roles', 'Digital_Lobster_User_Roles_Scanner', 100 );
-		$this->register_scanner( 'site_options', 'Site_Options_Scanner', 110 );
-		$this->register_scanner( 'acf', 'Digital_Lobster_Exporter_ACF_Scanner', 115 );
-		$this->register_scanner( 'shortcodes', 'Digital_Lobster_Exporter_Shortcode_Scanner', 120 );
-		$this->register_scanner( 'forms', 'Digital_Lobster_Forms_Scanner', 125 );
-		$this->register_scanner( 'hooks', 'Digital_Lobster_Exporter_Hooks_Scanner', 130 );
-		$this->register_scanner( 'assets', 'Digital_Lobster_Exporter_Assets_Scanner', 132 );
-		$this->register_scanner( 'page_templates', 'Page_Templates_Scanner', 135 );
-		$this->register_scanner( 'block_patterns', 'Block_Patterns_Scanner', 140 );
-		$this->register_scanner( 'rest_api', 'Digital_Lobster_Exporter_REST_API_Scanner', 145 );
-		$this->register_scanner( 'redirects', 'Digital_Lobster_Exporter_Redirects_Scanner', 150 );
-		$this->register_scanner( 'database', 'Digital_Lobster_Exporter_Database_Scanner', 155 );
-		$this->register_scanner( 'translations', 'Digital_Lobster_Exporter_Translation_Scanner', 160 );
-		$this->register_scanner( 'environment', 'Digital_Lobster_Exporter_Environment_Scanner', 165 );
-		
+
+		// Build scanner list from declarative registry
+		$this->scanners = $this->get_scanner_registry();
+
 		/**
 		 * Filters the registered scanner classes.
 		 *
@@ -155,7 +166,8 @@ class Digital_Lobster_Exporter_Scanner {
 		 *     'priority' => 10,
 		 * )
 		 *
-		 * Scanner classes must implement a scan() method that returns scan results.
+		 * Scanner classes must extend Digital_Lobster_Exporter_Scanner_Base and
+		 * implement a scan() method that returns scan results.
 		 * Optional methods for batch processing:
 		 * - supports_batching(): Returns true if scanner supports batching
 		 * - scan_batch($batch_number, $batch_size): Scans a single batch
@@ -189,6 +201,12 @@ class Digital_Lobster_Exporter_Scanner {
 		ob_start();
 		
 		try {
+			// Load shared constructs first (trait must come before classes that use it)
+			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/trait-error-logger.php';
+			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-callback-resolver.php';
+			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-source-identifier.php';
+			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-scanner-base.php';
+
 			// Load security filters class
 			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-security-filters.php';
 			
@@ -268,13 +286,11 @@ class Digital_Lobster_Exporter_Scanner {
 	 * @return array Scan results or error information.
 	 */
 	public function run_scan() {
-		// Initialize results and error tracking
+		// Initialize results
 		$this->results = array();
-		$this->errors = array();
-		$this->warnings = array();
 
 		// Update progress to starting state
-		$this->update_progress( 'starting', 0, __( 'Starting scan process...', 'digital-lobster-exporter' ) );
+		$this->update_progress( 'starting', 0, 'Starting scan process...' );
 
 		/**
 		 * Fires before the scan process begins.
@@ -354,7 +370,7 @@ class Digital_Lobster_Exporter_Scanner {
 			$this->update_progress(
 				'exporting',
 				95,
-				__( 'Exporting data to JSON files...', 'digital-lobster-exporter' )
+				'Exporting data to JSON files...'
 			);
 
 			$export_result = $this->export_data();
@@ -374,7 +390,7 @@ class Digital_Lobster_Exporter_Scanner {
 			$this->update_progress( 
 				'completed', 
 				100, 
-				__( 'Scan completed successfully!', 'digital-lobster-exporter' ),
+				'Scan completed successfully!',
 				true
 			);
 
@@ -391,13 +407,13 @@ class Digital_Lobster_Exporter_Scanner {
 			 * @param array $warnings Warning log entries.
 			 * @param Digital_Lobster_Exporter_Scanner $scanner The scanner instance.
 			 */
-			do_action( 'digital_lobster_after_scan', $this->results, $this->errors, $this->warnings, $this );
+			do_action( 'digital_lobster_after_scan', $this->results, $this->get_errors(), $this->get_warnings(), $this );
 
 			return array(
-				'success' => true,
-				'results' => $this->results,
-				'errors'  => $this->errors,
-				'warnings' => $this->warnings,
+				'success'  => true,
+				'results'  => $this->results,
+				'errors'   => $this->get_errors(),
+				'warnings' => $this->get_warnings(),
 			);
 
 		} catch ( Exception $e ) {
@@ -405,7 +421,7 @@ class Digital_Lobster_Exporter_Scanner {
 			$this->update_progress(
 				'failed',
 				0,
-				sprintf( __( 'Scan failed: %s', 'digital-lobster-exporter' ), $e->getMessage() ),
+				sprintf( 'Scan failed: %s', $e->getMessage() ),
 				false,
 				$e->getMessage()
 			);
@@ -421,18 +437,21 @@ class Digital_Lobster_Exporter_Scanner {
 			 * @param array $errors Error log entries.
 			 * @param Digital_Lobster_Exporter_Scanner $scanner The scanner instance.
 			 */
-			do_action( 'digital_lobster_scan_failed', $e, $this->errors, $this );
+			do_action( 'digital_lobster_scan_failed', $e, $this->get_errors(), $this );
 
 			return array(
 				'success' => false,
 				'error'   => $e->getMessage(),
-				'errors'  => $this->errors,
+				'errors'  => $this->get_errors(),
 			);
 		}
 	}
 
 	/**
-	 * Execute a single scanner.
+	 * Execute a single scanner with uniform instantiation.
+	 *
+	 * Every scanner receives the same $deps array and is instantiated through
+	 * the Scanner_Base constructor. No special-case logic per scanner.
 	 *
 	 * @param string $name Scanner identifier.
 	 * @param array  $scanner_config Scanner configuration.
@@ -446,62 +465,29 @@ class Digital_Lobster_Exporter_Scanner {
 		$this->update_progress(
 			$name,
 			$percent,
-			sprintf( __( 'Running %s...', 'digital-lobster-exporter' ), $name )
+			sprintf( 'Running %s...', $name )
 		);
 
 		// Check if class exists
 		if ( ! class_exists( $class_name ) ) {
-			$this->log_error( 
-				$name, 
-				sprintf( __( 'Scanner class %s not found', 'digital-lobster-exporter' ), $class_name ),
-				'error'
-			);
+			$this->log_error( $name, sprintf( 'Scanner class %s not found', $class_name ), 'error' );
 			return;
 		}
 
-		// Instantiate scanner with appropriate parameters
-		if ( $class_name === 'Digital_Lobster_Exporter_Content_Scanner' ) {
-			$scanner = new $class_name( $this->export_dir );
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_Taxonomy_Scanner' ) {
-			// Pass content data to TaxonomyScanner
-			$content_data = isset( $this->results['content'] ) ? $this->results['content'] : array();
-			$scanner = new $class_name( $content_data );
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_Media_Scanner' ) {
-			// Pass content data and export_dir to MediaScanner
-			$content_data = isset( $this->results['content'] ) ? $this->results['content'] : array();
-			$scanner = new $class_name( $content_data, $this->export_dir );
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_ACF_Scanner' ) {
-			// Pass export_dir to ACF Scanner
-			$scanner = new $class_name( $this->export_dir );
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_Shortcode_Scanner' ) {
-			// Pass export_dir to Shortcode Scanner
-			$scanner = new $class_name( $this->export_dir );
-		} elseif ( $class_name === 'Digital_Lobster_Forms_Scanner' ) {
-			// Forms Scanner doesn't need constructor params
-			$scanner = new $class_name();
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_Redirects_Scanner' ) {
-			// Pass export_dir to Redirects Scanner
-			$scanner = new $class_name( $this->export_dir );
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_Environment_Scanner' ) {
-			// Pass export_dir to Environment Scanner
-			$scanner = new $class_name( $this->export_dir );
-		} elseif ( $class_name === 'Digital_Lobster_Exporter_Assets_Scanner' ) {
-			// Pass export_dir to Assets Scanner
-			$scanner = new $class_name( $this->export_dir );
-		} else {
-			$scanner = new $class_name();
-		}
+		// Build deps — same for every scanner
+		$deps = array(
+			'export_dir'       => $this->export_dir,
+			'context'          => $this->results,
+			'security_filters' => $this->security_filters,
+		);
 
-		// Export to file if scanner has export method
-		if ( method_exists( $scanner, 'export' ) ) {
-			$scanner->export( $this->export_dir );
-		}
+		$scanner = new $class_name( $deps );
 
 		// Check if scanner has required method
 		if ( ! method_exists( $scanner, 'scan' ) ) {
 			$this->log_error(
 				$name,
-				sprintf( __( 'Scanner class %s does not have a scan() method', 'digital-lobster-exporter' ), $class_name ),
+				sprintf( 'Scanner class %s does not have a scan() method', $class_name ),
 				'error'
 			);
 			return;
@@ -529,8 +515,31 @@ class Digital_Lobster_Exporter_Scanner {
 			$this->results[ $name ] = $scanner_results;
 			
 			// If this is MediaScanner, save the media map
-			if ( $class_name === 'Digital_Lobster_Exporter_Media_Scanner' ) {
+			if ( $class_name === 'Digital_Lobster_Exporter_Media_Scanner' && method_exists( $scanner, 'save_media_map' ) ) {
 				$scanner->save_media_map();
+			}
+		}
+
+		// Merge scanner errors/warnings into orchestrator
+		$scanner_errors = $scanner->get_errors();
+		$scanner_warnings = $scanner->get_warnings();
+
+		if ( ! empty( $scanner_errors ) ) {
+			foreach ( $scanner_errors as $error ) {
+				$this->log_error(
+					isset( $error['component'] ) ? $error['component'] : $name,
+					isset( $error['message'] ) ? $error['message'] : '',
+					isset( $error['severity'] ) ? $error['severity'] : 'error'
+				);
+			}
+		}
+
+		if ( ! empty( $scanner_warnings ) ) {
+			foreach ( $scanner_warnings as $warning ) {
+				$this->log_warning(
+					isset( $warning['component'] ) ? $warning['component'] : $name,
+					isset( $warning['message'] ) ? $warning['message'] : ''
+				);
 			}
 		}
 	}
@@ -550,12 +559,6 @@ class Digital_Lobster_Exporter_Scanner {
 
 		// Execute scanner normally
 		try {
-			// Special handling for Redirects Scanner - pass content data
-			if ( $name === 'redirects' ) {
-				$content_data = isset( $this->results['content'] ) ? $this->results['content'] : array();
-				return $scanner->scan( $content_data );
-			}
-			
 			return $scanner->scan();
 		} catch ( Exception $e ) {
 			$this->log_error( $name, $e->getMessage(), 'error' );
@@ -600,7 +603,7 @@ class Digital_Lobster_Exporter_Scanner {
 				if ( $batch_number > 1000 ) {
 					$this->log_error(
 						$name,
-						__( 'Batch processing exceeded maximum iterations', 'digital-lobster-exporter' ),
+						'Batch processing exceeded maximum iterations',
 						'warning'
 					);
 					break;
@@ -698,63 +701,13 @@ class Digital_Lobster_Exporter_Scanner {
 	 */
 	private function store_results() {
 		$data = array(
-			'results'  => $this->results,
-			'errors'   => $this->errors,
-			'warnings' => $this->warnings,
+			'results'   => $this->results,
+			'errors'    => $this->get_errors(),
+			'warnings'  => $this->get_warnings(),
 			'timestamp' => current_time( 'timestamp' ),
 		);
 
 		set_transient( 'digital_lobster_scan_results', $data, HOUR_IN_SECONDS );
-	}
-
-	/**
-	 * Log an error or warning.
-	 *
-	 * @param string $scanner Scanner identifier.
-	 * @param string $message Error message.
-	 * @param string $severity Severity level: 'error', 'warning', 'critical'.
-	 */
-	private function log_error( $scanner, $message, $severity = 'error' ) {
-		$log_entry = array(
-			'scanner'   => $scanner,
-			'message'   => $message,
-			'severity'  => $severity,
-			'timestamp' => current_time( 'timestamp' ),
-		);
-
-		if ( $severity === 'warning' ) {
-			$this->warnings[] = $log_entry;
-		} else {
-			$this->errors[] = $log_entry;
-		}
-
-		// Also log to WordPress error log if WP_DEBUG is enabled
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf(
-				'Digital Lobster Exporter [%s] %s: %s',
-				strtoupper( $severity ),
-				$scanner,
-				$message
-			) );
-		}
-	}
-
-	/**
-	 * Get error log.
-	 *
-	 * @return array Error log entries.
-	 */
-	public function get_errors() {
-		return $this->errors;
-	}
-
-	/**
-	 * Get warning log.
-	 *
-	 * @return array Warning log entries.
-	 */
-	public function get_warnings() {
-		return $this->warnings;
 	}
 
 	/**
@@ -765,8 +718,6 @@ class Digital_Lobster_Exporter_Scanner {
 		delete_transient( 'digital_lobster_scan_results' );
 		
 		$this->results = array();
-		$this->errors = array();
-		$this->warnings = array();
 	}
 
 	/**
@@ -786,12 +737,12 @@ class Digital_Lobster_Exporter_Scanner {
 	private function check_system_requirements() {
 		// Check if ZipArchive is available
 		if ( ! class_exists( 'ZipArchive' ) ) {
-			throw new Exception( __( 'ZipArchive PHP extension is required but not available. Please contact your hosting provider to enable it.', 'digital-lobster-exporter' ) );
+			throw new Exception( 'ZipArchive PHP extension is required but not available. Please contact your hosting provider to enable it.' );
 		}
 
 		// Check if export directory is writable
 		if ( ! is_writable( dirname( $this->export_dir ) ) ) {
-			throw new Exception( __( 'Export directory is not writable. Please check file permissions.', 'digital-lobster-exporter' ) );
+			throw new Exception( 'Export directory is not writable. Please check file permissions.' );
 		}
 
 		// Check available disk space (require at least 100MB)
@@ -799,7 +750,7 @@ class Digital_Lobster_Exporter_Scanner {
 		if ( $free_space !== false && $free_space < 104857600 ) {
 			$this->log_error(
 				'system',
-				sprintf( __( 'Low disk space: %s MB available', 'digital-lobster-exporter' ), round( $free_space / 1048576, 2 ) ),
+				sprintf( 'Low disk space: %s MB available', round( $free_space / 1048576, 2 ) ),
 				'warning'
 			);
 		}
@@ -829,7 +780,7 @@ class Digital_Lobster_Exporter_Scanner {
 			$this->log_error(
 				$scanner_name,
 				sprintf(
-					__( 'High memory usage: %d%% (%s of %s used)', 'digital-lobster-exporter' ),
+					'High memory usage: %d%% (%s of %s used)',
 					round( $memory_percent ),
 					$this->format_bytes( $memory_used ),
 					$this->format_bytes( $memory_limit )
@@ -850,7 +801,7 @@ class Digital_Lobster_Exporter_Scanner {
 		if ( $memory_percent > 95 ) {
 			throw new Exception(
 				sprintf(
-					__( 'Memory limit nearly exhausted (%d%% used). Please increase PHP memory_limit or reduce batch size in settings.', 'digital-lobster-exporter' ),
+					'Memory limit nearly exhausted (%d%% used). Please increase PHP memory_limit or reduce batch size in settings.',
 					round( $memory_percent )
 				)
 			);
@@ -870,7 +821,7 @@ class Digital_Lobster_Exporter_Scanner {
 					$this->log_error(
 						$scanner_name,
 						sprintf(
-							__( 'Approaching execution time limit: %d seconds elapsed of %d maximum', 'digital-lobster-exporter' ),
+							'Approaching execution time limit: %d seconds elapsed of %d maximum',
 							$elapsed_time,
 							$max_execution_time
 						),
@@ -939,22 +890,22 @@ class Digital_Lobster_Exporter_Scanner {
 	private function get_user_friendly_error_message( $error_message, $scanner_name ) {
 		// Map technical errors to user-friendly messages
 		$error_patterns = array(
-			'/memory.*exhausted/i' => __( 'The scan ran out of memory. Try increasing PHP memory_limit in your hosting settings or reduce the batch size in plugin settings.', 'digital-lobster-exporter' ),
-			'/maximum execution time/i' => __( 'The scan took too long and timed out. Try increasing max_execution_time in your hosting settings or reduce the amount of content to export.', 'digital-lobster-exporter' ),
-			'/permission denied/i' => __( 'Permission denied when accessing files. Please check file permissions on your server.', 'digital-lobster-exporter' ),
-			'/disk.*full/i' => __( 'Not enough disk space available. Please free up space on your server.', 'digital-lobster-exporter' ),
-			'/failed to open stream/i' => __( 'Could not access a required file. This may be a temporary issue or a file permission problem.', 'digital-lobster-exporter' ),
-			'/database/i' => __( 'Database connection or query error. Please check your database connection.', 'digital-lobster-exporter' ),
+			'/memory.*exhausted/i' => 'The scan ran out of memory. Try increasing PHP memory_limit in your hosting settings or reduce the batch size in plugin settings.',
+			'/maximum execution time/i' => 'The scan took too long and timed out. Try increasing max_execution_time in your hosting settings or reduce the amount of content to export.',
+			'/permission denied/i' => 'Permission denied when accessing files. Please check file permissions on your server.',
+			'/disk.*full/i' => 'Not enough disk space available. Please free up space on your server.',
+			'/failed to open stream/i' => 'Could not access a required file. This may be a temporary issue or a file permission problem.',
+			'/database/i' => 'Database connection or query error. Please check your database connection.',
 		);
 
 		foreach ( $error_patterns as $pattern => $friendly_message ) {
 			if ( preg_match( $pattern, $error_message ) ) {
-				return $friendly_message . ' ' . sprintf( __( '(Scanner: %s)', 'digital-lobster-exporter' ), $scanner_name );
+				return $friendly_message . sprintf( ' (Scanner: %s)', $scanner_name );
 			}
 		}
 
 		// Return original message with scanner context
-		return sprintf( __( '%s (Scanner: %s)', 'digital-lobster-exporter' ), $error_message, $scanner_name );
+		return sprintf( '%s (Scanner: %s)', $error_message, $scanner_name );
 	}
 
 	/**
@@ -970,13 +921,26 @@ class Digital_Lobster_Exporter_Scanner {
 			// Export all data
 			$result = $exporter->export_all();
 
-			// Merge exporter errors and warnings with scanner errors
-			if ( ! empty( $exporter->get_errors() ) ) {
-				$this->errors = array_merge( $this->errors, $exporter->get_errors() );
+			// Merge exporter errors and warnings
+			$exporter_errors = $exporter->get_errors();
+			if ( ! empty( $exporter_errors ) ) {
+				foreach ( $exporter_errors as $error ) {
+					$this->log_error(
+						isset( $error['component'] ) ? $error['component'] : 'exporter',
+						isset( $error['message'] ) ? $error['message'] : '',
+						isset( $error['severity'] ) ? $error['severity'] : 'error'
+					);
+				}
 			}
 
-			if ( ! empty( $exporter->get_warnings() ) ) {
-				$this->warnings = array_merge( $this->warnings, $exporter->get_warnings() );
+			$exporter_warnings = $exporter->get_warnings();
+			if ( ! empty( $exporter_warnings ) ) {
+				foreach ( $exporter_warnings as $warning ) {
+					$this->log_warning(
+						isset( $warning['component'] ) ? $warning['component'] : 'exporter',
+						isset( $warning['message'] ) ? $warning['message'] : ''
+					);
+				}
 			}
 
 			// Package into ZIP archive
@@ -984,7 +948,7 @@ class Digital_Lobster_Exporter_Scanner {
 				$this->update_progress(
 					'packaging',
 					98,
-					__( 'Creating ZIP archive...', 'digital-lobster-exporter' )
+					'Creating ZIP archive...'
 				);
 
 				$package_result = $this->package_artifacts();
@@ -1025,12 +989,25 @@ class Digital_Lobster_Exporter_Scanner {
 			$result = $packager->create_zip( $this->export_dir );
 
 			// Merge packager errors and warnings
-			if ( ! empty( $packager->get_errors() ) ) {
-				$this->errors = array_merge( $this->errors, $packager->get_errors() );
+			$packager_errors = $packager->get_errors();
+			if ( ! empty( $packager_errors ) ) {
+				foreach ( $packager_errors as $error ) {
+					$this->log_error(
+						isset( $error['component'] ) ? $error['component'] : 'packager',
+						isset( $error['message'] ) ? $error['message'] : '',
+						isset( $error['severity'] ) ? $error['severity'] : 'error'
+					);
+				}
 			}
 
-			if ( ! empty( $packager->get_warnings() ) ) {
-				$this->warnings = array_merge( $this->warnings, $packager->get_warnings() );
+			$packager_warnings = $packager->get_warnings();
+			if ( ! empty( $packager_warnings ) ) {
+				foreach ( $packager_warnings as $warning ) {
+					$this->log_warning(
+						isset( $warning['component'] ) ? $warning['component'] : 'packager',
+						isset( $warning['message'] ) ? $warning['message'] : ''
+					);
+				}
 			}
 
 			return $result;

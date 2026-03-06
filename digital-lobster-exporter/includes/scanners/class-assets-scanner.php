@@ -17,14 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Assets Scanner Class
  */
-class Digital_Lobster_Exporter_Assets_Scanner {
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir = '';
+class Digital_Lobster_Exporter_Assets_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Assets directory for copied files.
@@ -43,11 +36,11 @@ class Digital_Lobster_Exporter_Assets_Scanner {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $export_dir Export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $export_dir = '' ) {
-		$this->export_dir = $export_dir;
-		$this->assets_dir = $export_dir . '/assets';
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+		$this->assets_dir = $this->export_dir . '/assets';
 		$this->site_url   = get_site_url();
 	}
 
@@ -79,9 +72,6 @@ class Digital_Lobster_Exporter_Assets_Scanner {
 
 			// Build the complete registry.
 			$registry = $this->build_registry( $all_assets, $copied_files );
-
-			// Export to JSON.
-			$this->export_registry( $registry );
 
 			$results['data'] = array(
 				'total_scripts'      => count( $all_assets['scripts'] ),
@@ -335,7 +325,7 @@ class Digital_Lobster_Exporter_Assets_Scanner {
 
 			if ( ! empty( $parts[0] ) ) {
 				$plugin_slug = $parts[0];
-				$plugin_data = $this->get_plugin_data( $plugin_slug );
+				$plugin_data = Digital_Lobster_Exporter_Source_Identifier::get_plugin_data( $plugin_slug );
 
 				$source['type'] = 'plugin';
 				$source['name'] = $plugin_data['name'];
@@ -399,34 +389,6 @@ class Digital_Lobster_Exporter_Assets_Scanner {
 		}
 
 		return $host;
-	}
-
-	/**
-	 * Get plugin data from slug.
-	 *
-	 * @param string $plugin_slug Plugin slug.
-	 * @return array Plugin data.
-	 */
-	private function get_plugin_data( $plugin_slug ) {
-		if ( ! function_exists( 'get_plugins' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-
-		$all_plugins = get_plugins();
-
-		foreach ( $all_plugins as $plugin_file => $plugin_data ) {
-			if ( strpos( $plugin_file, $plugin_slug . '/' ) === 0 || $plugin_file === $plugin_slug . '.php' ) {
-				return array(
-					'name' => $plugin_data['Name'],
-					'file' => $plugin_file,
-				);
-			}
-		}
-
-		return array(
-			'name' => ucwords( str_replace( array( '-', '_' ), ' ', $plugin_slug ) ),
-			'file' => '',
-		);
 	}
 
 	/**
@@ -753,24 +715,5 @@ class Digital_Lobster_Exporter_Assets_Scanner {
 		return $load_order;
 	}
 
-	/**
-	 * Export registry to JSON file.
-	 *
-	 * @param array $registry Registry data.
-	 */
-	private function export_registry( $registry ) {
-		$file_path = $this->export_dir . '/enqueued_assets.json';
 
-		$json = wp_json_encode( $registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( $json === false ) {
-			throw new Exception( 'Failed to encode assets registry to JSON' );
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( $result === false ) {
-			throw new Exception( 'Failed to write enqueued_assets.json' );
-		}
-	}
 }

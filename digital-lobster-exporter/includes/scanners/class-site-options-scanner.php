@@ -12,58 +12,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class Site_Options_Scanner
+ * Class Digital_Lobster_Exporter_Site_Options_Scanner
  *
- * Collects and exports critical WordPress options including:
+ * Collects critical WordPress options including:
  * - Plugin-specific options
  * - Theme settings
  * - Cron schedules and jobs
  * - Permalink and rewrite settings
  * - Core configuration options
  *
- * Filters out:
- * - Transients and cache entries
- * - Sensitive data (API keys, passwords, tokens)
- * - Temporary data
+ * Delegates sensitive-data and temporary-key filtering to Security_Filters.
  */
-class Site_Options_Scanner {
-
-	/**
-	 * List of sensitive option name patterns to exclude
-	 *
-	 * @var array
-	 */
-	private $sensitive_patterns = array(
-		'password',
-		'api_key',
-		'apikey',
-		'api_secret',
-		'secret_key',
-		'access_token',
-		'auth_token',
-		'private_key',
-		'consumer_key',
-		'consumer_secret',
-		'oauth',
-		'smtp_pass',
-		'ftp_pass',
-		'db_password',
-		'license_key',
-		'activation_key',
-	);
-
-	/**
-	 * List of temporary/cache option patterns to exclude
-	 *
-	 * @var array
-	 */
-	private $temporary_patterns = array(
-		'_transient_',
-		'_site_transient_',
-		'_cache_',
-		'_temp_',
-		'_tmp_',
-	);
+class Digital_Lobster_Exporter_Site_Options_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Active plugins list
@@ -80,9 +40,12 @@ class Site_Options_Scanner {
 	private $active_theme = '';
 
 	/**
-	 * Constructor
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct() {
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 		$this->active_plugins = get_option( 'active_plugins', array() );
 		$this->active_theme = get_stylesheet();
 	}
@@ -292,8 +255,9 @@ class Site_Options_Scanner {
 		foreach ( $all_options as $option ) {
 			$option_name = $option['option_name'];
 
-			// Skip if sensitive or temporary
-			if ( $this->is_sensitive_option( $option_name ) || $this->is_temporary_option( $option_name ) ) {
+			// Skip if sensitive or temporary — delegate to Security_Filters
+			if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_option( $option_name ) ||
+			     Digital_Lobster_Exporter_Security_Filters::is_temporary_key( $option_name ) ) {
 				continue;
 			}
 
@@ -350,40 +314,6 @@ class Site_Options_Scanner {
 	}
 
 	/**
-	 * Check if option name is sensitive
-	 *
-	 * @param string $option_name Option name
-	 * @return bool True if sensitive
-	 */
-	private function is_sensitive_option( $option_name ) {
-		$option_lower = strtolower( $option_name );
-
-		foreach ( $this->sensitive_patterns as $pattern ) {
-			if ( false !== strpos( $option_lower, $pattern ) ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Check if option is temporary/cache
-	 *
-	 * @param string $option_name Option name
-	 * @return bool True if temporary
-	 */
-	private function is_temporary_option( $option_name ) {
-		foreach ( $this->temporary_patterns as $pattern ) {
-			if ( false !== strpos( $option_name, $pattern ) ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
 	 * Sanitize option value
 	 *
 	 * @param string $option_name Option name
@@ -427,8 +357,8 @@ class Site_Options_Scanner {
 		$sanitized = array();
 
 		foreach ( $array as $key => $value ) {
-			// Skip sensitive keys
-			if ( $this->is_sensitive_option( $key ) ) {
+			// Delegate sensitive-key check to Security_Filters
+			if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_option( $key ) ) {
 				$sanitized[ $key ] = '[REDACTED]';
 				continue;
 			}
@@ -457,33 +387,5 @@ class Site_Options_Scanner {
 		}
 
 		return $this->sanitize_array( $args );
-	}
-
-	/**
-	 * Export options to JSON file
-	 *
-	 * @param string $export_dir Export directory path
-	 * @return bool Success status
-	 */
-	public function export( $export_dir ) {
-		$options = $this->scan();
-
-		$file_path = trailingslashit( $export_dir ) . 'site_options.json';
-
-		$json = wp_json_encode( $options, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( false === $json ) {
-			error_log( 'Digital Lobster Exporter: Failed to encode site options to JSON' );
-			return false;
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( false === $result ) {
-			error_log( 'Digital Lobster Exporter: Failed to write site_options.json' );
-			return false;
-		}
-
-		return true;
 	}
 }

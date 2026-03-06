@@ -17,14 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * ACF and Custom Fields Scanner Class
  */
-class Digital_Lobster_Exporter_ACF_Scanner {
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir;
+class Digital_Lobster_Exporter_ACF_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Detected custom field plugins.
@@ -36,10 +29,10 @@ class Digital_Lobster_Exporter_ACF_Scanner {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $export_dir Export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $export_dir = '' ) {
-		$this->export_dir = $export_dir;
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 		$this->detect_custom_field_plugins();
 	}
 
@@ -92,9 +85,6 @@ class Digital_Lobster_Exporter_ACF_Scanner {
 
 		// Export other custom field configurations
 		$results['custom_fields_config'] = $this->export_other_custom_fields();
-
-		// Save to JSON files
-		$this->save_to_files( $results );
 
 		return $results;
 	}
@@ -739,42 +729,4 @@ class Digital_Lobster_Exporter_ACF_Scanner {
 		return $carbon_config;
 	}
 
-	/**
-	 * Save scan results to JSON files.
-	 *
-	 * @param array $results Scan results.
-	 */
-	private function save_to_files( $results ) {
-		if ( empty( $this->export_dir ) ) {
-			return;
-		}
-
-		// Ensure export directory exists
-		if ( ! file_exists( $this->export_dir ) ) {
-			wp_mkdir_p( $this->export_dir );
-		}
-
-		// Save ACF field groups
-		if ( ! empty( $results['acf_field_groups'] ) ) {
-			$acf_file = trailingslashit( $this->export_dir ) . 'acf_field_groups.json';
-			$acf_data = array(
-				'schema_version' => 1,
-				'exported_at' => current_time( 'mysql' ),
-				'field_groups' => $results['acf_field_groups'],
-			);
-			file_put_contents( $acf_file, wp_json_encode( $acf_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
-		}
-
-		// Save other custom fields config
-		if ( ! empty( $results['custom_fields_config'] ) ) {
-			$custom_fields_file = trailingslashit( $this->export_dir ) . 'custom_fields_config.json';
-			$custom_fields_data = array(
-				'schema_version' => 1,
-				'exported_at' => current_time( 'mysql' ),
-				'detected_plugins' => $results['detected_plugins'],
-				'configurations' => $results['custom_fields_config'],
-			);
-			file_put_contents( $custom_fields_file, wp_json_encode( $custom_fields_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
-		}
-	}
 }

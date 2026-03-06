@@ -25,6 +25,7 @@ class Digital_Lobster_Exporter_Admin_Page {
 		add_action( 'wp_ajax_digital_lobster_start_scan', array( $this, 'handle_ajax_start_scan' ) );
 		add_action( 'wp_ajax_digital_lobster_get_progress', array( $this, 'handle_ajax_get_progress' ) );
 		add_action( 'wp_ajax_digital_lobster_download', array( $this, 'handle_ajax_download' ) );
+		add_action( 'wp_ajax_digital_lobster_save_settings', array( $this, 'handle_ajax_save_settings' ) );
 		
 		// Only register admin UI hooks when in admin context
 		if ( is_admin() && ! wp_doing_ajax() ) {
@@ -33,9 +34,6 @@ class Digital_Lobster_Exporter_Admin_Page {
 			
 			// Enqueue admin assets
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-			
-			// Register settings
-			add_action( 'admin_init', array( $this, 'register_settings' ) );
 		}
 	}
 
@@ -44,23 +42,13 @@ class Digital_Lobster_Exporter_Admin_Page {
 	 */
 	public function add_admin_menu() {
 		add_menu_page(
-			__( 'AI Website Exporter', 'digital-lobster-exporter' ),
-			__( '🧠 Export with AI Agents', 'digital-lobster-exporter' ),
+			'AI Website Exporter',
+			'🧠 Export with AI Agents',
 			'manage_options',
 			'digital-lobster-exporter',
 			array( $this, 'render_page' ),
 			'dashicons-migrate',
 			80
-		);
-
-		// Add settings submenu
-		add_submenu_page(
-			'digital-lobster-exporter',
-			__( 'Settings', 'digital-lobster-exporter' ),
-			__( 'Settings', 'digital-lobster-exporter' ),
-			'manage_options',
-			'digital-lobster-exporter-settings',
-			array( $this, 'render_settings_page' )
 		);
 	}
 
@@ -112,77 +100,11 @@ class Digital_Lobster_Exporter_Admin_Page {
 	public function render_page() {
 		// Check user capabilities
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'digital-lobster-exporter' ) );
+			wp_die( 'You do not have sufficient permissions to access this page.' );
 		}
 
 		// Load template
 		require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'templates/admin-page.php';
-	}
-
-	/**
-	 * Register plugin settings.
-	 */
-	public function register_settings() {
-		register_setting(
-			'digital_lobster_settings_group',
-			'digital_lobster_settings',
-			array( $this, 'sanitize_settings' )
-		);
-
-		add_settings_section(
-			'digital_lobster_content_settings',
-			__( 'Content Export Settings', 'digital-lobster-exporter' ),
-			array( $this, 'render_content_settings_section' ),
-			'digital-lobster-exporter-settings'
-		);
-
-		add_settings_field(
-			'max_posts',
-			__( 'Max Posts', 'digital-lobster-exporter' ),
-			array( $this, 'render_max_posts_field' ),
-			'digital-lobster-exporter-settings',
-			'digital_lobster_content_settings'
-		);
-
-		add_settings_field(
-			'max_pages',
-			__( 'Max Pages', 'digital-lobster-exporter' ),
-			array( $this, 'render_max_pages_field' ),
-			'digital-lobster-exporter-settings',
-			'digital_lobster_content_settings'
-		);
-
-		add_settings_field(
-			'max_per_custom_post_type',
-			__( 'Max Per Custom Post Type', 'digital-lobster-exporter' ),
-			array( $this, 'render_max_custom_post_type_field' ),
-			'digital-lobster-exporter-settings',
-			'digital_lobster_content_settings'
-		);
-
-		add_settings_field(
-			'include_html_snapshots',
-			__( 'Include HTML Snapshots', 'digital-lobster-exporter' ),
-			array( $this, 'render_include_html_snapshots_field' ),
-			'digital-lobster-exporter-settings',
-			'digital_lobster_content_settings'
-		);
-
-		add_settings_field(
-			'batch_size',
-			__( 'Batch Size', 'digital-lobster-exporter' ),
-			array( $this, 'render_batch_size_field' ),
-			'digital-lobster-exporter-settings',
-			'digital_lobster_content_settings'
-		);
-
-		add_settings_field(
-			'cleanup_after_hours',
-			__( 'Cleanup After (Hours)', 'digital-lobster-exporter' ),
-			array( $this, 'render_cleanup_after_hours_field' ),
-			'digital-lobster-exporter-settings',
-			'digital_lobster_content_settings'
-		);
 	}
 
 	/**
@@ -225,107 +147,51 @@ class Digital_Lobster_Exporter_Admin_Page {
 	}
 
 	/**
-	 * Render content settings section description.
+	 * Handle AJAX request to save settings.
 	 */
-	public function render_content_settings_section() {
-		echo '<p>' . esc_html__( 'Configure how many sample content items to export for each content type.', 'digital-lobster-exporter' ) . '</p>';
-	}
+	public function handle_ajax_save_settings() {
+		// Load security filters
+		require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-security-filters.php';
 
-	/**
-	 * Render max posts field.
-	 */
-	public function render_max_posts_field() {
-		$settings = get_option( 'digital_lobster_settings', array() );
-		$value = isset( $settings['max_posts'] ) ? $settings['max_posts'] : 5;
-		?>
-		<input type="number" name="digital_lobster_settings[max_posts]" value="<?php echo esc_attr( $value ); ?>" min="1" max="100" />
-		<p class="description"><?php esc_html_e( 'Maximum number of posts to export (default: 5)', 'digital-lobster-exporter' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render max pages field.
-	 */
-	public function render_max_pages_field() {
-		$settings = get_option( 'digital_lobster_settings', array() );
-		$value = isset( $settings['max_pages'] ) ? $settings['max_pages'] : 2;
-		?>
-		<input type="number" name="digital_lobster_settings[max_pages]" value="<?php echo esc_attr( $value ); ?>" min="1" max="100" />
-		<p class="description"><?php esc_html_e( 'Maximum number of pages to export (default: 2)', 'digital-lobster-exporter' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render max custom post type field.
-	 */
-	public function render_max_custom_post_type_field() {
-		$settings = get_option( 'digital_lobster_settings', array() );
-		$value = isset( $settings['max_per_custom_post_type'] ) ? $settings['max_per_custom_post_type'] : 10;
-		?>
-		<input type="number" name="digital_lobster_settings[max_per_custom_post_type]" value="<?php echo esc_attr( $value ); ?>" min="1" max="100" />
-		<p class="description"><?php esc_html_e( 'Maximum number of items to export per custom post type (default: 10)', 'digital-lobster-exporter' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render include HTML snapshots field.
-	 */
-	public function render_include_html_snapshots_field() {
-		$settings = get_option( 'digital_lobster_settings', array() );
-		$value = isset( $settings['include_html_snapshots'] ) ? $settings['include_html_snapshots'] : true;
-		?>
-		<label>
-			<input type="checkbox" name="digital_lobster_settings[include_html_snapshots]" value="1" <?php checked( $value, true ); ?> />
-			<?php esc_html_e( 'Generate HTML snapshots of content', 'digital-lobster-exporter' ); ?>
-		</label>
-		<p class="description"><?php esc_html_e( 'Enable to capture rendered HTML for each content item. Disable for faster exports on large sites (default: enabled)', 'digital-lobster-exporter' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render batch size field.
-	 */
-	public function render_batch_size_field() {
-		$settings = get_option( 'digital_lobster_settings', array() );
-		$value = isset( $settings['batch_size'] ) ? $settings['batch_size'] : 50;
-		?>
-		<input type="number" name="digital_lobster_settings[batch_size]" value="<?php echo esc_attr( $value ); ?>" min="10" max="200" />
-		<p class="description"><?php esc_html_e( 'Batch size for processing large datasets (default: 50)', 'digital-lobster-exporter' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render cleanup after hours field.
-	 */
-	public function render_cleanup_after_hours_field() {
-		$settings = get_option( 'digital_lobster_settings', array() );
-		$value = isset( $settings['cleanup_after_hours'] ) ? $settings['cleanup_after_hours'] : 24;
-		?>
-		<input type="number" name="digital_lobster_settings[cleanup_after_hours]" value="<?php echo esc_attr( $value ); ?>" min="1" max="168" />
-		<p class="description"><?php esc_html_e( 'Automatically delete old artifacts after this many hours (default: 24)', 'digital-lobster-exporter' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render settings page.
-	 */
-	public function render_settings_page() {
-		// Check user capabilities
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'digital-lobster-exporter' ) );
+		// Verify nonce
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
+		if ( ! Digital_Lobster_Exporter_Security_Filters::verify_nonce( $nonce ) ) {
+			wp_send_json_error( array( 'message' => 'Security check failed.' ) );
 		}
-		?>
-		<div class="wrap">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( 'digital_lobster_settings_group' );
-				do_settings_sections( 'digital-lobster-exporter-settings' );
-				submit_button();
-				?>
-			</form>
-		</div>
-		<?php
+
+		// Check user capabilities
+		if ( ! Digital_Lobster_Exporter_Security_Filters::verify_capability( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+		}
+
+		// Read settings from POST
+		$input = array();
+		if ( isset( $_POST['max_posts'] ) ) {
+			$input['max_posts'] = $_POST['max_posts'];
+		}
+		if ( isset( $_POST['max_pages'] ) ) {
+			$input['max_pages'] = $_POST['max_pages'];
+		}
+		if ( isset( $_POST['max_per_custom_post_type'] ) ) {
+			$input['max_per_custom_post_type'] = $_POST['max_per_custom_post_type'];
+		}
+		if ( isset( $_POST['include_html_snapshots'] ) ) {
+			$input['include_html_snapshots'] = $_POST['include_html_snapshots'];
+		}
+		if ( isset( $_POST['batch_size'] ) ) {
+			$input['batch_size'] = $_POST['batch_size'];
+		}
+		if ( isset( $_POST['cleanup_after_hours'] ) ) {
+			$input['cleanup_after_hours'] = $_POST['cleanup_after_hours'];
+		}
+
+		// Sanitize using existing method
+		$sanitized = $this->sanitize_settings( $input );
+
+		// Save to option
+		update_option( 'digital_lobster_settings', $sanitized );
+
+		wp_send_json_success( array( 'message' => 'Settings saved.' ) );
 	}
 
 	/**
@@ -358,13 +224,13 @@ class Digital_Lobster_Exporter_Admin_Page {
 			$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
 			if ( ! Digital_Lobster_Exporter_Security_Filters::verify_nonce( $nonce ) ) {
 				ob_end_clean();
-				wp_send_json_error( array( 'message' => __( 'Security check failed.', 'digital-lobster-exporter' ) ) );
+				wp_send_json_error( array( 'message' => 'Security check failed.' ) );
 			}
 
 			// Check user capabilities
 			if ( ! Digital_Lobster_Exporter_Security_Filters::verify_capability( 'manage_options' ) ) {
 				ob_end_clean();
-				wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'digital-lobster-exporter' ) ) );
+				wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
 			}
 
 			// Load scanner class
@@ -393,7 +259,7 @@ class Digital_Lobster_Exporter_Admin_Page {
 			ob_end_clean();
 			wp_send_json_error( array( 
 				'message' => sprintf( 
-					__( 'Fatal error: %s', 'digital-lobster-exporter' ), 
+					'Fatal error: %s', 
 					$e->getMessage() 
 				) 
 			) );
@@ -406,7 +272,7 @@ class Digital_Lobster_Exporter_Admin_Page {
 			ob_end_clean();
 			wp_send_json_error( array( 
 				'message' => sprintf( 
-					__( 'PHP Error: %s', 'digital-lobster-exporter' ), 
+					'PHP Error: %s', 
 					$e->getMessage() 
 				) 
 			) );
@@ -423,7 +289,7 @@ class Digital_Lobster_Exporter_Admin_Page {
 			$zip_size = isset( $result['results']['zip_size'] ) ? $result['results']['zip_size'] : 0;
 
 			// Format success message
-			$message = __( 'Scan completed successfully!', 'digital-lobster-exporter' );
+			$message = 'Scan completed successfully!';
 			
 			// Add warnings count if any
 			$warnings_count = isset( $result['warnings'] ) ? count( $result['warnings'] ) : 0;
@@ -431,7 +297,7 @@ class Digital_Lobster_Exporter_Admin_Page {
 			
 			if ( $warnings_count > 0 || $errors_count > 0 ) {
 				$message .= ' ' . sprintf(
-					__( '(%d warning(s), %d non-critical error(s) - see error_log.json in the export)', 'digital-lobster-exporter' ),
+					'(%d warning(s), %d non-critical error(s) - see error_log.json in the export)',
 					$warnings_count,
 					$errors_count
 				);
@@ -449,10 +315,10 @@ class Digital_Lobster_Exporter_Admin_Page {
 			) );
 		} else {
 			// Format error message with helpful context
-			$error_message = isset( $result['error'] ) ? $result['error'] : __( 'An unknown error occurred.', 'digital-lobster-exporter' );
+			$error_message = isset( $result['error'] ) ? $result['error'] : 'An unknown error occurred.';
 			
 			// Add troubleshooting tips
-			$error_message .= ' ' . __( 'Please check the WordPress debug log for more details.', 'digital-lobster-exporter' );
+			$error_message .= ' ' . 'Please check the WordPress debug log for more details.';
 
 			wp_send_json_error( array( 
 				'message' => $error_message,
@@ -471,19 +337,19 @@ class Digital_Lobster_Exporter_Admin_Page {
 		// Verify nonce
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
 		if ( ! Digital_Lobster_Exporter_Security_Filters::verify_nonce( $nonce ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'digital-lobster-exporter' ) ) );
+			wp_send_json_error( array( 'message' => 'Security check failed.' ) );
 		}
 
 		// Check user capabilities
 		if ( ! Digital_Lobster_Exporter_Security_Filters::verify_capability( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'digital-lobster-exporter' ) ) );
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
 		}
 
 		// Get current progress from transient
 		$progress = get_transient( 'digital_lobster_scan_progress' );
 
 		if ( ! $progress ) {
-			wp_send_json_error( array( 'message' => __( 'No scan in progress.', 'digital-lobster-exporter' ) ) );
+			wp_send_json_error( array( 'message' => 'No scan in progress.' ) );
 		}
 
 		wp_send_json_success( $progress );
@@ -502,12 +368,12 @@ class Digital_Lobster_Exporter_Admin_Page {
 
 		// Check user capabilities
 		if ( ! Digital_Lobster_Exporter_Security_Filters::verify_capability( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Insufficient permissions.', 'digital-lobster-exporter' ), 'Access Denied', array( 'response' => 403 ) );
+			wp_die( 'Insufficient permissions.', 'Access Denied', array( 'response' => 403 ) );
 		}
 
 		// Validate token
 		if ( empty( $token ) || empty( $nonce ) ) {
-			wp_die( esc_html__( 'Invalid download request.', 'digital-lobster-exporter' ), 'Invalid Request', array( 'response' => 400 ) );
+			wp_die( 'Invalid download request.', 'Invalid Request', array( 'response' => 400 ) );
 		}
 
 		// Load packager class
@@ -518,7 +384,7 @@ class Digital_Lobster_Exporter_Admin_Page {
 		$download_data = $packager->verify_download_token( $token, $nonce );
 
 		if ( ! $download_data ) {
-			wp_die( esc_html__( 'Invalid or expired download link.', 'digital-lobster-exporter' ), 'Invalid Link', array( 'response' => 404 ) );
+			wp_die( 'Invalid or expired download link.', 'Invalid Link', array( 'response' => 404 ) );
 		}
 
 		// Serve the file

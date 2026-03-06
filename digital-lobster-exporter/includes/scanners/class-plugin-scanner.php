@@ -18,14 +18,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Plugin Scanner Class
  */
-class Digital_Lobster_Exporter_Plugin_Scanner {
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir;
+class Digital_Lobster_Exporter_Plugin_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Plugins directory path in export.
@@ -50,19 +43,13 @@ class Digital_Lobster_Exporter_Plugin_Scanner {
 
 	/**
 	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct() {
-		$this->setup_export_directories();
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+		$this->plugins_export_dir = trailingslashit( $this->export_dir ) . 'plugins/';
 		$this->load_plugin_data();
-	}
-
-	/**
-	 * Setup export directories.
-	 */
-	private function setup_export_directories() {
-		$upload_dir = wp_upload_dir();
-		$this->export_dir = trailingslashit( $upload_dir['basedir'] ) . 'ai_migration_artifacts/';
-		$this->plugins_export_dir = $this->export_dir . 'plugins/';
 	}
 
 	/**
@@ -710,7 +697,7 @@ class Digital_Lobster_Exporter_Plugin_Scanner {
 				$plugin_shortcodes[ $plugin_slug ] = array();
 			}
 
-			$callback_info = $this->get_callback_info( $callback );
+			$callback_info = Digital_Lobster_Exporter_Callback_Resolver::resolve( $callback );
 
 			$plugin_shortcodes[ $plugin_slug ][] = array(
 				'tag'      => $shortcode_tag,
@@ -748,7 +735,7 @@ class Digital_Lobster_Exporter_Plugin_Scanner {
 	 */
 	private function identify_plugin_for_shortcode( $shortcode_tag, $callback ) {
 		// Try to get the callback source
-		$callback_info = $this->get_callback_info( $callback );
+		$callback_info = Digital_Lobster_Exporter_Callback_Resolver::resolve( $callback );
 
 		// Check if callback contains plugin path
 		if ( isset( $callback_info['file'] ) && strpos( $callback_info['file'], WP_PLUGIN_DIR ) !== false ) {
@@ -784,52 +771,6 @@ class Digital_Lobster_Exporter_Plugin_Scanner {
 		}
 
 		return 'unknown';
-	}
-
-	/**
-	 * Get callback information.
-	 *
-	 * @param mixed $callback Callback function.
-	 * @return array Callback information.
-	 */
-	private function get_callback_info( $callback ) {
-		$info = array();
-
-		if ( is_string( $callback ) ) {
-			$info['type'] = 'function';
-			$info['name'] = $callback;
-
-			if ( function_exists( $callback ) ) {
-				$reflection = new ReflectionFunction( $callback );
-				$info['file'] = $reflection->getFileName();
-				$info['line'] = $reflection->getStartLine();
-			}
-		} elseif ( is_array( $callback ) && count( $callback ) === 2 ) {
-			$info['type'] = 'method';
-			
-			if ( is_object( $callback[0] ) ) {
-				$info['class'] = get_class( $callback[0] );
-			} elseif ( is_string( $callback[0] ) ) {
-				$info['class'] = $callback[0];
-			}
-			
-			$info['method'] = $callback[1];
-
-			if ( isset( $info['class'] ) && method_exists( $info['class'], $info['method'] ) ) {
-				$reflection = new ReflectionMethod( $info['class'], $info['method'] );
-				$info['file'] = $reflection->getFileName();
-				$info['line'] = $reflection->getStartLine();
-			}
-		} elseif ( is_object( $callback ) && ( $callback instanceof Closure ) ) {
-			$info['type'] = 'closure';
-			$reflection = new ReflectionFunction( $callback );
-			$info['file'] = $reflection->getFileName();
-			$info['line'] = $reflection->getStartLine();
-		} else {
-			$info['type'] = 'unknown';
-		}
-
-		return $info;
 	}
 
 	/**

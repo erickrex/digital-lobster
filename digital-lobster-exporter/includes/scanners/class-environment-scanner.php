@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Environment Scanner Class
  */
-class Digital_Lobster_Exporter_Environment_Scanner {
+class Digital_Lobster_Exporter_Environment_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * WordPress database object.
@@ -27,21 +27,14 @@ class Digital_Lobster_Exporter_Environment_Scanner {
 	private $wpdb;
 
 	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir;
-
-	/**
 	 * Constructor.
 	 *
-	 * @param string $export_dir Export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $export_dir ) {
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 		global $wpdb;
-		$this->wpdb       = $wpdb;
-		$this->export_dir = $export_dir;
+		$this->wpdb = $wpdb;
 	}
 
 	/**
@@ -400,7 +393,7 @@ class Digital_Lobster_Exporter_Environment_Scanner {
 				
 				// Get test results (without running all tests to avoid performance issues).
 				$health_info['status'] = array(
-					'description' => __( 'Site health data available', 'digital-lobster-exporter' ),
+					'description' => 'Site health data available',
 				);
 
 				// Get critical info (if method exists).
@@ -431,24 +424,4 @@ class Digital_Lobster_Exporter_Environment_Scanner {
 		return $health_info;
 	}
 
-	/**
-	 * Export environment data to JSON file.
-	 *
-	 * @param string $export_dir Export directory path.
-	 * @return bool True on success, false on failure.
-	 */
-	public function export( $export_dir ) {
-		// Get the scan results
-		$environment = $this->scan();
-		
-		$file_path = trailingslashit( $export_dir ) . 'site_environment.json';
-		
-		$json = wp_json_encode( $environment, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-		
-		if ( false === $json ) {
-			return false;
-		}
-
-		return file_put_contents( $file_path, $json ) !== false;
-	}
 }

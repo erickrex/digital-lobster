@@ -12,14 +12,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class Menu_Scanner
+ * Class Digital_Lobster_Exporter_Menu_Scanner
  *
- * Collects and exports WordPress navigation menus including:
+ * Collects WordPress navigation menus including:
  * - All registered navigation menus with full hierarchy
  * - Menu item types, URLs, CSS classes, relationships
  * - Menu locations and assignments
  */
-class Menu_Scanner {
+class Digital_Lobster_Exporter_Menu_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
+	 */
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect menu data
@@ -181,33 +190,5 @@ class Menu_Scanner {
 		}
 		
 		return $context;
-	}
-
-	/**
-	 * Export menus to JSON file
-	 *
-	 * @param string $export_dir Export directory path
-	 * @return bool Success status
-	 */
-	public function export( $export_dir ) {
-		$menus = $this->scan();
-
-		$file_path = trailingslashit( $export_dir ) . 'menus.json';
-
-		$json = wp_json_encode( $menus, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( false === $json ) {
-			error_log( 'Digital Lobster Exporter: Failed to encode menus to JSON' );
-			return false;
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( false === $result ) {
-			error_log( 'Digital Lobster Exporter: Failed to write menus.json' );
-			return false;
-		}
-
-		return true;
 	}
 }

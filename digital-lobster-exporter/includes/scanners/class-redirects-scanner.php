@@ -16,14 +16,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Redirects Scanner Class
  */
-class Digital_Lobster_Exporter_Redirects_Scanner {
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir = '';
+class Digital_Lobster_Exporter_Redirects_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Scan results.
@@ -35,19 +28,20 @@ class Digital_Lobster_Exporter_Redirects_Scanner {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $export_dir Export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $export_dir = '' ) {
-		$this->export_dir = $export_dir;
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 	}
 
 	/**
 	 * Scan and collect redirect and rewrite rule information.
 	 *
-	 * @param array $content_data Previously exported content data.
 	 * @return array Redirect and rewrite rule data.
 	 */
-	public function scan( $content_data = array() ) {
+	public function scan() {
+		$content_data = isset( $this->context['content'] ) ? $this->context['content'] : array();
+
 		$this->scan_results = array(
 			'redirect_candidates' => $this->generate_redirect_candidates( $content_data ),
 			'redirect_plugins'    => $this->detect_redirect_plugins(),
@@ -56,40 +50,7 @@ class Digital_Lobster_Exporter_Redirects_Scanner {
 			'permalink_structure' => get_option( 'permalink_structure', '' ),
 		);
 
-		// Export files if export directory is set
-		if ( ! empty( $this->export_dir ) ) {
-			$this->export_files();
-		}
-
 		return $this->scan_results;
-	}
-
-	/**
-	 * Export scan results to files.
-	 */
-	private function export_files() {
-		// Export redirects_candidates.csv
-		$csv = $this->generate_csv( $this->scan_results['redirect_candidates'] );
-		if ( ! empty( $csv ) ) {
-			$csv_path = trailingslashit( $this->export_dir ) . 'redirects_candidates.csv';
-			file_put_contents( $csv_path, $csv );
-		}
-
-		// Export rewrite_rules.json
-		$rewrite_json = wp_json_encode( $this->scan_results['rewrite_rules'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-		if ( $rewrite_json !== false ) {
-			$rewrite_path = trailingslashit( $this->export_dir ) . 'rewrite_rules.json';
-			file_put_contents( $rewrite_path, $rewrite_json );
-		}
-
-		// Export plugin_redirects.json (if any plugin redirects exist)
-		if ( ! empty( $this->scan_results['plugin_redirects'] ) ) {
-			$plugin_redirects_json = wp_json_encode( $this->scan_results['plugin_redirects'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-			if ( $plugin_redirects_json !== false ) {
-				$plugin_redirects_path = trailingslashit( $this->export_dir ) . 'plugin_redirects.json';
-				file_put_contents( $plugin_redirects_path, $plugin_redirects_json );
-			}
-		}
 	}
 
 	/**

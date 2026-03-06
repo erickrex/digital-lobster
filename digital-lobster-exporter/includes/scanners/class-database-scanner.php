@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Database Scanner Class
  */
-class Digital_Lobster_Exporter_Database_Scanner {
+class Digital_Lobster_Exporter_Database_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * WordPress database object.
@@ -55,25 +55,12 @@ class Digital_Lobster_Exporter_Database_Scanner {
 	private $custom_tables_manifest = array();
 
 	/**
-	 * Sensitive table patterns to exclude from data export.
-	 *
-	 * @var array
-	 */
-	private $sensitive_patterns = array(
-		'users',
-		'usermeta',
-		'user_',
-		'sessions',
-		'login',
-		'password',
-		'token',
-		'auth',
-	);
-
-	/**
 	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct() {
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 		global $wpdb;
 		$this->wpdb = $wpdb;
 		$this->table_prefix = $wpdb->prefix;
@@ -113,22 +100,6 @@ class Digital_Lobster_Exporter_Database_Scanner {
 			'custom_tables' => $this->custom_tables,
 			'custom_tables_manifest' => $this->custom_tables_manifest,
 		);
-	}
-
-	/**
-	 * Export database schema and custom table data to files.
-	 *
-	 * @param string $export_dir Export directory path.
-	 */
-	public function export( $export_dir ) {
-		// Export schema SQL
-		$this->export_schema( $export_dir );
-
-		// Export custom tables manifest
-		$this->export_custom_tables_manifest( $export_dir );
-
-		// Export sample data from custom tables
-		$this->export_custom_tables_data( $export_dir );
 	}
 
 	/**
@@ -338,113 +309,20 @@ class Digital_Lobster_Exporter_Database_Scanner {
 	private function is_sensitive_table( $table ) {
 		$table_lower = strtolower( $table );
 
-		foreach ( $this->sensitive_patterns as $pattern ) {
+		// Delegate to centralized security filters.
+		if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_option( $table_lower ) ) {
+			return true;
+		}
+
+		// Check for user-related tables which are always sensitive.
+		$sensitive_table_patterns = array( 'users', 'usermeta', 'user_', 'sessions' );
+		foreach ( $sensitive_table_patterns as $pattern ) {
 			if ( strpos( $table_lower, $pattern ) !== false ) {
 				return true;
 			}
 		}
 
 		return false;
-	}
-
-	/**
-	 * Export database schema to SQL file.
-	 *
-	 * @param string $export_dir Export directory path.
-	 */
-	private function export_schema( $export_dir ) {
-		$schema_file = trailingslashit( $export_dir ) . 'schema_mysql.sql';
-		$schema_content = "-- WordPress Database Schema Export\n";
-		$schema_content .= "-- Generated: " . current_time( 'mysql' ) . "\n";
-		$schema_content .= "-- Database: " . DB_NAME . "\n";
-		$schema_content .= "-- Table Prefix: " . $this->table_prefix . "\n\n";
-
-		// Get all tables
-		$all_tables = $this->wpdb->get_col( 'SHOW TABLES' );
-
-		foreach ( $all_tables as $table ) {
-			// Skip tables without WordPress prefix
-			if ( strpos( $table, $this->table_prefix ) !== 0 ) {
-				continue;
-			}
-
-			// Get CREATE TABLE statement
-			$create_table = $this->wpdb->get_row( "SHOW CREATE TABLE `{$table}`", ARRAY_N );
-
-			if ( $create_table ) {
-				$schema_content .= "-- Table: {$table}\n";
-				$schema_content .= "DROP TABLE IF EXISTS `{$table}`;\n";
-				$schema_content .= $create_table[1] . ";\n\n";
-			}
-		}
-
-		// Write to file
-		file_put_contents( $schema_file, $schema_content );
-	}
-
-	/**
-	 * Export custom tables manifest to JSON file.
-	 *
-	 * @param string $export_dir Export directory path.
-	 */
-	private function export_custom_tables_manifest( $export_dir ) {
-		$manifest_file = trailingslashit( $export_dir ) . 'custom_tables_manifest.json';
-
-		$manifest = array(
-			'schema_version' => 1,
-			'generated_at'   => current_time( 'mysql' ),
-			'total_custom_tables' => count( $this->custom_tables ),
-			'tables'         => $this->custom_tables_manifest,
-		);
-
-		file_put_contents(
-			$manifest_file,
-			wp_json_encode( $manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
-		);
-	}
-
-	/**
-	 * Export sample data from custom tables.
-	 *
-	 * @param string $export_dir Export directory path.
-	 */
-	private function export_custom_tables_data( $export_dir ) {
-		$data_file = trailingslashit( $export_dir ) . 'custom_tables_data.json';
-		$custom_data = array(
-			'schema_version' => 1,
-			'generated_at'   => current_time( 'mysql' ),
-			'tables'         => array(),
-		);
-
-		foreach ( $this->custom_tables as $table ) {
-			$table_info = $this->custom_tables_manifest[ $table ];
-
-			// Skip sensitive tables
-			if ( $table_info['is_sensitive'] ) {
-				continue;
-			}
-
-			// Only export sample data from content-related tables
-			if ( ! $table_info['is_content_related'] ) {
-				continue;
-			}
-
-			// Export sample rows (limit to 10 per table)
-			$sample_data = $this->export_sample_table_data( $table, 10 );
-
-			if ( ! empty( $sample_data ) ) {
-				$custom_data['tables'][ $table ] = array(
-					'plugin_source' => $table_info['plugin_source'],
-					'row_count'     => $table_info['row_count'],
-					'sample_rows'   => $sample_data,
-				);
-			}
-		}
-
-		file_put_contents(
-			$data_file,
-			wp_json_encode( $custom_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
-		);
 	}
 
 	/**

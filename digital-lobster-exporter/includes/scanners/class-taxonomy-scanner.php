@@ -16,7 +16,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Taxonomy Scanner Class
  */
-class Digital_Lobster_Exporter_Taxonomy_Scanner {
+class Digital_Lobster_Exporter_Taxonomy_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Exported content data (from ContentScanner).
@@ -35,10 +35,11 @@ class Digital_Lobster_Exporter_Taxonomy_Scanner {
 	/**
 	 * Constructor.
 	 *
-	 * @param array $exported_content Optional. Content data from ContentScanner.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $exported_content = array() ) {
-		$this->exported_content = $exported_content;
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+		$this->exported_content = isset( $this->context['content'] ) ? $this->context['content'] : array();
 		$this->extract_exported_post_ids();
 	}
 
@@ -254,35 +255,17 @@ class Digital_Lobster_Exporter_Taxonomy_Scanner {
 	 * @return bool True if should be excluded.
 	 */
 	private function should_exclude_meta_key( $meta_key ) {
-		// Temporary and cache-related meta keys to exclude
-		$exclude_patterns = array(
-			'_transient_',
-			'_site_transient_',
-		);
-
-		// Check exact matches and patterns
-		foreach ( $exclude_patterns as $pattern ) {
-			if ( $meta_key === $pattern || strpos( $meta_key, $pattern ) === 0 ) {
-				return true;
-			}
+		// Delegate to centralized Security_Filters.
+		if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_meta( $meta_key ) ) {
+			return true;
 		}
 
-		// Exclude sensitive meta keys
-		$sensitive_patterns = array(
-			'password',
-			'api_key',
-			'apikey',
-			'secret',
-			'token',
-			'private_key',
-			'privatekey',
-		);
+		if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_option( $meta_key ) ) {
+			return true;
+		}
 
-		$meta_key_lower = strtolower( $meta_key );
-		foreach ( $sensitive_patterns as $pattern ) {
-			if ( strpos( $meta_key_lower, $pattern ) !== false ) {
-				return true;
-			}
+		if ( Digital_Lobster_Exporter_Security_Filters::is_temporary_key( $meta_key ) ) {
+			return true;
 		}
 
 		return false;
@@ -296,49 +279,11 @@ class Digital_Lobster_Exporter_Taxonomy_Scanner {
 	 * @return mixed Filtered meta value.
 	 */
 	private function filter_sensitive_meta_value( $meta_key, $meta_value ) {
-		// If it's an array or object, recursively filter
 		if ( is_array( $meta_value ) ) {
-			return $this->filter_sensitive_array( $meta_value );
+			return Digital_Lobster_Exporter_Security_Filters::filter_post_meta( $meta_value );
 		}
 
 		return $meta_value;
-	}
-
-	/**
-	 * Recursively filter sensitive data from arrays.
-	 *
-	 * @param array $array Array to filter.
-	 * @return array Filtered array.
-	 */
-	private function filter_sensitive_array( $array ) {
-		$filtered = array();
-
-		foreach ( $array as $key => $value ) {
-			// Skip sensitive keys in arrays
-			$sensitive_keys = array( 'password', 'api_key', 'secret', 'token', 'private_key' );
-			$key_lower = strtolower( (string) $key );
-			
-			$is_sensitive = false;
-			foreach ( $sensitive_keys as $sensitive ) {
-				if ( strpos( $key_lower, $sensitive ) !== false ) {
-					$is_sensitive = true;
-					break;
-				}
-			}
-
-			if ( $is_sensitive ) {
-				continue;
-			}
-
-			// Recursively filter nested arrays
-			if ( is_array( $value ) ) {
-				$filtered[ $key ] = $this->filter_sensitive_array( $value );
-			} else {
-				$filtered[ $key ] = $value;
-			}
-		}
-
-		return $filtered;
 	}
 
 	/**

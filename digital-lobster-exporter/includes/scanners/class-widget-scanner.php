@@ -12,25 +12,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class Widget_Scanner
+ * Class Digital_Lobster_Exporter_Widget_Scanner
  *
- * Collects and exports WordPress widgets and sidebars including:
+ * Collects WordPress widgets and sidebars including:
  * - All registered sidebars
  * - All active widgets with settings
  * - Text widget content including HTML and shortcodes
- * - Filters out widgets with PII
+ * - Delegates PII/sensitive filtering to Security_Filters
  */
-class Widget_Scanner {
+class Digital_Lobster_Exporter_Widget_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
-	 * PII-sensitive widget types to filter
+	 * Constructor.
 	 *
-	 * @var array
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	private $sensitive_widgets = array(
-		'recent-comments',
-		'rss',
-	);
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect widget data
@@ -132,22 +131,11 @@ class Widget_Scanner {
 			return null;
 		}
 		
-		// Check if this is a sensitive widget type
-		if ( $this->is_sensitive_widget( $parsed['base'] ) ) {
-			return array(
-				'id'       => $widget_id,
-				'type'     => $parsed['base'],
-				'name'     => $widget['name'],
-				'filtered' => true,
-				'reason'   => 'Contains potentially sensitive information',
-			);
-		}
-		
 		// Get widget settings
 		$settings = $this->get_widget_settings( $parsed['base'], $parsed['number'] );
 		
-		// Filter PII from settings
-		$settings = $this->filter_pii_from_settings( $settings );
+		// Delegate PII/sensitive filtering to centralized Security_Filters
+		$settings = Digital_Lobster_Exporter_Security_Filters::filter_widget_data( $settings );
 		
 		$widget_data = array(
 			'id'       => $widget_id,
@@ -182,16 +170,6 @@ class Widget_Scanner {
 	}
 
 	/**
-	 * Check if widget type is sensitive
-	 *
-	 * @param string $widget_base Widget base ID
-	 * @return bool True if sensitive
-	 */
-	private function is_sensitive_widget( $widget_base ) {
-		return in_array( $widget_base, $this->sensitive_widgets, true );
-	}
-
-	/**
 	 * Get widget settings from options
 	 *
 	 * @param string $widget_base Widget base ID
@@ -207,98 +185,5 @@ class Widget_Scanner {
 		}
 		
 		return array();
-	}
-
-	/**
-	 * Filter PII from widget settings
-	 *
-	 * @param array $settings Widget settings
-	 * @return array Filtered settings
-	 */
-	private function filter_pii_from_settings( $settings ) {
-		if ( empty( $settings ) || ! is_array( $settings ) ) {
-			return $settings;
-		}
-		
-		// List of keys that might contain PII
-		$pii_keys = array(
-			'email',
-			'author_email',
-			'user_email',
-			'contact_email',
-			'phone',
-			'telephone',
-			'address',
-			'street',
-			'city',
-			'zip',
-			'postal_code',
-		);
-		
-		foreach ( $pii_keys as $key ) {
-			if ( isset( $settings[ $key ] ) ) {
-				$settings[ $key ] = '[filtered-pii]';
-			}
-		}
-		
-		// Filter email addresses from text content
-		if ( isset( $settings['text'] ) ) {
-			$settings['text'] = $this->filter_emails_from_text( $settings['text'] );
-		}
-		
-		if ( isset( $settings['content'] ) ) {
-			$settings['content'] = $this->filter_emails_from_text( $settings['content'] );
-		}
-		
-		return $settings;
-	}
-
-	/**
-	 * Filter email addresses from text content
-	 *
-	 * @param string $text Text content
-	 * @return string Filtered text
-	 */
-	private function filter_emails_from_text( $text ) {
-		if ( empty( $text ) ) {
-			return $text;
-		}
-		
-		// Replace email addresses with placeholder
-		$text = preg_replace(
-			'/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/',
-			'[email]',
-			$text
-		);
-		
-		return $text;
-	}
-
-	/**
-	 * Export widgets to JSON file
-	 *
-	 * @param string $export_dir Export directory path
-	 * @return bool Success status
-	 */
-	public function export( $export_dir ) {
-		$widgets = $this->scan();
-
-		$file_path = trailingslashit( $export_dir ) . 'widgets.json';
-
-		$json = wp_json_encode( $widgets, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( false === $json ) {
-			error_log( 'Digital Lobster Exporter: Failed to encode widgets to JSON' );
-			return false;
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( false === $result ) {
-			error_log( 'Digital Lobster Exporter: Failed to write widgets.json' );
-			return false;
-		}
-
-		return true;
 	}
 }

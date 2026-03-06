@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Content Scanner Class
  */
-class Digital_Lobster_Exporter_Content_Scanner {
+class Digital_Lobster_Exporter_Content_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Block usage statistics.
@@ -34,20 +34,13 @@ class Digital_Lobster_Exporter_Content_Scanner {
 	private $settings = array();
 
 	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir = '';
-
-	/**
 	 * Constructor.
 	 *
-	 * @param string $export_dir Optional export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $export_dir = '' ) {
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 		$this->load_settings();
-		$this->export_dir = $export_dir;
 	}
 
 	/**
@@ -416,17 +409,17 @@ class Digital_Lobster_Exporter_Content_Scanner {
 	private function should_exclude_meta_key( $meta_key ) {
 		// Temporary and cache-related meta keys to exclude
 		$exclude_patterns = array(
-			'_edit_lock',           // Edit lock temporary data
-			'_edit_last',           // Last editor temporary data
-			'_wp_old_slug',         // Old slug redirects (handled separately)
-			'_wp_old_date',         // Old date temporary data
-			'_wp_trash_',           // Trash-related temporary data
-			'_transient_',          // Transients
-			'_site_transient_',     // Site transients
-			'_oembed_',             // oEmbed cache
-			'_encloseme',           // Pingback temporary data
-			'_pingme',              // Pingback temporary data
-			'_wp_attachment_backup_sizes', // Image backup data (large)
+			'_edit_lock',
+			'_edit_last',
+			'_wp_old_slug',
+			'_wp_old_date',
+			'_wp_trash_',
+			'_transient_',
+			'_site_transient_',
+			'_oembed_',
+			'_encloseme',
+			'_pingme',
+			'_wp_attachment_backup_sizes',
 		);
 
 		// Check exact matches and patterns
@@ -436,22 +429,13 @@ class Digital_Lobster_Exporter_Content_Scanner {
 			}
 		}
 
-		// Exclude sensitive meta keys (check for patterns anywhere in the key)
-		$sensitive_patterns = array(
-			'password',             // Any password fields
-			'api_key',              // API keys
-			'apikey',               // API keys (no underscore)
-			'secret',               // Secret keys
-			'token',                // Auth tokens
-			'private_key',          // Private keys
-			'privatekey',           // Private keys (no underscore)
-		);
+		// Delegate sensitive key checking to centralized Security_Filters.
+		if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_meta( $meta_key ) ) {
+			return true;
+		}
 
-		$meta_key_lower = strtolower( $meta_key );
-		foreach ( $sensitive_patterns as $pattern ) {
-			if ( strpos( $meta_key_lower, $pattern ) !== false ) {
-				return true;
-			}
+		if ( Digital_Lobster_Exporter_Security_Filters::is_sensitive_option( $meta_key ) ) {
+			return true;
 		}
 
 		return false;
@@ -465,56 +449,11 @@ class Digital_Lobster_Exporter_Content_Scanner {
 	 * @return mixed Filtered meta value.
 	 */
 	private function filter_sensitive_meta_value( $meta_key, $meta_value ) {
-		// If it's an array or object, recursively filter
 		if ( is_array( $meta_value ) ) {
-			return $this->filter_sensitive_array( $meta_value );
-		}
-
-		// For string values, check for sensitive patterns
-		if ( is_string( $meta_value ) ) {
-			// Don't filter SEO meta or other important string fields
-			// Just return as-is for now
-			return $meta_value;
+			return Digital_Lobster_Exporter_Security_Filters::filter_post_meta( $meta_value );
 		}
 
 		return $meta_value;
-	}
-
-	/**
-	 * Recursively filter sensitive data from arrays.
-	 *
-	 * @param array $array Array to filter.
-	 * @return array Filtered array.
-	 */
-	private function filter_sensitive_array( $array ) {
-		$filtered = array();
-
-		foreach ( $array as $key => $value ) {
-			// Skip sensitive keys in arrays
-			$sensitive_keys = array( 'password', 'api_key', 'secret', 'token', 'private_key' );
-			$key_lower = strtolower( (string) $key );
-			
-			$is_sensitive = false;
-			foreach ( $sensitive_keys as $sensitive ) {
-				if ( strpos( $key_lower, $sensitive ) !== false ) {
-					$is_sensitive = true;
-					break;
-				}
-			}
-
-			if ( $is_sensitive ) {
-				continue;
-			}
-
-			// Recursively filter nested arrays
-			if ( is_array( $value ) ) {
-				$filtered[ $key ] = $this->filter_sensitive_array( $value );
-			} else {
-				$filtered[ $key ] = $value;
-			}
-		}
-
-		return $filtered;
 	}
 
 	/**

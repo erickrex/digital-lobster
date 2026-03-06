@@ -12,16 +12,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class Settings_Scanner
+ * Class Digital_Lobster_Exporter_Settings_Scanner
  *
- * Collects and exports WordPress site settings including:
+ * Collects WordPress site settings including:
  * - Core site settings (title, tagline, email, timezone)
  * - Language settings and locale
  * - Reading settings (posts per page, RSS)
  * - Discussion settings
  * - Media settings (image sizes, upload paths)
  */
-class Settings_Scanner {
+class Digital_Lobster_Exporter_Settings_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
+	 */
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect site settings
@@ -214,33 +223,5 @@ class Settings_Scanner {
 		$path = preg_replace( '#^/usr/share/#', '', $path );
 
 		return $path;
-	}
-
-	/**
-	 * Export settings to JSON file
-	 *
-	 * @param string $export_dir Export directory path
-	 * @return bool Success status
-	 */
-	public function export( $export_dir ) {
-		$settings = $this->scan();
-
-		$file_path = trailingslashit( $export_dir ) . 'site_settings.json';
-
-		$json = wp_json_encode( $settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( false === $json ) {
-			error_log( 'Digital Lobster Exporter: Failed to encode settings to JSON' );
-			return false;
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( false === $result ) {
-			error_log( 'Digital Lobster Exporter: Failed to write site_settings.json' );
-			return false;
-		}
-
-		return true;
 	}
 }

@@ -16,14 +16,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Shortcode Scanner Class
  */
-class Digital_Lobster_Exporter_Shortcode_Scanner {
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir = '';
+class Digital_Lobster_Exporter_Shortcode_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Shortcode usage data.
@@ -35,10 +28,10 @@ class Digital_Lobster_Exporter_Shortcode_Scanner {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $export_dir Export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $export_dir = '' ) {
-		$this->export_dir = $export_dir;
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
 	}
 
 	/**
@@ -62,9 +55,6 @@ class Digital_Lobster_Exporter_Shortcode_Scanner {
 
 			// Build the inventory.
 			$inventory = $this->build_inventory( $registered_shortcodes );
-
-			// Export to JSON.
-			$this->export_inventory( $inventory );
 
 			$results['data'] = array(
 				'total_registered' => count( $registered_shortcodes ),
@@ -111,19 +101,8 @@ class Digital_Lobster_Exporter_Shortcode_Scanner {
 	 * @return string Callback description.
 	 */
 	private function get_callback_info( $callback ) {
-		if ( is_string( $callback ) ) {
-			return $callback;
-		} elseif ( is_array( $callback ) && count( $callback ) === 2 ) {
-			$class  = is_object( $callback[0] ) ? get_class( $callback[0] ) : $callback[0];
-			$method = $callback[1];
-			return $class . '::' . $method;
-		} elseif ( is_object( $callback ) && ( $callback instanceof Closure ) ) {
-			return 'Closure';
-		} elseif ( is_object( $callback ) ) {
-			return get_class( $callback ) . '::__invoke';
-		}
-
-		return 'Unknown';
+		$resolved = Digital_Lobster_Exporter_Callback_Resolver::resolve( $callback );
+		return isset( $resolved['name'] ) ? $resolved['name'] : 'Unknown';
 	}
 
 	/**
@@ -138,9 +117,6 @@ class Digital_Lobster_Exporter_Shortcode_Scanner {
 			'type' => 'unknown',
 			'name' => 'Unknown',
 		);
-
-		// Try to identify from callback.
-		$callback_info = $this->get_callback_info( $callback );
 
 		// Check if it's a WordPress core shortcode.
 		$core_shortcodes = array(
@@ -158,101 +134,14 @@ class Digital_Lobster_Exporter_Shortcode_Scanner {
 			return $source;
 		}
 
-		// Try to identify from reflection.
-		try {
-			if ( is_array( $callback ) && count( $callback ) === 2 ) {
-				$reflection = is_object( $callback[0] )
-					? new ReflectionClass( $callback[0] )
-					: new ReflectionClass( $callback[0] );
+		// Use Callback_Resolver to get file info, then Source_Identifier.
+		$resolved = Digital_Lobster_Exporter_Callback_Resolver::resolve( $callback );
 
-				$filename = $reflection->getFileName();
-
-				if ( $filename ) {
-					$source = $this->identify_source_from_file( $filename );
-				}
-			} elseif ( is_string( $callback ) && function_exists( $callback ) ) {
-				$reflection = new ReflectionFunction( $callback );
-				$filename   = $reflection->getFileName();
-
-				if ( $filename ) {
-					$source = $this->identify_source_from_file( $filename );
-				}
-			}
-		} catch ( Exception $e ) {
-			// Reflection failed, keep unknown.
+		if ( isset( $resolved['file'] ) && ! empty( $resolved['file'] ) ) {
+			$source = Digital_Lobster_Exporter_Source_Identifier::identify( $resolved['file'] );
 		}
 
 		return $source;
-	}
-
-	/**
-	 * Identify source from file path.
-	 *
-	 * @param string $filename File path.
-	 * @return array Source information.
-	 */
-	private function identify_source_from_file( $filename ) {
-		$source = array(
-			'type' => 'unknown',
-			'name' => 'Unknown',
-		);
-
-		// Check if it's from a plugin.
-		if ( strpos( $filename, WP_PLUGIN_DIR ) !== false ) {
-			$relative = str_replace( WP_PLUGIN_DIR . '/', '', $filename );
-			$parts    = explode( '/', $relative );
-
-			if ( ! empty( $parts[0] ) ) {
-				$plugin_slug = $parts[0];
-				$plugin_data = $this->get_plugin_data( $plugin_slug );
-
-				$source['type'] = 'plugin';
-				$source['name'] = $plugin_data['name'];
-				$source['slug'] = $plugin_slug;
-			}
-		} elseif ( strpos( $filename, get_template_directory() ) !== false ) {
-			// From active theme.
-			$theme          = wp_get_theme();
-			$source['type'] = 'theme';
-			$source['name'] = $theme->get( 'Name' );
-			$source['slug'] = $theme->get_stylesheet();
-		} elseif ( strpos( $filename, get_stylesheet_directory() ) !== false ) {
-			// From child theme.
-			$theme          = wp_get_theme();
-			$source['type'] = 'theme';
-			$source['name'] = $theme->get( 'Name' );
-			$source['slug'] = $theme->get_stylesheet();
-		}
-
-		return $source;
-	}
-
-	/**
-	 * Get plugin data from slug.
-	 *
-	 * @param string $plugin_slug Plugin slug.
-	 * @return array Plugin data.
-	 */
-	private function get_plugin_data( $plugin_slug ) {
-		if ( ! function_exists( 'get_plugins' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-
-		$all_plugins = get_plugins();
-
-		foreach ( $all_plugins as $plugin_file => $plugin_data ) {
-			if ( strpos( $plugin_file, $plugin_slug . '/' ) === 0 ) {
-				return array(
-					'name' => $plugin_data['Name'],
-					'file' => $plugin_file,
-				);
-			}
-		}
-
-		return array(
-			'name' => ucwords( str_replace( array( '-', '_' ), ' ', $plugin_slug ) ),
-			'file' => '',
-		);
 	}
 
 	/**
@@ -420,24 +309,4 @@ class Digital_Lobster_Exporter_Shortcode_Scanner {
 		return $inventory;
 	}
 
-	/**
-	 * Export inventory to JSON file.
-	 *
-	 * @param array $inventory Inventory data.
-	 */
-	private function export_inventory( $inventory ) {
-		$file_path = $this->export_dir . '/shortcodes_inventory.json';
-
-		$json = wp_json_encode( $inventory, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( $json === false ) {
-			throw new Exception( 'Failed to encode shortcodes inventory to JSON' );
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( $result === false ) {
-			throw new Exception( 'Failed to write shortcodes_inventory.json' );
-		}
-	}
 }

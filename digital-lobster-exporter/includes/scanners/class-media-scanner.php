@@ -16,7 +16,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Media Scanner Class
  */
-class Digital_Lobster_Exporter_Media_Scanner {
+class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Exported content data (from ContentScanner).
@@ -24,13 +24,6 @@ class Digital_Lobster_Exporter_Media_Scanner {
 	 * @var array
 	 */
 	private $exported_content = array();
-
-	/**
-	 * Export directory path.
-	 *
-	 * @var string
-	 */
-	private $export_dir = '';
 
 	/**
 	 * Referenced media items.
@@ -56,12 +49,11 @@ class Digital_Lobster_Exporter_Media_Scanner {
 	/**
 	 * Constructor.
 	 *
-	 * @param array  $exported_content Content data from ContentScanner.
-	 * @param string $export_dir Export directory path.
+	 * @param array $deps Optional. Associative array of dependencies.
 	 */
-	public function __construct( $exported_content = array(), $export_dir = '' ) {
-		$this->exported_content = $exported_content;
-		$this->export_dir = $export_dir;
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+		$this->exported_content = isset( $this->context['content'] ) ? $this->context['content'] : array();
 		$this->upload_dir = wp_upload_dir();
 	}
 

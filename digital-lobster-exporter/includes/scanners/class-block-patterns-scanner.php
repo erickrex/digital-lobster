@@ -12,15 +12,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class Block_Patterns_Scanner
+ * Class Digital_Lobster_Exporter_Block_Patterns_Scanner
  *
- * Collects and exports WordPress block patterns including:
+ * Collects WordPress block patterns including:
  * - All registered block patterns
  * - Pattern metadata (name, title, description, categories)
  * - Reusable blocks (wp_block post type)
  * - Usage tracking for reusable blocks
  */
-class Block_Patterns_Scanner {
+class Digital_Lobster_Exporter_Block_Patterns_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
+	 */
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect block pattern data
@@ -219,33 +228,5 @@ class Block_Patterns_Scanner {
 		}
 
 		return $sanitized;
-	}
-
-	/**
-	 * Export block patterns to JSON file
-	 *
-	 * @param string $export_dir Export directory path
-	 * @return bool Success status
-	 */
-	public function export( $export_dir ) {
-		$data = $this->scan();
-
-		$file_path = trailingslashit( $export_dir ) . 'block_patterns.json';
-
-		$json = wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-
-		if ( false === $json ) {
-			error_log( 'Digital Lobster Exporter: Failed to encode block patterns to JSON' );
-			return false;
-		}
-
-		$result = file_put_contents( $file_path, $json );
-
-		if ( false === $result ) {
-			error_log( 'Digital Lobster Exporter: Failed to write block_patterns.json' );
-			return false;
-		}
-
-		return true;
 	}
 }

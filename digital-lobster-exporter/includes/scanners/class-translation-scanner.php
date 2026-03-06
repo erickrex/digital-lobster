@@ -18,7 +18,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Translation Scanner Class
  */
-class Digital_Lobster_Exporter_Translation_Scanner {
+class Digital_Lobster_Exporter_Translation_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
 
 	/**
 	 * Detected multilingual plugin.
@@ -26,6 +26,15 @@ class Digital_Lobster_Exporter_Translation_Scanner {
 	 * @var string|null
 	 */
 	private $detected_plugin = null;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
+	 */
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect translation data.
@@ -669,25 +678,4 @@ class Digital_Lobster_Exporter_Translation_Scanner {
 		return isset( $languages[ $code ] ) ? $languages[ $code ] : $code;
 	}
 
-	/**
-	 * Export translation data to JSON file.
-	 *
-	 * @param string $export_dir Export directory path.
-	 */
-	public function export( $export_dir ) {
-		$data = $this->scan();
-
-		// If no multilingual plugin detected, don't create the file
-		if ( ! $data ) {
-			return;
-		}
-
-		$file_path = trailingslashit( $export_dir ) . 'translations.json';
-
-		$json_data = wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
-
-		if ( $json_data ) {
-			file_put_contents( $file_path, $json_data );
-		}
-	}
 }

@@ -16,7 +16,16 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Site Scanner Class
  */
-class Digital_Lobster_Exporter_Site_Scanner {
+class Digital_Lobster_Exporter_Site_Scanner extends Digital_Lobster_Exporter_Scanner_Base {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $deps Optional. Associative array of dependencies.
+	 */
+	public function __construct( array $deps = array() ) {
+		parent::__construct( $deps );
+	}
 
 	/**
 	 * Scan and collect site information.
