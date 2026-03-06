@@ -355,9 +355,11 @@ class QAAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _collect_project_files(context: dict[str, Any]) -> dict[str, str]:
+    def _collect_project_files(
+        context: dict[str, Any]
+    ) -> dict[str, str | bytes]:
         """Merge scaffold + importer content files into a single dict."""
-        files: dict[str, str] = {}
+        files: dict[str, str | bytes] = {}
         scaffold = context.get("astro_project", {})
         if isinstance(scaffold, dict):
             files.update(scaffold)
@@ -367,14 +369,18 @@ class QAAgent(BaseAgent):
         return files
 
     @staticmethod
-    def _write_project(files: dict[str, str]) -> str:
+    def _write_project(files: dict[str, str | bytes]) -> str:
         """Write *files* to a temporary directory and return its path."""
         tmp = tempfile.mkdtemp(prefix="qa_astro_")
         for rel_path, content in files.items():
             full = os.path.join(tmp, rel_path)
             os.makedirs(os.path.dirname(full), exist_ok=True)
-            with open(full, "w", encoding="utf-8") as fh:
-                fh.write(content)
+            if isinstance(content, bytes):
+                with open(full, "wb") as fh:
+                    fh.write(content)
+            else:
+                with open(full, "w", encoding="utf-8") as fh:
+                    fh.write(content)
         return tmp
 
     async def _run_build(self, project_dir: str) -> tuple[bool, list[str]]:
@@ -524,5 +530,4 @@ class QAAgent(BaseAgent):
                 return f"{resp.status_code}"
         except httpx.HTTPError as exc:
             return f"unreachable ({exc})"
-
 

@@ -15,6 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from src.api.app import create_app
 from src.api.routes import _run_states, configure_routes
 from src.orchestrator.state import PipelineRunState
+from src.utils.scrubbing import REDACTED
 
 
 @pytest.fixture(autouse=True)
@@ -124,6 +125,23 @@ class TestMigrationStatus:
         resp = await client.get("/migrations/nonexistent")
         assert resp.status_code == 404
 
+    async def test_status_scrubs_secret_error_fields(
+        self, client: AsyncClient
+    ) -> None:
+        state = PipelineRunState.create(
+            run_id="run-secret", bundle_key="uploads/abc/export.zip"
+        )
+        state.error = {
+            "agent": "content_type_generator",
+            "message": "failed",
+            "strapi_api_token": "tok-secret",
+        }
+        _run_states["run-secret"] = state
+
+        resp = await client.get("/migrations/run-secret")
+        assert resp.status_code == 200
+        assert resp.json()["error"]["strapi_api_token"] == REDACTED
+
 
 class TestArtifactList:
     async def test_list_artifacts_returns_names(
@@ -146,6 +164,19 @@ class TestArtifactList:
     ) -> None:
         resp = await client.get("/migrations/nonexistent/artifacts")
         assert resp.status_code == 404
+
+    async def test_sensitive_artifacts_are_not_listed(
+        self, client: AsyncClient
+    ) -> None:
+        state = PipelineRunState.create(
+            run_id="run-456", bundle_key="uploads/abc/export.zip"
+        )
+        state.artifacts = {"prd_md": "# PRD"}
+        _run_states["run-456"] = state
+
+        resp = await client.get("/migrations/run-456/artifacts")
+        assert resp.status_code == 200
+        assert resp.json()["artifacts"] == ["prd_md"]
 
 
 class TestArtifactDownload:
@@ -181,6 +212,20 @@ class TestArtifactDownload:
         _run_states["run-aaa"] = state
 
         resp = await client.get("/migrations/run-aaa/artifacts/missing")
+        assert resp.status_code == 404
+
+    async def test_sensitive_artifact_download_returns_404(
+        self, client: AsyncClient
+    ) -> None:
+        state = PipelineRunState.create(
+            run_id="run-safe", bundle_key="uploads/abc/export.zip"
+        )
+        state.artifacts = {"prd_md": "# PRD"}
+        _run_states["run-safe"] = state
+
+        resp = await client.get(
+            "/migrations/run-safe/artifacts/strapi_api_token"
+        )
         assert resp.status_code == 404
 
 

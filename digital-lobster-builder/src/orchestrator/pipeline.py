@@ -62,14 +62,23 @@ CMS_AGENT_ORDER: list[str] = [
     "deployment_pipeline",
 ]
 
-# Artifacts that are only used as transient in-memory pipeline context
-# and should not be persisted to Spaces as downloadable outputs.
-NON_PERSISTED_ARTIFACTS: set[str] = {
-    "export_bundle",
-    "content_items",
-    "menus",
-    "redirect_rules",
-    "html_snapshots",
+# Artifacts that may be safely persisted and downloaded by API consumers.
+PERSISTED_ARTIFACTS: set[str] = {
+    "inventory",
+    "prd_md",
+    "modeling_manifest",
+    "theme_css",
+    "tokens_css",
+    "layouts",
+    "content_files",
+    "media_map",
+    "navigation",
+    "redirects",
+    "astro_project",
+    "astro_project_zip",
+    "qa_report",
+    "migration_report",
+    "deployment_report",
 }
 
 
@@ -251,7 +260,7 @@ class PipelineOrchestrator:
         return {
             name: value
             for name, value in artifacts.items()
-            if name not in NON_PERSISTED_ARTIFACTS
+            if name in PERSISTED_ARTIFACTS
         }
 
     def _make_tracer(self, run_id: str) -> Tracer:

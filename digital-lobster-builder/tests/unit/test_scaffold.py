@@ -681,6 +681,50 @@ class TestScaffoldAgentExecute:
         assert "public/styles/tokens.css" in project
 
     @pytest.mark.asyncio
+    async def test_media_assets_written_to_public_media_with_nested_paths(self):
+        agent = ScaffoldAgent(gradient_client=_make_gradient_client())
+        context = {
+            "inventory": _make_inventory(has_media_manifest=True),
+            "modeling_manifest": _make_manifest(),
+            "export_bundle": {
+                "media/2024/01/photo.jpg": b"jpeg-bytes",
+            },
+            "media_manifest": [
+                {
+                    "source_url": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
+                    "bundle_path": "media/2024/01/photo.jpg",
+                    "artifact_path": "media/2024/01/photo.jpg",
+                    "filename": "photo.jpg",
+                }
+            ],
+        }
+        result = await agent.execute(context)
+        project = result.artifacts["astro_project"]
+        assert project["public/media/2024/01/photo.jpg"] == b"jpeg-bytes"
+
+    @pytest.mark.asyncio
+    async def test_missing_media_asset_emits_warning(self):
+        agent = ScaffoldAgent(gradient_client=_make_gradient_client())
+        context = {
+            "inventory": _make_inventory(has_media_manifest=True),
+            "modeling_manifest": _make_manifest(),
+            "export_bundle": {},
+            "media_manifest": [
+                {
+                    "source_url": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
+                    "bundle_path": "media/2024/01/photo.jpg",
+                    "artifact_path": "media/2024/01/photo.jpg",
+                    "filename": "photo.jpg",
+                }
+            ],
+        }
+        result = await agent.execute(context)
+        assert any(
+            "Media asset missing from export bundle: media/2024/01/photo.jpg" in warning
+            for warning in result.warnings
+        )
+
+    @pytest.mark.asyncio
     async def test_island_components_get_hydration_directives(self):
         components = [
             _make_island_component(),

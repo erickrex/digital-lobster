@@ -12,11 +12,16 @@ from typing import Any
 from urllib.parse import urlparse
 
 from src.agents.base import AgentResult, BaseAgent
+from src.agents.scaffold import package_as_zip
 from src.models.content import SerializedContent, WordPressContentItem
 from src.models.modeling_manifest import (
     ComponentMapping,
     ContentCollectionSchema,
     ModelingManifest,
+)
+from src.pipeline_context import (
+    MediaManifestEntry,
+    extract_media_manifest as shared_extract_media_manifest,
 )
 from src.serialization.frontmatter import serialize_frontmatter
 from src.serialization.markdown import blocks_to_markdown
@@ -52,6 +57,19 @@ def _extract_menus(context: dict[str, Any]) -> list[dict]:
 def _extract_redirect_rules(context: dict[str, Any]) -> list[dict]:
     """Extract redirect rules from pipeline context."""
     return context.get("redirect_rules", [])
+
+
+def _extract_media_manifest(context: dict[str, Any]) -> list[MediaManifestEntry]:
+    """Extract normalized media manifest entries from pipeline context."""
+    return shared_extract_media_manifest(context)
+
+
+def _extract_astro_project(context: dict[str, Any]) -> dict[str, str | bytes]:
+    """Extract the current Astro project scaffold from context."""
+    raw = context.get("astro_project", {})
+    if isinstance(raw, dict):
+        return dict(raw)
+    return {}
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +171,7 @@ def scan_media_urls(content_items: list[WordPressContentItem]) -> dict[str, str]
     """Scan all content items for media URLs and build a media map.
 
     Returns a dict mapping original WordPress media URLs to local
-    ``public/media/{filename}`` paths.
+    ``/media/{path}`` URLs.
     """
     media_map: dict[str, str] = {}
     for item in content_items:
@@ -162,18 +180,34 @@ def scan_media_urls(content_items: list[WordPressContentItem]) -> dict[str, str]
             for url in _MEDIA_URL_RE.findall(block.html):
                 if url not in media_map:
                     filename = _safe_filename(url)
-                    media_map[url] = f"/public/media/{filename}"
+                    media_map[url] = f"/media/{filename}"
         # Scan raw_html
         for url in _MEDIA_URL_RE.findall(item.raw_html):
             if url not in media_map:
                 filename = _safe_filename(url)
-                media_map[url] = f"/public/media/{filename}"
+                media_map[url] = f"/media/{filename}"
         # Featured media
         if item.featured_media:
             fm_url = item.featured_media.get("url", "")
             if fm_url and fm_url not in media_map:
                 filename = _safe_filename(fm_url)
-                media_map[fm_url] = f"/public/media/{filename}"
+                media_map[fm_url] = f"/media/{filename}"
+    return media_map
+
+
+def build_media_map(
+    content_items: list[WordPressContentItem],
+    media_manifest: list[MediaManifestEntry],
+) -> dict[str, str]:
+    """Build a media map only for assets present in the normalized bundle manifest."""
+    if not media_manifest:
+        return {}
+
+    referenced_urls = set(scan_media_urls(content_items).keys())
+    media_map: dict[str, str] = {}
+    for entry in media_manifest:
+        if entry.source_url in referenced_urls:
+            media_map[entry.source_url] = entry.public_url
     return media_map
 
 
@@ -402,6 +436,7 @@ class ImporterAgent(BaseAgent):
         raw_items = _extract_content_items(context)
         menus = _extract_menus(context)
         redirect_rules = _extract_redirect_rules(context)
+        media_manifest = _extract_media_manifest(context)
 
         # Parse content items, skipping malformed ones
         content_items: list[WordPressContentItem] = []
@@ -418,7 +453,7 @@ class ImporterAgent(BaseAgent):
                 logger.error("Malformed content item at index %d: %s", i, exc)
 
         # Generate media map
-        media_map = scan_media_urls(content_items)
+        media_map = build_media_map(content_items, media_manifest)
 
         # Convert each content item
         content_files: dict[str, str] = {}
@@ -456,14 +491,22 @@ class ImporterAgent(BaseAgent):
         # Generate redirects
         redirects = generate_redirects(content_items, manifest, redirect_rules)
 
+        artifacts: dict[str, Any] = {
+            "content_files": content_files,
+            "media_map": media_map,
+            "navigation": navigation,
+            "redirects": redirects,
+        }
+
+        astro_project = _extract_astro_project(context)
+        if astro_project:
+            astro_project.update(content_files)
+            artifacts["astro_project"] = astro_project
+            artifacts["astro_project_zip"] = package_as_zip(astro_project)
+
         return AgentResult(
             agent_name="importer",
-            artifacts={
-                "content_files": content_files,
-                "media_map": media_map,
-                "navigation": navigation,
-                "redirects": redirects,
-            },
+            artifacts=artifacts,
             warnings=warnings,
             duration_seconds=time.monotonic() - start,
         )

@@ -26,10 +26,11 @@ from src.models.inventory import (
     ThemeMetadata,
 )
 from src.models.manifest import ExportManifest
+from src.pipeline_context import MediaManifestEntry
 
 logger = logging.getLogger(__name__)
 
-# Required top-level entries in the export bundle ZIP.
+# Preferred required entries in the export bundle ZIP.
 REQUIRED_FILES = ("MANIFEST.json", "site/site_info.json")
 REQUIRED_DIRS = ("theme/", "content/", "menus/")
 
@@ -97,11 +98,11 @@ class BlueprintIntakeAgent(BaseAgent):
                 duration_seconds=time.monotonic() - start,
             )
 
-        # 3. Parse MANIFEST.json
+        # 3. Parse manifest + site metadata with compatibility fallbacks
         manifest = _parse_manifest(zf)
 
-        # 4. Parse site_info.json
-        site_info = _load_json(zf, "site/site_info.json")
+        # 4. Parse site_info/site_blueprint
+        site_info = _load_site_info(zf)
 
         # 5. Build Inventory
         inventory = build_inventory(zf, manifest, site_info, warnings)
@@ -110,6 +111,7 @@ class BlueprintIntakeAgent(BaseAgent):
         menus = extract_menu_definitions(zf, warnings)
         redirect_rules = extract_redirect_rules(zf, warnings)
         html_snapshots = extract_html_snapshots(zf, warnings)
+        media_manifest = extract_media_manifest(zf, warnings)
 
         # 6. Create Knowledge Base and upload documents
         kb_ref: str | None = None
@@ -129,6 +131,7 @@ class BlueprintIntakeAgent(BaseAgent):
                 "menus": menus,
                 "redirect_rules": redirect_rules,
                 "html_snapshots": html_snapshots,
+                "media_manifest": [entry.model_dump() for entry in media_manifest],
             },
             warnings=warnings,
             duration_seconds=time.monotonic() - start,
@@ -175,16 +178,27 @@ def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
     names = set(zf.namelist())
     errors: list[dict[str, str]] = []
 
-    for req_file in REQUIRED_FILES:
-        if req_file not in names:
-            errors.append({"path": req_file, "error": "missing required file"})
+    has_manifest = "MANIFEST.json" in names or "site_blueprint.json" in names
+    has_site_info = (
+        "site/site_info.json" in names or "site_blueprint.json" in names
+    )
+    has_menus = any(n.startswith("menus/") for n in names) or "menus.json" in names
 
-    for req_dir in REQUIRED_DIRS:
+    if not has_manifest:
+        errors.append({"path": "MANIFEST.json", "error": "missing required file"})
+    if not has_site_info:
+        errors.append(
+            {"path": "site/site_info.json", "error": "missing required file"}
+        )
+
+    for req_dir in ("theme/", "content/"):
         if not any(n.startswith(req_dir) for n in names):
             errors.append({"path": req_dir, "error": "missing required directory"})
+    if not has_menus:
+        errors.append({"path": "menus/", "error": "missing required directory"})
 
     # Validate that required JSON files are well-formed
-    for req_file in REQUIRED_FILES:
+    for req_file in ("MANIFEST.json", "site/site_info.json", "site_blueprint.json"):
         if req_file in names:
             try:
                 json.loads(zf.read(req_file))
@@ -221,8 +235,14 @@ def build_inventory(
         has_html_snapshots=any(
             n.startswith("snapshots/") for n in zf.namelist()
         ),
-        has_media_manifest="media/media_manifest.json" in zf.namelist(),
-        has_redirect_rules="redirects/redirects.json" in zf.namelist(),
+        has_media_manifest=(
+            "media/media_manifest.json" in zf.namelist()
+            or "media/media_map.json" in zf.namelist()
+        ),
+        has_redirect_rules=(
+            "redirects/redirects.json" in zf.namelist()
+            or "redirects.json" in zf.namelist()
+        ),
         has_seo_data=any(
             p.family == "yoast" for p in plugins
         ),
@@ -252,11 +272,17 @@ def collect_kb_documents(zf: zipfile.ZipFile) -> list[dict]:
         if candidate in names:
             documents.append(_make_kb_doc(zf, candidate))
             break
+    if "site_blueprint.json" in names and not any(
+        doc["metadata"]["file"] == "site/site_info.json" for doc in documents
+    ):
+        documents.append(_make_kb_doc(zf, "site_blueprint.json"))
 
     # Plugin fingerprints
     for name in names:
         if name.startswith("plugins/") and name.endswith(".json"):
             documents.append(_make_kb_doc(zf, name))
+    if "plugins_fingerprint.json" in names:
+        documents.append(_make_kb_doc(zf, "plugins_fingerprint.json"))
 
     # blocks_usage.json
     if "blocks_usage.json" in names:
@@ -332,7 +358,10 @@ def extract_menu_definitions(
     menu_defs: list[dict[str, Any]] = []
 
     for name in zf.namelist():
-        if not (name.startswith("menus/") and name.endswith(".json")):
+        if not (
+            (name.startswith("menus/") and name.endswith(".json"))
+            or name == "menus.json"
+        ):
             continue
         try:
             raw = json.loads(zf.read(name))
@@ -340,13 +369,21 @@ def extract_menu_definitions(
             warnings.append(f"Skipping malformed menu file {name}: {exc}")
             continue
 
-        menus = raw if isinstance(raw, list) else [raw]
+        if isinstance(raw, dict) and "menus" in raw and isinstance(raw["menus"], list):
+            menus = raw["menus"]
+        else:
+            menus = raw if isinstance(raw, list) else [raw]
         for menu in menus:
             if not isinstance(menu, dict):
                 continue
+            location = menu.get("location", "")
+            if not location:
+                locations = menu.get("locations")
+                if isinstance(locations, list) and locations:
+                    location = str(locations[0])
             menu_defs.append({
                 "name": menu.get("name", PurePosixPath(name).stem),
-                "location": menu.get("location", ""),
+                "location": location,
                 "items": _normalize_menu_items(menu.get("items", [])),
             })
 
@@ -357,8 +394,9 @@ def extract_redirect_rules(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> list[dict[str, Any]]:
     """Extract redirect rules from ``redirects/redirects.json`` when present."""
-    path = "redirects/redirects.json"
-    if path not in zf.namelist():
+    candidates = ("redirects/redirects.json", "redirects.json")
+    path = next((candidate for candidate in candidates if candidate in zf.namelist()), "")
+    if not path:
         return []
 
     try:
@@ -373,7 +411,70 @@ def extract_redirect_rules(
         rules = data.get("redirects", data.get("rules", []))
         if isinstance(rules, list):
             return [rule for rule in rules if isinstance(rule, dict)]
-    return []
+    return [] 
+
+
+def extract_media_manifest(
+    zf: zipfile.ZipFile, warnings: list[str]
+) -> list[MediaManifestEntry]:
+    """Extract and normalize media manifest entries from known bundle formats."""
+    raw_entries: list[Any] = []
+    if "media/media_manifest.json" in zf.namelist():
+        try:
+            data = json.loads(zf.read("media/media_manifest.json"))
+            raw_entries = data if isinstance(data, list) else []
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            warnings.append(
+                f"Skipping malformed media manifest file media/media_manifest.json: {exc}"
+            )
+    elif "media/media_map.json" in zf.namelist():
+        try:
+            data = json.loads(zf.read("media/media_map.json"))
+            raw_entries = data if isinstance(data, list) else []
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            warnings.append(
+                f"Skipping malformed media manifest file media/media_map.json: {exc}"
+            )
+
+    entries: list[MediaManifestEntry] = []
+    names = set(zf.namelist())
+    for raw in raw_entries:
+        if not isinstance(raw, dict):
+            continue
+        source_url = _coerce_text(
+            raw.get("url") or raw.get("wp_src") or raw.get("source_url")
+        )
+        bundle_path = _resolve_media_bundle_path(raw, names)
+        if not source_url or not bundle_path:
+            continue
+        artifact_path = bundle_path.lstrip("/")
+        if artifact_path.startswith("public/"):
+            artifact_path = artifact_path[len("public/"):]
+        entries.append(
+            MediaManifestEntry(
+                source_url=source_url,
+                bundle_path=bundle_path,
+                artifact_path=artifact_path,
+                filename=PurePosixPath(bundle_path).name,
+                alt_text=_coerce_text(
+                    raw.get("alt_text")
+                    or raw.get("alt")
+                    or (raw.get("metadata") or {}).get("alt")
+                ),
+                caption=_coerce_text(
+                    raw.get("caption")
+                    or (raw.get("metadata") or {}).get("caption")
+                ),
+                mime_type=_coerce_text(
+                    raw.get("mime_type")
+                    or (raw.get("metadata") or {}).get("mime_type")
+                ),
+                metadata=raw.get("metadata")
+                if isinstance(raw.get("metadata"), dict)
+                else None,
+            )
+        )
+    return entries
 
 
 def extract_html_snapshots(
@@ -609,6 +710,22 @@ def _load_json(zf: zipfile.ZipFile, path: str) -> dict:
 def _parse_manifest(zf: zipfile.ZipFile) -> ExportManifest:
     """Parse MANIFEST.json into an ExportManifest model."""
     data = _load_json(zf, "MANIFEST.json")
+    if not data and "site_blueprint.json" in zf.namelist():
+        blueprint = _load_json(zf, "site_blueprint.json")
+        export_metadata = (
+            blueprint.get("export_metadata", {})
+            if isinstance(blueprint, dict)
+            else {}
+        )
+        data = {
+            "export_version": export_metadata.get("version", ""),
+            "site_url": export_metadata.get("site_url", ""),
+            "export_date": export_metadata.get("export_date", ""),
+            "wordpress_version": export_metadata.get("wordpress_version", ""),
+            "total_files": export_metadata.get("total_files", 0),
+            "total_size_bytes": export_metadata.get("total_size_bytes", 0),
+            "files": export_metadata.get("files", {}),
+        }
     return ExportManifest(
         export_version=data.get("export_version", ""),
         site_url=data.get("site_url", ""),
@@ -618,6 +735,40 @@ def _parse_manifest(zf: zipfile.ZipFile) -> ExportManifest:
         total_size_bytes=data.get("total_size_bytes", 0),
         files=data.get("files", {}),
     )
+
+
+def _load_site_info(zf: zipfile.ZipFile) -> dict[str, Any]:
+    """Load site metadata from either builder or exporter bundle formats."""
+    site_info = _load_json(zf, "site/site_info.json")
+    if site_info:
+        return {
+            "site_url": site_info.get("site_url", site_info.get("url", "")),
+            "site_name": site_info.get("site_name", site_info.get("name", "")),
+            "wordpress_version": site_info.get(
+                "wordpress_version", site_info.get("version", "")
+            ),
+        }
+
+    blueprint = _load_json(zf, "site_blueprint.json")
+    if not blueprint:
+        return {}
+
+    export_metadata = (
+        blueprint.get("export_metadata", {})
+        if isinstance(blueprint, dict)
+        else {}
+    )
+    raw_site_info = (
+        blueprint.get("site_info", {}) if isinstance(blueprint, dict) else {}
+    )
+    return {
+        "site_url": raw_site_info.get("site_url", raw_site_info.get("url", export_metadata.get("site_url", ""))),
+        "site_name": raw_site_info.get("site_name", raw_site_info.get("name", export_metadata.get("site_name", ""))),
+        "wordpress_version": raw_site_info.get(
+            "wordpress_version",
+            raw_site_info.get("version", export_metadata.get("wordpress_version", "")),
+        ),
+    }
 
 
 def _extract_content_types(
@@ -706,6 +857,56 @@ def _extract_plugins(
             )
         )
 
+    if not plugins and "plugins_fingerprint.json" in zf.namelist():
+        try:
+            data = json.loads(zf.read("plugins_fingerprint.json"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            warnings.append(f"Skipping malformed plugin file plugins_fingerprint.json: {exc}")
+            data = []
+        if isinstance(data, list):
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                slug = item.get("slug", item.get("plugin_slug", "unknown"))
+                family = detect_plugin_family(slug)
+                plugins.append(
+                    PluginFeature(
+                        slug=slug,
+                        name=item.get("name", item.get("plugin_name", slug)),
+                        version=item.get("version", ""),
+                        family=family,
+                        custom_post_types=item.get("custom_post_types", []),
+                        custom_taxonomies=item.get("custom_taxonomies", []),
+                        detected_features=item.get(
+                            "detected_features", item.get("features", [])
+                        ),
+                    )
+                )
+
+    if not plugins and "site_blueprint.json" in zf.namelist():
+        blueprint = _load_json(zf, "site_blueprint.json")
+        active_plugins = blueprint.get("active_plugins", []) if isinstance(blueprint, dict) else []
+        if isinstance(active_plugins, list):
+            for item in active_plugins:
+                if not isinstance(item, dict):
+                    continue
+                slug = item.get("slug", "unknown")
+                family = detect_plugin_family(slug)
+                detected_features = item.get("detected_features")
+                if not detected_features:
+                    detected_features = item.get("blocks", []) or item.get("shortcodes", []) or item.get("rest_endpoints", [])
+                plugins.append(
+                    PluginFeature(
+                        slug=slug,
+                        name=item.get("name", slug),
+                        version=item.get("version", ""),
+                        family=family,
+                        custom_post_types=item.get("custom_post_types", []),
+                        custom_taxonomies=item.get("custom_taxonomies", []),
+                        detected_features=detected_features if isinstance(detected_features, list) else [],
+                    )
+                )
+
     return plugins
 
 
@@ -717,6 +918,8 @@ def _extract_taxonomies(
 
     # Try dedicated taxonomies file first
     tax_data = _load_json(zf, "taxonomies/taxonomies.json")
+    if not tax_data:
+        tax_data = _load_json(zf, "taxonomies.json")
     if isinstance(tax_data, list):
         for item in tax_data:
             if not isinstance(item, dict):
@@ -768,7 +971,10 @@ def _extract_menus(
     menus: list[MenuSummary] = []
 
     for name in zf.namelist():
-        if not (name.startswith("menus/") and name.endswith(".json")):
+        if not (
+            (name.startswith("menus/") and name.endswith(".json"))
+            or name == "menus.json"
+        ):
             continue
         try:
             data = json.loads(zf.read(name))
@@ -776,6 +982,8 @@ def _extract_menus(
             warnings.append(f"Skipping malformed menu file {name}: {exc}")
             continue
 
+        if isinstance(data, dict) and "menus" in data and isinstance(data["menus"], list):
+            data = data["menus"]
         if isinstance(data, list):
             # File contains a list of menus
             for menu in data:
@@ -857,3 +1065,22 @@ def _make_kb_doc(zf: zipfile.ZipFile, path: str) -> dict:
         "content": content,
         "metadata": {"file": path},
     }
+
+
+def _resolve_media_bundle_path(raw: dict[str, Any], names: set[str]) -> str:
+    """Resolve a media entry to a concrete bundle path."""
+    artifact = _coerce_text(
+        raw.get("artifact") or raw.get("bundle_path") or raw.get("path")
+    )
+    if artifact:
+        return artifact.lstrip("/")
+
+    filename = _coerce_text(raw.get("filename"))
+    if filename:
+        direct = f"media/{filename}"
+        if direct in names:
+            return direct
+        for candidate in names:
+            if candidate.startswith("media/") and PurePosixPath(candidate).name == filename:
+                return candidate
+    return ""

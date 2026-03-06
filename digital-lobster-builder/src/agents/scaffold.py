@@ -17,6 +17,9 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from src.agents.base import AgentResult, BaseAgent
+from src.agents.scaffold_cms import build_cms_project
+from src.agents.scaffold_shared import generate_content_config
+from src.agents.scaffold_static import build_static_project
 from src.models.inventory import Inventory
 from src.models.modeling_manifest import (
     ComponentMapping,
@@ -456,7 +459,7 @@ def _wp_type_to_ts(wp_type: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def package_as_zip(project: dict[str, str]) -> bytes:
+def package_as_zip(project: dict[str, str | bytes]) -> bytes:
     """Package a project file dict into a ZIP archive (in-memory bytes)."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -907,301 +910,50 @@ class ScaffoldAgent(BaseAgent):
             - ``astro_project_zip``: bytes of the ZIP archive
         """
         if context.get("cms_mode", False):
-            return await self._generate_cms_project(context)
-        return await self._generate_static_project(context)
-
-    async def _generate_static_project(self, context: dict[str, Any]) -> AgentResult:
-        """Generate a static Astro project (original code path)."""
-        start = time.monotonic()
-        warnings: list[str] = []
-
-        inventory = _extract_inventory(context)
-        manifest = _extract_modeling_manifest(context)
-        theme_layouts = _extract_theme_layouts(context)
-
-        project: dict[str, str] = {}
-
-        # 1. Configuration files
-        project["astro.config.mjs"] = generate_astro_config(inventory.site_url)
-        project["package.json"] = generate_package_json(inventory.site_name)
-        project["tsconfig.json"] = generate_tsconfig()
-
-        # 2. Layouts — wire in theme layouts with SEO head injection
-        self._generate_layouts(project, inventory, theme_layouts)
-        self._generate_theme_assets(project, context)
-
-        # 3. Pages — route files matching WordPress permalink structure
-        self._generate_pages(project, inventory, manifest, warnings)
-
-        # 4. Components — from modeling manifest component specs
-        self._generate_components(project, manifest, warnings)
-
-        # 5. Content collection config placeholder
-        project["src/content/config.ts"] = self._generate_content_config(manifest)
-
-        # 6. Public directory placeholder
-        project["public/.gitkeep"] = ""
-
-        # 7. README
-        project["README.md"] = generate_readme(inventory.site_name, inventory.site_url)
-
-        # 8. Package as ZIP
-        project_zip = package_as_zip(project)
-
-        return AgentResult(
-            agent_name="scaffold",
-            artifacts={
-                "astro_project": project,
-                "astro_project_zip": project_zip,
-            },
-            warnings=warnings,
-            duration_seconds=time.monotonic() - start,
-        )
-
-    async def _generate_cms_project(self, context: dict[str, Any]) -> AgentResult:
-        """Generate a Strapi-backed Astro project (CMS mode code path)."""
-        start = time.monotonic()
-        warnings: list[str] = []
-
-        inventory = _extract_inventory(context)
-        manifest = _extract_modeling_manifest(context)
-        theme_layouts = _extract_theme_layouts(context)
-        content_type_map = _extract_content_type_map(context)
-
-        project: dict[str, str] = {}
-
-        # 1. Configuration files (CMS-specific)
-        project["astro.config.mjs"] = generate_cms_astro_config(inventory.site_url)
-        project["package.json"] = generate_cms_package_json(inventory.site_name)
-        project["tsconfig.json"] = generate_tsconfig()
-        project[".env.example"] = generate_env_example()
-
-        # 2. Strapi API client and types
-        project["src/lib/strapi.ts"] = generate_strapi_client()
-        project["src/types/strapi.ts"] = generate_strapi_types(content_type_map)
-
-        # 3. Layouts — reuse theme layouts with SEO head injection
-        self._generate_layouts(project, inventory, theme_layouts)
-        self._generate_theme_assets(project, context)
-
-        # 4. RichTextRenderer component
-        project["src/components/RichTextRenderer.astro"] = generate_rich_text_renderer()
-
-        # 5. CMS route pages — fetch from Strapi API
-        self._generate_cms_pages(project, inventory, manifest, content_type_map, warnings)
-
-        # 6. Components — from modeling manifest component specs
-        self._generate_components(project, manifest, warnings)
-
-        # 7. Public directory placeholder
-        project["public/.gitkeep"] = ""
-
-        # 8. README
-        project["README.md"] = generate_readme(inventory.site_name, inventory.site_url)
-
-        # 9. Package as ZIP
-        project_zip = package_as_zip(project)
-
-        return AgentResult(
-            agent_name="scaffold",
-            artifacts={
-                "astro_project": project,
-                "astro_project_zip": project_zip,
-            },
-            warnings=warnings,
-            duration_seconds=time.monotonic() - start,
-        )
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _generate_layouts(
-        project: dict[str, str],
-        inventory: Inventory,
-        theme_layouts: dict[str, str],
-    ) -> None:
-        """Wire theme layouts into ``src/layouts/``, injecting SEO tags."""
-        # Base layout gets SEO head tags
-        project["src/layouts/BaseLayout.astro"] = generate_base_layout_with_seo(
-            inventory.site_name, theme_layouts
-        )
-
-        # Copy other theme layouts as-is
-        for name, content in theme_layouts.items():
-            if name == "BaseLayout.astro":
-                continue  # Already handled with SEO injection
-            project[f"src/layouts/{name}"] = content
-
-        # Ensure PageLayout and PostLayout exist
-        if "src/layouts/PageLayout.astro" not in project:
-            project["src/layouts/PageLayout.astro"] = _default_page_layout(inventory.site_name)
-        if "src/layouts/PostLayout.astro" not in project:
-            project["src/layouts/PostLayout.astro"] = _default_post_layout(inventory.site_name)
-
-    @staticmethod
-    def _generate_pages(
-        project: dict[str, str],
-        inventory: Inventory,
-        manifest: ModelingManifest,
-        warnings: list[str],
-    ) -> None:
-        """Generate route pages in ``src/pages/`` for each collection."""
-        # Home page
-        project["src/pages/index.astro"] = generate_home_page(
-            inventory.site_name, manifest.collections
-        )
-
-        # Per-collection routes
-        for collection in manifest.collections:
-            route_dir = _route_dir(collection.route_pattern)
-            if route_dir:
-                base = f"src/pages/{route_dir}"
-            else:
-                base = "src/pages"
-
-            page_layout_import = _layout_import_path(
-                route_dir, "PageLayout.astro"
+            return build_cms_project(
+                context,
+                _extract_inventory(context),
+                _extract_modeling_manifest(context),
+                _extract_theme_layouts(context),
+                _extract_content_type_map(context),
+                generate_cms_astro_config=generate_cms_astro_config,
+                generate_cms_package_json=generate_cms_package_json,
+                generate_tsconfig=generate_tsconfig,
+                generate_env_example=generate_env_example,
+                generate_strapi_client=generate_strapi_client,
+                generate_strapi_types=generate_strapi_types,
+                generate_rich_text_renderer=generate_rich_text_renderer,
+                generate_cms_home_page=generate_cms_home_page,
+                generate_cms_route_page=generate_cms_route_page,
+                generate_cms_index_page=generate_cms_index_page,
+                generate_component=generate_component,
+                generate_base_layout_with_seo=generate_base_layout_with_seo,
+                generate_readme=generate_readme,
+                package_as_zip=package_as_zip,
+                default_page_layout=_default_page_layout,
+                default_post_layout=_default_post_layout,
+                route_dir=_route_dir,
             )
-            post_layout_import = _layout_import_path(
-                route_dir, "PostLayout.astro"
-            )
-
-            # Dynamic route page: [slug].astro
-            project[f"{base}/[slug].astro"] = generate_route_page(
-                collection,
-                layout_import_path=post_layout_import,
-            )
-
-            # Index page for the collection
-            if route_dir:
-                project[f"{base}/index.astro"] = generate_index_page(
-                    collection,
-                    layout_import_path=page_layout_import,
-                )
-            else:
-                warnings.append(
-                    "Skipped generating collection index for root route "
-                    f"pattern '{collection.route_pattern}' to preserve home page."
-                )
-
-    @staticmethod
-    def _generate_cms_pages(
-        project: dict[str, str],
-        inventory: Inventory,
-        manifest: ModelingManifest,
-        content_type_map: "ContentTypeMap",
-        warnings: list[str],
-    ) -> None:
-        """Generate CMS route pages in ``src/pages/`` that fetch from Strapi API."""
-        # Home page
-        project["src/pages/index.astro"] = generate_cms_home_page(
-            inventory.site_name, manifest.collections
+        return build_static_project(
+            context,
+            _extract_inventory(context),
+            _extract_modeling_manifest(context),
+            _extract_theme_layouts(context),
+            generate_astro_config=generate_astro_config,
+            generate_package_json=generate_package_json,
+            generate_tsconfig=generate_tsconfig,
+            generate_home_page=generate_home_page,
+            generate_route_page=generate_route_page,
+            generate_index_page=generate_index_page,
+            generate_component=generate_component,
+            generate_base_layout_with_seo=generate_base_layout_with_seo,
+            generate_readme=generate_readme,
+            package_as_zip=package_as_zip,
+            default_page_layout=_default_page_layout,
+            default_post_layout=_default_post_layout,
+            layout_import_path=_layout_import_path,
+            route_dir=_route_dir,
         )
-
-        # Per-collection routes
-        for collection in manifest.collections:
-            api_id = content_type_map.mappings.get(collection.collection_name)
-            if not api_id:
-                warnings.append(
-                    f"No Strapi API ID found for collection '{collection.collection_name}'; "
-                    "skipping CMS route generation."
-                )
-                continue
-
-            route_dir = _route_dir(collection.route_pattern)
-            if route_dir:
-                base = f"src/pages/{route_dir}"
-            else:
-                base = "src/pages"
-
-            # Dynamic route page: [slug].astro — fetches single entry by slug
-            project[f"{base}/[slug].astro"] = generate_cms_route_page(
-                collection.collection_name,
-                api_id,
-                collection.route_pattern,
-            )
-
-            # Index page for the collection — fetches paginated entries
-            if route_dir:
-                project[f"{base}/index.astro"] = generate_cms_index_page(
-                    collection.collection_name,
-                    api_id,
-                    collection.route_pattern,
-                )
-            else:
-                warnings.append(
-                    "Skipped generating CMS collection index for root route "
-                    f"pattern '{collection.route_pattern}' to preserve home page."
-                )
-
-
-    @staticmethod
-    def _generate_components(
-        project: dict[str, str],
-        manifest: ModelingManifest,
-        warnings: list[str],
-    ) -> None:
-        """Generate component files in ``src/components/``."""
-        for mapping in manifest.components:
-            filename = f"src/components/{mapping.astro_component}.astro"
-            project[filename] = generate_component(mapping)
-            if mapping.is_island:
-                logger.info(
-                    "Island component %s uses %s",
-                    mapping.astro_component,
-                    mapping.hydration_directive or "client:load",
-                )
-
-    @staticmethod
-    def _generate_theme_assets(
-        project: dict[str, str],
-        context: dict[str, Any],
-    ) -> None:
-        """Write theme CSS and tokens.css into ``public/styles`` when present."""
-        theme_css = context.get("theme_css", {})
-        if isinstance(theme_css, dict):
-            for name, content in theme_css.items():
-                safe_name = PurePosixPath(str(name)).name
-                if not safe_name:
-                    continue
-                if isinstance(content, bytes):
-                    content = content.decode("utf-8", errors="replace")
-                elif not isinstance(content, str):
-                    content = str(content)
-                project[f"public/styles/{safe_name}"] = content
-
-        tokens_css = context.get("tokens_css", "")
-        if isinstance(tokens_css, bytes):
-            tokens_css = tokens_css.decode("utf-8", errors="replace")
-        if isinstance(tokens_css, str) and tokens_css.strip():
-            project["public/styles/tokens.css"] = tokens_css
-
-    @staticmethod
-    def _generate_content_config(manifest: ModelingManifest) -> str:
-        """Generate ``src/content/config.ts`` with Zod schemas for collections."""
-        lines = [
-            "import { defineCollection, z } from 'astro:content';",
-            "",
-        ]
-        collection_defs: list[str] = []
-        for coll in manifest.collections:
-            schema_fields = _build_zod_fields(coll)
-            lines.append(f"const {coll.collection_name} = defineCollection({{")
-            lines.append("  schema: z.object({")
-            for field_line in schema_fields:
-                lines.append(f"    {field_line}")
-            lines.append("  }),")
-            lines.append("});")
-            lines.append("")
-            collection_defs.append(f"  {coll.collection_name},")
-
-        lines.append("export const collections = {")
-        lines.extend(collection_defs)
-        lines.append("};")
-        lines.append("")
-        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

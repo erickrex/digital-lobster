@@ -195,6 +195,30 @@ class TestArtifactPersistenceFiltering:
         assert "run-filter/prd_md" in keys
         assert "run-filter/export_bundle" not in keys
 
+    async def test_sensitive_and_internal_artifacts_are_not_persisted(self) -> None:
+        spaces = AsyncMock()
+        spaces.upload = AsyncMock()
+        a0 = _make_mock_agent(
+            "a0",
+            artifacts={
+                "inventory": {"site_name": "Site"},
+                "strapi_api_token": "tok-secret",
+                "admin_credentials": {"email": "admin@example.com"},
+                "ssh_connection_string": "root@1.2.3.4",
+                "kb_ref": "kb-123",
+                "content_type_map": {"posts": "api::post.post"},
+            },
+        )
+        orch = _make_orchestrator([("a0", a0)], spaces_client=spaces)
+
+        state = await orch.run("bundle.zip", "run-sensitive")
+
+        assert state.status == "completed"
+        assert state.artifacts == {"inventory": {"site_name": "Site"}}
+
+        keys = [call.args[1] for call in spaces.upload.call_args_list]
+        assert keys == ["run-sensitive/inventory"]
+
 
 class TestArtifactAccumulation:
     """Each agent receives accumulated artifacts from all prior agents."""

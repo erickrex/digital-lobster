@@ -166,15 +166,16 @@ async def get_migration_status(run_id: str) -> MigrationStatus:
     state = _run_states.get(run_id)
     if state is None:
         raise HTTPException(status_code=404, detail="Run not found")
+    safe = state.to_safe_dict()
     return MigrationStatus(
-        run_id=state.run_id,
-        status=state.status,
-        current_agent=state.current_agent,
-        warnings=state.warnings,
-        error=state.error,
-        started_at=state.started_at,
-        completed_at=state.completed_at,
-        agent_durations=state.agent_durations,
+        run_id=safe["run_id"],
+        status=safe["status"],
+        current_agent=safe["current_agent"],
+        warnings=safe["warnings"],
+        error=safe["error"],
+        started_at=safe["started_at"],
+        completed_at=safe["completed_at"],
+        agent_durations=safe["agent_durations"],
     )
 
 

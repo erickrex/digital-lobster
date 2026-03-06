@@ -6,6 +6,7 @@ from typing import Any
 
 from src.agents.importer import (
     ImporterAgent,
+    build_media_map,
     build_frontmatter,
     convert_content_item,
     generate_navigation,
@@ -26,6 +27,7 @@ from src.models.modeling_manifest import (
     ModelingManifest,
     TaxonomyDefinition,
 )
+from src.pipeline_context import MediaManifestEntry
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +106,8 @@ def _make_context(
     menus: list | None = None,
     redirect_rules: list | None = None,
     inventory: dict | None = None,
+    media_manifest: list[dict[str, Any]] | None = None,
+    astro_project: dict[str, str | bytes] | None = None,
 ) -> dict[str, Any]:
     m = manifest or _make_manifest()
     return {
@@ -112,6 +116,8 @@ def _make_context(
         "menus": menus or [],
         "redirect_rules": redirect_rules or [],
         "inventory": inventory or {"site_url": "https://example.com"},
+        "media_manifest": media_manifest or [],
+        "astro_project": astro_project or {},
     }
 
 
@@ -247,7 +253,7 @@ class TestScanMediaUrls:
         )
         media_map = scan_media_urls([item])
         assert "https://wp.example.com/uploads/photo.jpg" in media_map
-        assert media_map["https://wp.example.com/uploads/photo.jpg"] == "/public/media/photo.jpg"
+        assert media_map["https://wp.example.com/uploads/photo.jpg"] == "/media/photo.jpg"
 
     def test_finds_urls_in_raw_html(self):
         item = _make_content_item(
@@ -288,25 +294,68 @@ class TestScanMediaUrls:
 class TestRewriteMediaUrls:
     def test_rewrites_urls(self):
         body = "Check out ![photo](https://wp.example.com/uploads/photo.jpg)"
-        media_map = {"https://wp.example.com/uploads/photo.jpg": "/public/media/photo.jpg"}
+        media_map = {"https://wp.example.com/uploads/photo.jpg": "/media/photo.jpg"}
         result = rewrite_media_urls(body, media_map)
         assert "https://wp.example.com/uploads/photo.jpg" not in result
-        assert "/public/media/photo.jpg" in result
+        assert "/media/photo.jpg" in result
 
     def test_no_change_when_no_match(self):
         body = "No media here"
-        result = rewrite_media_urls(body, {"https://other.com/x.jpg": "/public/media/x.jpg"})
+        result = rewrite_media_urls(body, {"https://other.com/x.jpg": "/media/x.jpg"})
         assert result == body
 
     def test_multiple_urls(self):
         body = "A https://a.com/1.jpg and https://b.com/2.png"
         media_map = {
-            "https://a.com/1.jpg": "/public/media/1.jpg",
-            "https://b.com/2.png": "/public/media/2.png",
+            "https://a.com/1.jpg": "/media/1.jpg",
+            "https://b.com/2.png": "/media/2.png",
         }
         result = rewrite_media_urls(body, media_map)
-        assert "/public/media/1.jpg" in result
-        assert "/public/media/2.png" in result
+        assert "/media/1.jpg" in result
+        assert "/media/2.png" in result
+
+
+# ---------------------------------------------------------------------------
+# Tests: build_media_map
+# ---------------------------------------------------------------------------
+
+class TestBuildMediaMap:
+    def test_uses_only_manifest_entries_present_in_bundle(self):
+        item = _make_content_item(
+            blocks=[
+                WordPressBlock(
+                    name="core/image",
+                    attrs={},
+                    html='<img src="https://wp.example.com/uploads/nested/photo.jpg" />',
+                )
+            ]
+        )
+        media_map = build_media_map(
+            [item],
+            [
+                MediaManifestEntry(
+                    source_url="https://wp.example.com/uploads/nested/photo.jpg",
+                    bundle_path="media/2024/01/photo.jpg",
+                    artifact_path="media/2024/01/photo.jpg",
+                    filename="photo.jpg",
+                ),
+                MediaManifestEntry(
+                    source_url="https://wp.example.com/uploads/unused.jpg",
+                    bundle_path="media/unused.jpg",
+                    artifact_path="media/unused.jpg",
+                    filename="unused.jpg",
+                ),
+            ],
+        )
+        assert media_map == {
+            "https://wp.example.com/uploads/nested/photo.jpg": "/media/2024/01/photo.jpg"
+        }
+
+    def test_returns_empty_when_no_manifest(self):
+        item = _make_content_item(
+            featured_media={"url": "https://wp.example.com/uploads/thumb.jpg"}
+        )
+        assert build_media_map([item], []) == {}
 
 
 # ---------------------------------------------------------------------------
@@ -549,11 +598,11 @@ class TestConvertContentItem:
         )
         # Use a manifest with only fallback components so markdown is used
         manifest = _make_manifest(components=[])
-        media_map = {"https://wp.com/img.jpg": "/public/media/img.jpg"}
+        media_map = {"https://wp.com/img.jpg": "/media/img.jpg"}
         result = convert_content_item(item, manifest, media_map, [])
         assert result is not None
         assert "https://wp.com/img.jpg" not in result.body
-        assert "/public/media/img.jpg" in result.body
+        assert "/media/img.jpg" in result.body
 
     def test_unsupported_block_warning(self):
         item = _make_content_item(
@@ -606,10 +655,10 @@ class TestConvertContentItem:
             ]
         )
         manifest = _make_manifest(collections=[schema])
-        media_map = {"https://wp.com/thumb.jpg": "/public/media/thumb.jpg"}
+        media_map = {"https://wp.com/thumb.jpg": "/media/thumb.jpg"}
         result = convert_content_item(item, manifest, media_map, [])
         assert result is not None
-        assert result.frontmatter["featured_image"] == "/public/media/thumb.jpg"
+        assert result.frontmatter["featured_image"] == "/media/thumb.jpg"
 
 
 # ---------------------------------------------------------------------------
@@ -676,13 +725,25 @@ class TestImporterAgentExecute:
                 )
             ]
         )
-        ctx = _make_context(content_items=[item.model_dump()])
+        ctx = _make_context(
+            content_items=[item.model_dump()],
+            media_manifest=[
+                {
+                    "source_url": "https://wp.com/uploads/pic.jpg",
+                    "bundle_path": "media/2024/01/pic.jpg",
+                    "artifact_path": "media/2024/01/pic.jpg",
+                    "filename": "pic.jpg",
+                }
+            ],
+        )
         result = await agent.execute(ctx)
         media_map = result.artifacts["media_map"]
-        assert "https://wp.com/uploads/pic.jpg" in media_map
+        assert media_map == {
+            "https://wp.com/uploads/pic.jpg": "/media/2024/01/pic.jpg"
+        }
 
     @pytest.mark.asyncio
-    async def test_media_urls_rewritten_in_content(self):
+    async def test_media_urls_rewritten_in_content_when_manifest_present(self):
         agent = ImporterAgent(gradient_client=_make_gradient_client())
         item = _make_content_item(
             blocks=[
@@ -698,11 +759,41 @@ class TestImporterAgentExecute:
         ctx = _make_context(
             content_items=[item.model_dump()],
             manifest=_make_manifest(components=[]),
+            media_manifest=[
+                {
+                    "source_url": "https://wp.com/uploads/pic.jpg",
+                    "bundle_path": "media/uploads/pic.jpg",
+                    "artifact_path": "media/uploads/pic.jpg",
+                    "filename": "pic.jpg",
+                }
+            ],
         )
         result = await agent.execute(ctx)
         content = list(result.artifacts["content_files"].values())[0]
         assert "https://wp.com/uploads/pic.jpg" not in content
-        assert "/public/media/pic.jpg" in content
+        assert "/media/uploads/pic.jpg" in content
+
+    @pytest.mark.asyncio
+    async def test_media_urls_left_unchanged_when_manifest_missing(self):
+        agent = ImporterAgent(gradient_client=_make_gradient_client())
+        item = _make_content_item(
+            blocks=[
+                WordPressBlock(
+                    name="core/image",
+                    attrs={"url": "https://wp.com/uploads/pic.jpg", "alt": "pic"},
+                    html='<img src="https://wp.com/uploads/pic.jpg" alt="pic" />',
+                )
+            ],
+            raw_html='<img src="https://wp.com/uploads/pic.jpg" alt="pic" />',
+        )
+        ctx = _make_context(
+            content_items=[item.model_dump()],
+            manifest=_make_manifest(components=[]),
+        )
+        result = await agent.execute(ctx)
+        content = list(result.artifacts["content_files"].values())[0]
+        assert "https://wp.com/uploads/pic.jpg" in content
+        assert result.artifacts["media_map"] == {}
 
     @pytest.mark.asyncio
     async def test_navigation_generated(self):
@@ -837,3 +928,25 @@ class TestImporterAgentExecute:
         ctx = _make_context(content_items=items)
         result = await agent.execute(ctx)
         assert len(result.artifacts["content_files"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_updates_astro_project_and_zip_with_generated_content(self):
+        agent = ImporterAgent(gradient_client=_make_gradient_client())
+        item = _make_content_item()
+        ctx = _make_context(
+            content_items=[item.model_dump()],
+            astro_project={"package.json": "{\"name\": \"site\"}\n"},
+        )
+        result = await agent.execute(ctx)
+
+        assert "astro_project" in result.artifacts
+        project = result.artifacts["astro_project"]
+        assert "package.json" in project
+        assert any(path.startswith("src/content/posts/") for path in project)
+
+        import io
+        import zipfile
+
+        with zipfile.ZipFile(io.BytesIO(result.artifacts["astro_project_zip"]), "r") as zf:
+            assert "package.json" in zf.namelist()
+            assert any(name.startswith("src/content/posts/") for name in zf.namelist())

@@ -26,6 +26,8 @@ from src.models.strapi_types import (
     StrapiContentTypeDefinition,
     StrapiFieldDefinition,
 )
+from src.pipeline_context import extract_modeling_manifest
+from src.utils.ssh import strapi_base_url_context
 
 logger = logging.getLogger(__name__)
 
@@ -384,9 +386,16 @@ class ContentTypeGeneratorAgent(BaseAgent):
         start = time.monotonic()
         warnings: list[str] = []
 
-        manifest: ModelingManifest = context["modeling_manifest"]
+        manifest = extract_modeling_manifest(context)
         base_url: str = context["strapi_base_url"]
         api_token: str = context["strapi_api_token"]
+        ssh_connection_string = context.get("ssh_connection_string")
+        cms_config = context.get("cms_config")
+        ssh_private_key_path = (
+            getattr(cms_config, "ssh_private_key_path", None)
+            if cms_config is not None
+            else None
+        )
 
         mappings: dict[str, str] = {}
         taxonomy_mappings: dict[str, str] = {}
@@ -403,36 +412,43 @@ class ContentTypeGeneratorAgent(BaseAgent):
                 needs_seo = True
                 break
 
-        if needs_seo:
-            # Gather all unique SEO fields across collections
-            all_seo: dict[str, FrontmatterField] = {}
+        async with strapi_base_url_context(
+            base_url, ssh_connection_string, ssh_private_key_path
+        ) as resolved_base_url:
+            if needs_seo:
+                # Gather all unique SEO fields across collections
+                all_seo: dict[str, FrontmatterField] = {}
+                for schema in manifest.collections:
+                    seo_fields, _ = detect_seo_fields(schema.frontmatter_fields)
+                    for f in seo_fields:
+                        all_seo[f.name] = f
+
+                seo_component = build_seo_component(list(all_seo.values()))
+                seo_component_uid = await _post_component(
+                    resolved_base_url, api_token, seo_component
+                )
+                component_uids.append(seo_component_uid)
+
+            # ------------------------------------------------------------------
+            # Phase 2: Create Content Types for each collection
+            # ------------------------------------------------------------------
             for schema in manifest.collections:
-                seo_fields, _ = detect_seo_fields(schema.frontmatter_fields)
-                for f in seo_fields:
-                    all_seo[f.name] = f
+                ct_def = build_content_type_definition(schema, seo_component_uid)
+                api_id = await _post_content_type(
+                    resolved_base_url, api_token, ct_def
+                )
+                mappings[schema.collection_name] = api_id
 
-            seo_component = build_seo_component(list(all_seo.values()))
-            seo_component_uid = await _post_component(
-                base_url, api_token, seo_component
-            )
-            component_uids.append(seo_component_uid)
-
-        # ------------------------------------------------------------------
-        # Phase 2: Create Content Types for each collection
-        # ------------------------------------------------------------------
-        for schema in manifest.collections:
-            ct_def = build_content_type_definition(schema, seo_component_uid)
-            api_id = await _post_content_type(base_url, api_token, ct_def)
-            mappings[schema.collection_name] = api_id
-
-        # ------------------------------------------------------------------
-        # Phase 3: Create taxonomy Content Types with relations
-        # ------------------------------------------------------------------
-        for tax in manifest.taxonomies:
-            tax_def, tax_warnings = build_taxonomy_content_type(tax, mappings)
-            warnings.extend(tax_warnings)
-            api_id = await _post_content_type(base_url, api_token, tax_def)
-            taxonomy_mappings[tax.taxonomy] = api_id
+            # ------------------------------------------------------------------
+            # Phase 3: Create taxonomy Content Types with relations
+            # ------------------------------------------------------------------
+            for tax in manifest.taxonomies:
+                tax_def, tax_warnings = build_taxonomy_content_type(tax, mappings)
+                warnings.extend(tax_warnings)
+                api_id = await _post_content_type(
+                    resolved_base_url, api_token, tax_def
+                )
+                taxonomy_mappings[tax.taxonomy] = api_id
 
         # ------------------------------------------------------------------
         # Build result

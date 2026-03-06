@@ -8,11 +8,7 @@ rebuilds on content changes.
 from __future__ import annotations
 
 import asyncio
-import io
-import json
 import logging
-import os
-import tarfile
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -21,6 +17,11 @@ import httpx
 
 from src.agents.base import AgentResult, BaseAgent
 from src.models.deployment_report import DeploymentReport
+from src.utils.ssh import (
+    scp_project_to_vps,
+    ssh_run,
+    strapi_base_url_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,104 +33,6 @@ ASTRO_DIST_PATH = "/var/www/astro"
 STRAPI_BUILD_URL = "http://localhost:1337"
 REBUILD_ENDPOINT = "http://localhost:4000/rebuild"
 WEBHOOK_EVENTS = ["entry.create", "entry.update", "entry.delete"]
-
-
-# ---------------------------------------------------------------------------
-# SSH / SCP helpers
-# ---------------------------------------------------------------------------
-
-def _ssh_base_args(ssh_private_key_path: str | None) -> list[str]:
-    """Return common SSH option flags."""
-    args = [
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "UserKnownHostsFile=/dev/null",
-        "-o", "ConnectTimeout=30",
-    ]
-    if ssh_private_key_path:
-        args.extend(["-i", ssh_private_key_path])
-    return args
-
-
-async def scp_project_to_vps(
-    ssh_connection_string: str,
-    ssh_private_key_path: str | None,
-    astro_project: dict[str, str],
-) -> int:
-    """SCP the Astro project files to the VPS at ``/var/www/astro-src``.
-
-    Creates a tar archive in memory from *astro_project* (a mapping of
-    relative file paths to file contents), pipes it to the remote host
-    via ``ssh … tar xf -``, and returns the number of files transferred.
-
-    Raises:
-        RuntimeError: If the SCP/SSH transfer fails.
-    """
-    # Build an in-memory tar archive of the project files
-    buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        for rel_path, content in astro_project.items():
-            data = content.encode("utf-8") if isinstance(content, str) else content
-            info = tarfile.TarInfo(name=rel_path)
-            info.size = len(data)
-            tar.addfile(info, io.BytesIO(data))
-    archive_bytes = buf.getvalue()
-
-    ssh_opts = _ssh_base_args(ssh_private_key_path)
-
-    # Ensure target directory exists, then extract archive
-    cmd = [
-        "ssh", *ssh_opts, ssh_connection_string,
-        f"mkdir -p {ASTRO_SRC_PATH} && tar xzf - -C {ASTRO_SRC_PATH}",
-    ]
-
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await proc.communicate(input=archive_bytes)
-
-    if proc.returncode != 0:
-        stderr_text = stderr.decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"SCP to {ASTRO_SRC_PATH} failed: {stderr_text}"
-        )
-
-    return len(astro_project)
-
-
-async def ssh_run(
-    ssh_connection_string: str,
-    ssh_private_key_path: str | None,
-    command: str,
-) -> tuple[str, str]:
-    """Execute *command* on the remote host via SSH.
-
-    Returns:
-        Tuple of (stdout, stderr) decoded as UTF-8.
-
-    Raises:
-        RuntimeError: If the remote command exits with a non-zero status.
-    """
-    ssh_opts = _ssh_base_args(ssh_private_key_path)
-    cmd = ["ssh", *ssh_opts, ssh_connection_string, command]
-
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout_bytes, stderr_bytes = await proc.communicate()
-    stdout_text = stdout_bytes.decode("utf-8", errors="replace")
-    stderr_text = stderr_bytes.decode("utf-8", errors="replace")
-
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"SSH command failed (rc={proc.returncode}): {stderr_text}"
-        )
-
-    return stdout_text, stderr_text
 
 
 # ---------------------------------------------------------------------------
@@ -278,6 +181,8 @@ async def verify_site(
 async def register_strapi_webhook(
     strapi_base_url: str,
     api_token: str,
+    ssh_connection_string: str | None = None,
+    ssh_private_key_path: str | None = None,
 ) -> bool:
     """Register a Strapi webhook for content change events.
 
@@ -299,25 +204,28 @@ async def register_strapi_webhook(
         "enabled": True,
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        try:
-            resp = await client.post(
-                f"{strapi_base_url}/api/webhook-store",
-                headers=headers,
-                json=payload,
-            )
-            if resp.status_code in (200, 201):
-                logger.info("Strapi webhook registered successfully")
-                return True
-            logger.warning(
-                "Webhook registration returned status %d: %s",
-                resp.status_code,
-                resp.text,
-            )
-            return False
-        except httpx.HTTPError as exc:
-            logger.warning("Webhook registration failed: %s", exc)
-            return False
+    async with strapi_base_url_context(
+        strapi_base_url, ssh_connection_string, ssh_private_key_path
+    ) as resolved_base_url:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                resp = await client.post(
+                    f"{resolved_base_url}/api/webhook-store",
+                    headers=headers,
+                    json=payload,
+                )
+                if resp.status_code in (200, 201):
+                    logger.info("Strapi webhook registered successfully")
+                    return True
+                logger.warning(
+                    "Webhook registration returned status %d: %s",
+                    resp.status_code,
+                    resp.text,
+                )
+                return False
+            except httpx.HTTPError as exc:
+                logger.warning("Webhook registration failed: %s", exc)
+                return False
 
 
 # ---------------------------------------------------------------------------
@@ -354,7 +262,7 @@ class DeploymentPipelineAgent(BaseAgent):
         domain_name: str = context["domain_name"]
         strapi_base_url: str = context["strapi_base_url"]
         strapi_api_token: str = context["strapi_api_token"]
-        astro_project: dict[str, str] = context["astro_project"]
+        astro_project: dict[str, str | bytes] = context["astro_project"]
 
         # Resolve SSH private key path from cms_config if available
         cms_config = context.get("cms_config")
@@ -384,7 +292,10 @@ class DeploymentPipelineAgent(BaseAgent):
         # ------------------------------------------------------------------
         try:
             files_transferred = await scp_project_to_vps(
-                ssh_connection_string, ssh_private_key_path, astro_project
+                ssh_connection_string,
+                ssh_private_key_path,
+                ASTRO_SRC_PATH,
+                astro_project,
             )
         except RuntimeError as exc:
             raise RuntimeError(
@@ -448,7 +359,10 @@ class DeploymentPipelineAgent(BaseAgent):
         # Step 7: Register Strapi webhook
         # ------------------------------------------------------------------
         webhook_registered = await register_strapi_webhook(
-            strapi_base_url, strapi_api_token
+            strapi_base_url,
+            strapi_api_token,
+            ssh_connection_string,
+            ssh_private_key_path,
         )
         if not webhook_registered:
             warnings.append("Strapi webhook registration failed")

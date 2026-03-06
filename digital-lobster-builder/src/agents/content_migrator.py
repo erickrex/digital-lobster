@@ -27,6 +27,15 @@ from src.models.migration_report import (
 )
 from src.models.modeling_manifest import ModelingManifest
 from src.models.strapi_types import ContentTypeMap
+from src.pipeline_context import (
+    MediaManifestEntry,
+    extract_content_items,
+    extract_content_type_map,
+    extract_media_manifest,
+    extract_menus,
+    extract_modeling_manifest,
+)
+from src.utils.ssh import strapi_base_url_context
 
 logger = logging.getLogger(__name__)
 
@@ -278,7 +287,8 @@ async def _upload_single_media(
     client: httpx.AsyncClient,
     base_url: str,
     token: str,
-    media_entry: dict[str, Any],
+    media_entry: MediaManifestEntry,
+    export_bundle: dict[str, Any],
     semaphore: asyncio.Semaphore,
 ) -> tuple[str, str | None]:
     """Upload a single media file to Strapi Media Library.
@@ -286,30 +296,32 @@ async def _upload_single_media(
     Returns ``(original_url, strapi_url)`` on success, or
     ``(original_url, None)`` on failure.
     """
-    original_url: str = media_entry.get("url", "")
-    filename: str = media_entry.get("filename", original_url.split("/")[-1])
-    alt_text: str = media_entry.get("alt_text", "")
-    caption: str = media_entry.get("caption", "")
+    original_url = media_entry.source_url
+    filename = media_entry.filename or original_url.split("/")[-1]
+    alt_text = media_entry.alt_text
+    caption = media_entry.caption
 
     async with semaphore:
         try:
-            # Download the media file
-            dl_resp = await client.get(original_url, timeout=60)
-            if dl_resp.status_code != 200:
+            content = export_bundle.get(media_entry.bundle_path)
+            if content is None:
                 logger.warning(
-                    "Media file inaccessible (HTTP %d): %s",
-                    dl_resp.status_code,
+                    "Media bundle asset missing for %s at %s",
                     original_url,
+                    media_entry.bundle_path,
                 )
                 return original_url, None
 
-            content_type = dl_resp.headers.get("content-type", "application/octet-stream")
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+
+            content_type = media_entry.mime_type or "application/octet-stream"
 
             # Upload to Strapi
             upload_url = f"{base_url}/api/upload"
             headers = {"Authorization": f"Bearer {token}"}
             files_payload = {
-                "files": (filename, dl_resp.content, content_type),
+                "files": (filename, content, content_type),
             }
             data_payload: dict[str, str] = {}
             if alt_text:
@@ -350,7 +362,8 @@ async def _upload_single_media(
 async def upload_media_files(
     base_url: str,
     token: str,
-    media_manifest: list[dict[str, Any]],
+    media_manifest: list[MediaManifestEntry],
+    export_bundle: dict[str, Any],
     concurrency: int = DEFAULT_MEDIA_CONCURRENCY,
 ) -> tuple[dict[str, str], MediaMigrationStats]:
     """Upload all media files in parallel with bounded concurrency.
@@ -363,7 +376,14 @@ async def upload_media_files(
 
     async with httpx.AsyncClient() as client:
         tasks = [
-            _upload_single_media(client, base_url, token, entry, semaphore)
+            _upload_single_media(
+                client,
+                base_url,
+                token,
+                entry,
+                export_bundle,
+                semaphore,
+            )
             for entry in media_manifest
         ]
         results = await asyncio.gather(*tasks)
@@ -883,72 +903,94 @@ class ContentMigratorAgent(BaseAgent):
         start = time.monotonic()
         all_warnings: list[str] = []
 
-        content_type_map: ContentTypeMap = context["content_type_map"]
+        content_type_map = extract_content_type_map(context)
         base_url: str = context["strapi_base_url"]
         api_token: str = context["strapi_api_token"]
-        content_items: list[WordPressContentItem] = context["content_items"]
-        manifest: ModelingManifest = context["modeling_manifest"]
+        content_items = extract_content_items(context)
+        manifest = extract_modeling_manifest(context)
+        menus = extract_menus(context)
+        media_manifest_entries = extract_media_manifest(context)
         export_bundle: dict[str, Any] = context.get("export_bundle", {})
+        ssh_connection_string = context.get("ssh_connection_string")
+        cms_config = context.get("cms_config")
+        ssh_private_key_path = (
+            getattr(cms_config, "ssh_private_key_path", None)
+            if cms_config is not None
+            else None
+        )
 
         batch_size: int = context.get("batch_size", DEFAULT_BATCH_SIZE)
         media_concurrency: int = context.get(
             "media_concurrency", DEFAULT_MEDIA_CONCURRENCY
         )
 
-        # ------------------------------------------------------------------
-        # Phase 1: Upload media files
-        # ------------------------------------------------------------------
-        media_manifest: list[dict[str, Any]] = export_bundle.get("media", [])
-        media_url_map: dict[str, str] = {}
-        media_stats: MediaMigrationStats
+        async with strapi_base_url_context(
+            base_url, ssh_connection_string, ssh_private_key_path
+        ) as resolved_base_url:
+            # ------------------------------------------------------------------
+            # Phase 1: Upload media files
+            # ------------------------------------------------------------------
+            media_url_map: dict[str, str] = {}
+            media_stats: MediaMigrationStats
 
-        if media_manifest:
-            media_url_map, media_stats = await upload_media_files(
-                base_url, api_token, media_manifest, media_concurrency
-            )
-            if media_stats.failed_urls:
-                for url in media_stats.failed_urls:
-                    all_warnings.append(f"Media upload failed: {url}")
-        else:
-            media_stats = MediaMigrationStats(
-                total=0, succeeded=0, failed=0, failed_urls=[]
-            )
-
-        # ------------------------------------------------------------------
-        # Phase 2: Create taxonomy term entries
-        # ------------------------------------------------------------------
-        async with httpx.AsyncClient() as client:
-            taxonomy_term_ids, taxonomy_count, tax_warnings = (
-                await create_taxonomy_terms(
-                    client, base_url, api_token, content_items, content_type_map
+            if media_manifest_entries:
+                media_url_map, media_stats = await upload_media_files(
+                    resolved_base_url,
+                    api_token,
+                    media_manifest_entries,
+                    export_bundle,
+                    media_concurrency,
                 )
-            )
-        all_warnings.extend(tax_warnings)
+                if media_stats.failed_urls:
+                    for url in media_stats.failed_urls:
+                        all_warnings.append(f"Media upload failed: {url}")
+            else:
+                media_stats = MediaMigrationStats(
+                    total=0, succeeded=0, failed=0, failed_urls=[]
+                )
 
-        # ------------------------------------------------------------------
-        # Phase 3: Create content entries in batches
-        # ------------------------------------------------------------------
-        content_stats = await migrate_content_entries(
-            base_url,
-            api_token,
-            content_items,
-            content_type_map,
-            media_url_map,
-            taxonomy_term_ids,
-            batch_size,
-        )
+            # ------------------------------------------------------------------
+            # Phase 2: Create taxonomy term entries
+            # ------------------------------------------------------------------
+            async with httpx.AsyncClient() as client:
+                taxonomy_term_ids, taxonomy_count, tax_warnings = (
+                    await create_taxonomy_terms(
+                        client,
+                        resolved_base_url,
+                        api_token,
+                        content_items,
+                        content_type_map,
+                    )
+                )
+            all_warnings.extend(tax_warnings)
 
-        # ------------------------------------------------------------------
-        # Phase 4: Create navigation menu entries
-        # ------------------------------------------------------------------
-        menus: list[dict[str, Any]] = export_bundle.get("menus", [])
-        migrated_slugs: set[str] = {item.slug for item in content_items}
-        menu_entries_created = 0
-        if menus:
-            menu_entries_created, menu_warnings = await migrate_menus(
-                base_url, api_token, menus, manifest, migrated_slugs
+            # ------------------------------------------------------------------
+            # Phase 3: Create content entries in batches
+            # ------------------------------------------------------------------
+            content_stats = await migrate_content_entries(
+                resolved_base_url,
+                api_token,
+                content_items,
+                content_type_map,
+                media_url_map,
+                taxonomy_term_ids,
+                batch_size,
             )
-            all_warnings.extend(menu_warnings)
+
+            # ------------------------------------------------------------------
+            # Phase 4: Create navigation menu entries
+            # ------------------------------------------------------------------
+            migrated_slugs: set[str] = {item.slug for item in content_items}
+            menu_entries_created = 0
+            if menus:
+                menu_entries_created, menu_warnings = await migrate_menus(
+                    resolved_base_url,
+                    api_token,
+                    menus,
+                    manifest,
+                    migrated_slugs,
+                )
+                all_warnings.extend(menu_warnings)
 
         # ------------------------------------------------------------------
         # Phase 5: Build migration report

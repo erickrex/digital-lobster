@@ -69,6 +69,69 @@ def _minimal_bundle_files() -> dict[str, str]:
     }
 
 
+def _exporter_bundle_files() -> dict[str, str]:
+    """Return a compatible bundle using the exporter-style root artifacts."""
+    return {
+        "site_blueprint.json": json.dumps({
+            "export_metadata": {
+                "version": "2.0",
+                "site_url": "https://example.com",
+                "site_name": "Exporter Site",
+                "export_date": "2024-01-02",
+                "wordpress_version": "6.5",
+                "total_files": 7,
+                "total_size_bytes": 4096,
+                "files": {"content": 1, "media": 1},
+            },
+            "site_info": {
+                "site_url": "https://example.com",
+                "site_name": "Exporter Site",
+                "wordpress_version": "6.5",
+            },
+            "active_plugins": [
+                {"slug": "wordpress-seo", "name": "Yoast SEO", "version": "22.0"}
+            ],
+        }),
+        "theme/style.css": "/* theme */",
+        "content/posts.json": json.dumps([
+            {
+                "id": 1,
+                "post_type": "post",
+                "title": "Hello Exporter",
+                "slug": "hello-exporter",
+                "status": "publish",
+                "date": "2024-01-02",
+                "content": {"rendered": "<p>Hello</p>"},
+                "taxonomies": {"category": ["news"]},
+                "meta": {},
+                "link": "https://example.com/hello-exporter/",
+            }
+        ]),
+        "menus.json": json.dumps({
+            "menus": [
+                {
+                    "name": "Primary",
+                    "location": "header",
+                    "items": [{"title": "Home", "url": "https://example.com/"}],
+                }
+            ]
+        }),
+        "taxonomies.json": json.dumps({"category": ["news"]}),
+        "media/media_map.json": json.dumps([
+            {
+                "source_url": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
+                "filename": "photo.jpg",
+                "bundle_path": "media/2024/01/photo.jpg",
+                "metadata": {"alt": "Photo", "caption": "Caption"},
+            }
+        ]),
+        "media/2024/01/photo.jpg": "binary-jpg-placeholder",
+        "redirects.json": json.dumps([
+            {"source": "/old", "destination": "/new", "status": 301}
+        ]),
+    }
+
+
 def _manifest() -> ExportManifest:
     return ExportManifest(
         export_version="1.0",
@@ -161,6 +224,11 @@ class TestValidateBundleStructure:
         zf = _make_zip({})
         errors = validate_bundle_structure(zf)
         assert len(errors) == 5
+
+    def test_exporter_bundle_shape_is_accepted(self):
+        zf = _make_zip(_exporter_bundle_files())
+        errors = validate_bundle_structure(zf)
+        assert errors == []
 
 
 # ==================================================================
@@ -304,6 +372,17 @@ class TestBuildInventory:
         inv = build_inventory(zf, _manifest(), {"site_url": "", "site_name": "", "wordpress_version": ""}, warnings)
         assert inv.has_media_manifest is True
 
+    def test_exporter_media_map_detected(self):
+        zf = _make_zip(_exporter_bundle_files())
+        warnings: list[str] = []
+        inv = build_inventory(
+            zf,
+            _manifest(),
+            {"site_url": "", "site_name": "", "wordpress_version": ""},
+            warnings,
+        )
+        assert inv.has_media_manifest is True
+
     def test_malformed_content_file_produces_warning(self):
         files = _minimal_bundle_files()
         files["content/broken.json"] = "not json"
@@ -372,6 +451,12 @@ class TestCollectKbDocuments:
         # Should not include both
         assert file_names.count("site/site_info.json") + file_names.count("site/site_blueprint.json") == 1
 
+    def test_includes_root_site_blueprint_when_site_info_missing(self):
+        zf = _make_zip(_exporter_bundle_files())
+        docs = collect_kb_documents(zf)
+        file_names = [d["metadata"]["file"] for d in docs]
+        assert "site_blueprint.json" in file_names
+
 
 # ==================================================================
 # BlueprintIntakeAgent.execute (integration-style with mocks)
@@ -406,6 +491,14 @@ class TestBlueprintIntakeAgentExecute:
             "location": "header",
             "items": [{"label": "Home", "url": "https://example.com/"}],
         })
+        bundle_files["media/media_manifest.json"] = json.dumps([
+            {
+                "source_url": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
+                "filename": "photo.jpg",
+                "bundle_path": "media/2024/01/photo.jpg",
+            }
+        ])
+        bundle_files["media/2024/01/photo.jpg"] = "binary-jpg-placeholder"
         bundle_files["redirects/redirects.json"] = json.dumps([
             {"source": "/old", "destination": "/new", "status": 301}
         ])
@@ -441,6 +534,7 @@ class TestBlueprintIntakeAgentExecute:
         assert "menus" in result.artifacts
         assert "redirect_rules" in result.artifacts
         assert "html_snapshots" in result.artifacts
+        assert "media_manifest" in result.artifacts
         assert result.artifacts.get("errors") is None
 
         inv = result.artifacts["inventory"]
@@ -451,10 +545,37 @@ class TestBlueprintIntakeAgentExecute:
         assert result.artifacts["menus"][0]["name"] == "Primary"
         assert result.artifacts["redirect_rules"][0]["source"] == "/old"
         assert "/" in result.artifacts["html_snapshots"]
+        assert result.artifacts["media_manifest"][0]["artifact_path"] == "media/2024/01/photo.jpg"
 
         spaces_client.download.assert_awaited_once_with("test-bucket", "export.zip")
         kb_client.create.assert_awaited_once_with("run-1")
         kb_client.upload_documents.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_exporter_bundle_shape_executes_successfully(self):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for path, content in _exporter_bundle_files().items():
+                zf.writestr(path, content if isinstance(content, bytes) else content.encode())
+        zip_bytes = buf.getvalue()
+
+        spaces_client = AsyncMock()
+        spaces_client.download.return_value = zip_bytes
+
+        agent = BlueprintIntakeAgent(
+            gradient_client=MagicMock(),
+            kb_client=None,
+            spaces_client=spaces_client,
+            ingestion_bucket="bucket",
+        )
+
+        result = await agent.execute({"bundle_key": "exporter.zip"})
+
+        assert "errors" not in result.artifacts
+        assert result.artifacts["inventory"].site_name == "Exporter Site"
+        assert result.artifacts["menus"][0]["location"] == "header"
+        assert result.artifacts["media_manifest"][0]["bundle_path"] == "media/2024/01/photo.jpg"
+        assert result.artifacts["redirect_rules"][0]["destination"] == "/new"
 
     @pytest.mark.asyncio
     async def test_missing_files_returns_errors(self):

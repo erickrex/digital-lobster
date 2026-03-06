@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,7 @@ import httpx
 
 from src.agents.base import AgentResult, BaseAgent
 from src.models.cms_config import CMSConfig
+from src.utils.ssh import strapi_base_url_context
 
 logger = logging.getLogger(__name__)
 
@@ -62,54 +64,70 @@ class StrapiProvisionerAgent(BaseAgent):
         warnings: list[str] = []
 
         cms_config: CMSConfig = context["cms_config"]
-
-        # 1. Write tfvars
-        write_tfvars(self.terraform_dir, cms_config)
-
-        # 2. Terraform init + apply
-        tf_outputs = await run_terraform(self.terraform_dir)
-
-        # 3. Parse outputs
-        droplet_ip: str = tf_outputs["droplet_ip"]["value"]
-        domain_name: str = tf_outputs["domain_name"]["value"]
-        strapi_admin_url: str = tf_outputs["strapi_admin_url"]["value"]
-        ssh_connection_string: str = tf_outputs["ssh_connection_string"]["value"]
-
-        # 4. Health check
-        await poll_health(droplet_ip, self.health_timeout)
-
-        # 5. Create admin user
-        admin_jwt = await create_admin_user(
-            droplet_ip,
-            cms_config.strapi_admin_email,
-            cms_config.strapi_admin_password.get_secret_value(),
+        run_id = context.get("run_id", "default")
+        work_dir = Path(
+            tempfile.mkdtemp(prefix=f"digital_lobster_tf_{run_id}_")
         )
+        shutil.copytree(self.terraform_dir, work_dir, dirs_exist_ok=True)
 
-        # 6. Generate API token
-        api_token = await generate_api_token(droplet_ip, admin_jwt)
+        try:
+            # 1. Write tfvars
+            write_tfvars(work_dir, cms_config)
 
-        # 7. Store Terraform state
-        store_terraform_state(self.terraform_dir, cms_config.terraform_state_path)
+            # 2. Terraform init + apply
+            tf_outputs = await run_terraform(work_dir)
 
-        strapi_base_url = f"http://{droplet_ip}:1337"
+            # 3. Parse outputs
+            droplet_ip: str = tf_outputs["droplet_ip"]["value"]
+            domain_name: str = tf_outputs["domain_name"]["value"]
+            ssh_connection_string: str = tf_outputs["ssh_connection_string"]["value"]
+            ssh_private_key_path = cms_config.ssh_private_key_path
 
-        duration = time.monotonic() - start
-        return AgentResult(
-            agent_name="strapi_provisioner",
-            artifacts={
-                "strapi_base_url": strapi_base_url,
-                "strapi_api_token": api_token,
-                "droplet_ip": droplet_ip,
-                "ssh_connection_string": ssh_connection_string,
-                "admin_credentials": {
-                    "email": cms_config.strapi_admin_email,
-                    "password": cms_config.strapi_admin_password.get_secret_value(),
+            # 4. Health check through SSH
+            await poll_health(
+                droplet_ip,
+                ssh_connection_string=ssh_connection_string,
+                ssh_private_key_path=ssh_private_key_path,
+                timeout=self.health_timeout,
+            )
+
+            # 5. Create admin user
+            admin_jwt = await create_admin_user(
+                droplet_ip,
+                cms_config.strapi_admin_email,
+                cms_config.strapi_admin_password.get_secret_value(),
+                ssh_connection_string=ssh_connection_string,
+                ssh_private_key_path=ssh_private_key_path,
+            )
+
+            # 6. Generate API token
+            api_token = await generate_api_token(
+                droplet_ip,
+                admin_jwt,
+                ssh_connection_string=ssh_connection_string,
+                ssh_private_key_path=ssh_private_key_path,
+            )
+
+            # 7. Store Terraform state
+            store_terraform_state(work_dir, cms_config.terraform_state_path)
+
+            strapi_base_url = f"http://{droplet_ip}:1337"
+
+            duration = time.monotonic() - start
+            return AgentResult(
+                agent_name="strapi_provisioner",
+                artifacts={
+                    "strapi_base_url": strapi_base_url,
+                    "strapi_api_token": api_token,
+                    "droplet_ip": droplet_ip,
+                    "ssh_connection_string": ssh_connection_string,
+                    "domain_name": domain_name,
                 },
-                "domain_name": domain_name,
-            },
-            warnings=warnings,
-            duration_seconds=duration,
-        )
+                warnings=warnings,
+                duration_seconds=duration,
+            )
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
 
 
 # ======================================================================
@@ -211,6 +229,8 @@ def _extract_failed_resource(stderr: str) -> str:
 
 async def poll_health(
     droplet_ip: str,
+    ssh_connection_string: str | None = None,
+    ssh_private_key_path: str | None = None,
     timeout: int = DEFAULT_HEALTH_TIMEOUT,
     poll_interval: int = HEALTH_POLL_INTERVAL,
 ) -> None:
@@ -220,23 +240,29 @@ async def poll_health(
         RuntimeError: If the health check does not succeed within *timeout*
             seconds, with the droplet IP and log file reference.
     """
-    url = f"http://{droplet_ip}:1337/_health"
+    url = f"http://{droplet_ip}:1337"
     deadline = time.monotonic() + timeout
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        while time.monotonic() < deadline:
-            try:
-                resp = await client.get(url)
-                if resp.status_code == 200:
-                    logger.info("Strapi health check passed at %s", url)
-                    return
-            except httpx.HTTPError:
-                pass  # connection refused, timeout, etc. — keep polling
+    async with strapi_base_url_context(
+        url, ssh_connection_string, ssh_private_key_path
+    ) as resolved_base_url:
+        async with httpx.AsyncClient(timeout=10) as client:
+            while time.monotonic() < deadline:
+                try:
+                    resp = await client.get(f"{resolved_base_url}/_health")
+                    if resp.status_code == 200:
+                        logger.info(
+                            "Strapi health check passed at %s/_health",
+                            resolved_base_url,
+                        )
+                        return
+                except httpx.HTTPError:
+                    pass
 
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            await asyncio.sleep(min(poll_interval, remaining))
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                await asyncio.sleep(min(poll_interval, remaining))
 
     raise RuntimeError(
         f"Strapi health check timed out after {timeout}s. "
@@ -249,6 +275,8 @@ async def create_admin_user(
     droplet_ip: str,
     email: str,
     password: str,
+    ssh_connection_string: str | None = None,
+    ssh_private_key_path: str | None = None,
 ) -> str:
     """Create the initial Strapi admin user via ``POST /admin/register-admin``.
 
@@ -257,7 +285,6 @@ async def create_admin_user(
     Raises:
         RuntimeError: If the admin registration request fails.
     """
-    url = f"http://{droplet_ip}:1337/admin/register-admin"
     payload = {
         "firstname": "Admin",
         "lastname": "User",
@@ -265,8 +292,15 @@ async def create_admin_user(
         "password": password,
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload)
+    async with strapi_base_url_context(
+        f"http://{droplet_ip}:1337",
+        ssh_connection_string,
+        ssh_private_key_path,
+    ) as resolved_base_url:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{resolved_base_url}/admin/register-admin", json=payload
+            )
 
     if resp.status_code not in (200, 201):
         raise RuntimeError(
@@ -283,7 +317,12 @@ async def create_admin_user(
     return token
 
 
-async def generate_api_token(droplet_ip: str, admin_jwt: str) -> str:
+async def generate_api_token(
+    droplet_ip: str,
+    admin_jwt: str,
+    ssh_connection_string: str | None = None,
+    ssh_private_key_path: str | None = None,
+) -> str:
     """Generate a full-access API token via the Strapi admin API.
 
     Returns the plain-text access token string.
@@ -291,7 +330,6 @@ async def generate_api_token(droplet_ip: str, admin_jwt: str) -> str:
     Raises:
         RuntimeError: If token generation fails.
     """
-    url = f"http://{droplet_ip}:1337/admin/api-tokens"
     payload = {
         "name": "digital-lobster-pipeline",
         "description": "Auto-generated token for the Digital Lobster migration pipeline",
@@ -299,8 +337,17 @@ async def generate_api_token(droplet_ip: str, admin_jwt: str) -> str:
     }
     headers = {"Authorization": f"Bearer {admin_jwt}"}
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+    async with strapi_base_url_context(
+        f"http://{droplet_ip}:1337",
+        ssh_connection_string,
+        ssh_private_key_path,
+    ) as resolved_base_url:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{resolved_base_url}/admin/api-tokens",
+                json=payload,
+                headers=headers,
+            )
 
     if resp.status_code not in (200, 201):
         raise RuntimeError(
