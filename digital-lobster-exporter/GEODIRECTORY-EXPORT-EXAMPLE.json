@@ -1,0 +1,142 @@
+{
+  "type": "gd_place",
+  "id": 123,
+  "slug": "cozy-corner-cafe",
+  "status": "publish",
+  "title": "Cozy Corner Cafe",
+  "excerpt": "A charming neighborhood cafe serving artisanal coffee and fresh pastries in the heart of downtown.",
+  "author": {
+    "display_name": "John Doe"
+  },
+  "date_gmt": "2024-02-10T12:00:00",
+  "modified_gmt": "2024-02-15T09:30:00",
+  "taxonomies": {
+    "gd_placecategory": [5, 12],
+    "gd_amenity": [3, 7, 9],
+    "gd_cpt": [1]
+  },
+  "blocks": [
+    {
+      "name": "core/paragraph",
+      "attrs": {},
+      "html": "<p>Welcome to Cozy Corner Cafe, where every cup tells a story.</p>"
+    },
+    {
+      "name": "core/heading",
+      "attrs": {
+        "level": 2
+      },
+      "html": "<h2>Our Story</h2>"
+    },
+    {
+      "name": "core/paragraph",
+      "attrs": {},
+      "html": "<p>Founded in 2020, we've been serving the community with passion and dedication.</p>"
+    },
+    {
+      "name": "core/image",
+      "attrs": {
+        "id": 456,
+        "sizeSlug": "large"
+      },
+      "html": "<figure class=\"wp-block-image size-large\"><img src=\"/wp-content/uploads/2024/02/cafe-interior.jpg\" alt=\"Cozy cafe interior\" /></figure>"
+    }
+  ],
+  "raw_html": "<!-- wp:paragraph -->\n<p>Welcome to Cozy Corner Cafe, where every cup tells a story.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2>Our Story</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Founded in 2020, we've been serving the community with passion and dedication.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:image {\"id\":456,\"sizeSlug\":\"large\"} -->\n<figure class=\"wp-block-image size-large\"><img src=\"/wp-content/uploads/2024/02/cafe-interior.jpg\" alt=\"Cozy cafe interior\" /></figure>\n<!-- /wp:image -->",
+  "featured_media": {
+    "id": 890,
+    "url": "https://example.com/wp-content/uploads/2024/02/cafe-exterior.jpg",
+    "alt": "Cozy Corner Cafe exterior view"
+  },
+  "internal_links": [
+    "/about/",
+    "/contact/",
+    "/menu/"
+  ],
+  "legacy_permalink": "/places/cozy-corner-cafe/",
+  "template": "default",
+  "geodirectory": {
+    "address": {
+      "street": "123 Main Street",
+      "street2": "Suite 100",
+      "city": "San Francisco",
+      "region": "California",
+      "country": "United States",
+      "zip": "94102",
+      "postcode": "94102"
+    },
+    "geo": {
+      "latitude": "37.7749",
+      "longitude": "-122.4194"
+    },
+    "categories": [
+      {
+        "taxonomy": "gd_placecategory",
+        "term_id": 5,
+        "name": "Restaurants & Cafes",
+        "slug": "restaurants-cafes"
+      },
+      {
+        "taxonomy": "gd_placecategory",
+        "term_id": 12,
+        "name": "Coffee Shops",
+        "slug": "coffee-shops"
+      }
+    ],
+    "tags": [
+      {
+        "taxonomy": "gd_amenity",
+        "term_id": 3,
+        "name": "WiFi",
+        "slug": "wifi"
+      },
+      {
+        "taxonomy": "gd_amenity",
+        "term_id": 7,
+        "name": "Outdoor Seating",
+        "slug": "outdoor-seating"
+      },
+      {
+        "taxonomy": "gd_amenity",
+        "term_id": 9,
+        "name": "Wheelchair Accessible",
+        "slug": "wheelchair-accessible"
+      }
+    ],
+    "custom_fields": {
+      "price_range": "$$",
+      "business_hours": "Mon-Fri: 7am-7pm, Sat-Sun: 8am-8pm",
+      "payment_methods": "Cash, Credit Cards, Mobile Pay",
+      "parking": "Street parking available",
+      "seating_capacity": "45",
+      "established_year": "2020",
+      "cuisine_type": "American, Coffee & Tea",
+      "dress_code": "Casual",
+      "reservations": "Not required",
+      "delivery_available": "Yes",
+      "takeout_available": "Yes",
+      "outdoor_dining": "Yes",
+      "alcohol_served": "No",
+      "good_for_groups": "Yes",
+      "good_for_kids": "Yes",
+      "noise_level": "Moderate",
+      "attire": "Casual",
+      "ambiance": "Cozy, Casual, Trendy",
+      "music": "Background music",
+      "tv": "No",
+      "waiter_service": "Counter service"
+    },
+    "postmeta": {
+      "geodir_contact": "John Smith",
+      "geodir_email": "info@cozycornercafe.com",
+      "geodir_website": "https://cozycornercafe.com",
+      "geodir_phone": "+1 (415) 555-1234",
+      "geodir_twitter": "@cozycornercafe",
+      "geodir_facebook": "facebook.com/cozycornercafe",
+      "geodir_video": "https://youtube.com/watch?v=example",
+      "geodir_timing": "Mon-Fri: 7am-7pm<br>Sat-Sun: 8am-8pm",
+      "geodir_featured": "1",
+      "geodir_special_offers": "Happy Hour: 3pm-5pm daily - 20% off all drinks"
+    }
+  }
+}

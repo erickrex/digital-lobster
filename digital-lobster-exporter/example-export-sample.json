@@ -1,0 +1,261 @@
+{
+  "export_metadata": {
+    "version": "1.0.0",
+    "generator": "Digital Lobster Exporter",
+    "site_url": "https://horuswp.com",
+    "site_name": "Horus WP",
+    "export_date": "2025-10-14T12:34:56Z",
+    "wordpress_version": "6.4.2",
+    "php_version": "8.1.0",
+    "mysql_version": "8.0.32",
+    "active_theme": "Kadence",
+    "active_plugins_count": 20,
+    "total_posts": 247,
+    "total_pages": 12,
+    "total_custom_post_types": 1247,
+    "export_duration_seconds": 45.3
+  },
+  
+  "site_info": {
+    "url": "https://horuswp.com",
+    "name": "Horus WP",
+    "description": "Your WordPress Site Description",
+    "admin_email": "admin@horuswp.com",
+    "language": "en_US",
+    "timezone": "America/New_York",
+    "date_format": "F j, Y",
+    "time_format": "g:i a",
+    "start_of_week": 1,
+    "is_multisite": false,
+    "is_subdomain_install": false
+  },
+  
+  "active_plugins": [
+    {
+      "name": "Kadence Simple Share",
+      "slug": "kadence-simple-share",
+      "version": "1.2.3",
+      "active": true,
+      "has_settings": true,
+      "custom_post_types": [],
+      "custom_taxonomies": [],
+      "shortcodes": ["kadence_share"],
+      "widgets": [],
+      "rest_endpoints": []
+    },
+    {
+      "name": "GeoDirectory",
+      "slug": "geodirectory",
+      "version": "2.3.20",
+      "active": true,
+      "has_settings": true,
+      "custom_post_types": ["gd_place", "gd_event"],
+      "custom_taxonomies": ["gd_placecategory", "gd_place_tags"],
+      "shortcodes": ["gd_listings", "gd_map", "gd_search"],
+      "widgets": ["geodir_categories", "geodir_recent_listings"],
+      "rest_endpoints": ["/geodir/v2/places", "/geodir/v2/categories"],
+      "custom_tables": [
+        "wp_geodir_gd_place_detail",
+        "wp_geodir_post_icon",
+        "wp_geodir_attachments"
+      ]
+    },
+    {
+      "name": "Forminator",
+      "slug": "forminator",
+      "version": "1.24.6",
+      "active": true,
+      "has_settings": true,
+      "custom_post_types": [],
+      "custom_taxonomies": [],
+      "shortcodes": ["forminator_form", "forminator_poll"],
+      "widgets": ["forminator_widget"],
+      "rest_endpoints": ["/forminator/v1/forms"],
+      "forms_count": 5
+    },
+    {
+      "name": "Kadence Blocks",
+      "slug": "kadence-blocks",
+      "version": "3.2.10",
+      "active": true,
+      "has_settings": true,
+      "blocks": [
+        "kadence/rowlayout",
+        "kadence/column",
+        "kadence/advancedheading",
+        "kadence/advancedbtn",
+        "kadence/tabs",
+        "kadence/accordion",
+        "kadence/iconlist",
+        "kadence/testimonials"
+      ],
+      "block_patterns": 15,
+      "global_styles": true
+    },
+    {
+      "name": "UsersWP",
+      "slug": "userswp",
+      "version": "1.2.8",
+      "active": true,
+      "has_settings": true,
+      "custom_post_types": [],
+      "custom_taxonomies": ["uwp_profile_tabs"],
+      "shortcodes": ["uwp_profile", "uwp_login", "uwp_register"],
+      "widgets": ["uwp_profile_widget"],
+      "custom_fields": 12,
+      "profile_tabs": 8
+    },
+    {
+      "name": "Invoicing",
+      "slug": "invoicing",
+      "version": "2.3.4",
+      "active": true,
+      "has_settings": true,
+      "custom_post_types": ["wpi_invoice", "wpi_quote"],
+      "custom_taxonomies": [],
+      "shortcodes": ["wpinv_checkout", "wpinv_history"],
+      "payment_gateways": ["paypal", "stripe", "bank_transfer"],
+      "invoice_templates": 3
+    },
+    {
+      "name": "Yoast SEO",
+      "slug": "wordpress-seo",
+      "version": "21.5",
+      "active": true,
+      "has_settings": true,
+      "custom_post_types": [],
+      "custom_taxonomies": [],
+      "rest_endpoints": ["/yoast/v1/get_head"],
+      "sitemaps_enabled": true,
+      "schema_enabled": true
+    },
+    {
+      "name": "Redirection",
+      "slug": "redirection",
+      "version": "5.3.10",
+      "active": true,
+      "has_settings": true,
+      "redirects_count": 47,
+      "redirect_groups": 3,
+      "rest_endpoints": ["/redirection/v1/redirect"]
+    }
+  ],
+  
+  "sample_content": {
+    "posts": [
+      {
+        "ID": 1,
+        "post_title": "Welcome to WordPress",
+        "post_type": "post",
+        "post_status": "publish",
+        "post_date": "2024-01-15 10:30:00",
+        "permalink": "https://horuswp.com/welcome-to-wordpress/",
+        "excerpt": "This is your first post...",
+        "categories": ["Uncategorized"],
+        "tags": ["welcome", "getting-started"],
+        "featured_image_url": "https://horuswp.com/wp-content/uploads/2024/01/welcome.jpg",
+        "yoast_seo": {
+          "title": "Welcome to WordPress - Horus WP",
+          "description": "This is your first post on our new WordPress site",
+          "focus_keyword": "wordpress",
+          "seo_score": 75
+        }
+      }
+    ],
+    "gd_places": [
+      {
+        "ID": 123,
+        "post_title": "Best Pizza Restaurant Downtown",
+        "post_type": "gd_place",
+        "post_status": "publish",
+        "permalink": "https://horuswp.com/places/best-pizza-restaurant-downtown/",
+        "categories": ["Restaurants", "Italian"],
+        "tags": ["pizza", "downtown"],
+        "geodir_data": {
+          "contact": "555-1234",
+          "email": "info@bestpizza.com",
+          "website": "https://bestpizza.com",
+          "address": "123 Main St, New York, NY 10001",
+          "latitude": "40.7128",
+          "longitude": "-74.0060",
+          "rating": "4.5",
+          "review_count": "127"
+        }
+      }
+    ]
+  },
+  
+  "database_structure": {
+    "core_tables": 12,
+    "custom_tables": 8,
+    "total_tables": 20,
+    "custom_tables_list": [
+      {
+        "name": "wp_geodir_gd_place_detail",
+        "rows": 1247,
+        "size_mb": 2.4,
+        "purpose": "GeoDirectory place details"
+      },
+      {
+        "name": "wp_forminator_forms",
+        "rows": 5,
+        "size_mb": 0.1,
+        "purpose": "Forminator form definitions"
+      },
+      {
+        "name": "wp_forminator_form_entry",
+        "rows": 342,
+        "size_mb": 0.8,
+        "purpose": "Forminator form submissions"
+      },
+      {
+        "name": "wp_wpi_invoices",
+        "rows": 89,
+        "size_mb": 0.3,
+        "purpose": "Invoicing plugin invoices"
+      }
+    ]
+  },
+  
+  "environment": {
+    "php": {
+      "version": "8.1.0",
+      "memory_limit": "256M",
+      "max_execution_time": "300",
+      "upload_max_filesize": "64M",
+      "post_max_size": "64M"
+    },
+    "server": {
+      "software": "nginx/1.21.6",
+      "os": "Linux",
+      "architecture": "x86_64"
+    },
+    "wordpress": {
+      "version": "6.4.2",
+      "multisite": false,
+      "debug_mode": false,
+      "memory_limit": "256M"
+    }
+  },
+  
+  "warnings": [
+    {
+      "scanner": "media",
+      "message": "Large media library (5000+ items) - only metadata exported",
+      "severity": "info"
+    }
+  ],
+  
+  "errors": [],
+  
+  "export_summary": {
+    "total_files_created": 487,
+    "total_size_bytes": 15728640,
+    "total_size_mb": 15.0,
+    "scanners_run": 24,
+    "scanners_successful": 24,
+    "scanners_failed": 0,
+    "warnings_count": 1,
+    "errors_count": 0
+  }
+}

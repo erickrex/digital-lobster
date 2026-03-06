@@ -1,0 +1,86 @@
+# =========================
+# OS & Editor
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# Python (digital-lobster-builder)
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*.local
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+
+
+# =========================
+# PHP / WordPress (digital-lobster-exporter)
+# =========================
+vendor/
+composer.lock
+*.log
+
+# =========================
+# Terraform (digital-lobster-builder/terraform)
+# =========================
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*.tfvars
+!*.tfvars.example
+
+# =========================
+# Project-specific
+# =========================
+tasks_completed_reports/
+
+# =========================
+# Archives & Packages
+# =========================
+*.zip
+*.tar.gz
+*.rar
+
+# =========================
+# Logs & Temp
+# =========================
+*.log
+tmp/
+temp/
