@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "instances": [
+    {
+      "instance_id": "plugin:yoast:seo-config",
+      "source_plugin": "yoast",
+      "instance_type": "seo_object",
+      "config": {
+        "title_separator": "—",
+        "company_name": "DevBlog",
+        "company_logo": "media:logo-devblog"
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:acf:field-group-reviews",
+      "source_plugin": "acf",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Product Review Fields",
+        "fields": ["rating", "pros_cons", "product_url"],
+        "location_rules": [{"param": "post_type", "operator": "==", "value": "review"}]
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:cf7:newsletter-form",
+      "source_plugin": "contact_form_7",
+      "instance_type": "form",
+      "config": {
+        "title": "Newsletter Signup",
+        "fields": [
+          {"name": "your-email", "type": "email", "required": true}
+        ],
+        "mail_to": "[email]",
+        "mail_subject": "New subscriber: [your-email]"
+      },
+      "references": ["post:page:home"]
+    },
+    {
+      "instance_id": "plugin:core:widget-recent-posts",
+      "source_plugin": "core",
+      "instance_type": "widget",
+      "config": {
+        "title": "Recent Posts",
+        "number": 5,
+        "show_date": true
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:core:widget-categories",
+      "source_plugin": "core",
+      "instance_type": "widget",
+      "config": {
+        "title": "Categories",
+        "count": true,
+        "hierarchical": true
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:core:widget-tag-cloud",
+      "source_plugin": "core",
+      "instance_type": "widget",
+      "config": {
+        "title": "Tags",
+        "taxonomy": "post_tag"
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:core:widget-search",
+      "source_plugin": "core",
+      "instance_type": "widget",
+      "config": {
+        "title": "Search"
+      },
+      "references": []
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "schema_version": "1.0.0",
+  "site_url": "https://creative-studio.example.com",
+  "site_name": "Creative Studio",
+  "wordpress_version": "6.4.3",
+
+  "site_blueprint": {},
+  "site_settings": {},
+  "site_options": {},
+  "site_environment": {},
+  "taxonomies": {
+    "portfolio_category": {
+      "terms": [
+        {"term_id": "term:portfolio_category:web-design", "name": "Web Design", "slug": "web-design", "count": 4},
+        {"term_id": "term:portfolio_category:branding", "name": "Branding", "slug": "branding", "count": 3},
+        {"term_id": "term:portfolio_category:mobile-apps", "name": "Mobile Apps", "slug": "mobile-apps", "count": 2}
+      ]
+    },
+    "portfolio_tag": {
+      "terms": [
+        {"term_id": "term:portfolio_tag:responsive", "name": "Responsive", "slug": "responsive", "count": 5},
+        {"term_id": "term:portfolio_tag:ecommerce", "name": "E-Commerce", "slug": "ecommerce", "count": 2}
+      ]
+    },
+    "skill": {
+      "terms": [
+        {"term_id": "term:skill:react", "name": "React", "slug": "react", "count": 3},
+        {"term_id": "term:skill:nodejs", "name": "Node.js", "slug": "nodejs", "count": 2},
+        {"term_id": "term:skill:figma", "name": "Figma", "slug": "figma", "count": 4},
+        {"term_id": "term:skill:wordpress", "name": "WordPress", "slug": "wordpress", "count": 3}
+      ]
+    }
+  },
+  "menus": [
+    {
+      "name": "Primary Menu",
+      "location": "primary",
+      "items": [
+        {"title": "Portfolio", "url": "/", "type": "page", "object_id": "post:page:home"},
+        {"title": "About", "url": "/about", "type": "page", "object_id": "post:page:about"},
+        {"title": "Testimonials", "url": "/testimonials/client-review", "type": "custom", "object_id": null}
+      ]
+    }
+  ],
+  "media_map": [
+    {"id": "media:logo-studio", "url": "https://creative-studio.example.com/wp-content/uploads/logo-studio.png", "alt": "Creative Studio Logo", "mime_type": "image/png"},
+    {"id": "media:hero-home", "url": "https://creative-studio.example.com/wp-content/uploads/hero-home.jpg", "alt": "Studio hero image", "mime_type": "image/jpeg"},
+    {"id": "media:portfolio-alpha-hero", "url": "https://creative-studio.example.com/wp-content/uploads/portfolio-alpha-hero.jpg", "alt": "Project Alpha", "mime_type": "image/jpeg"},
+    {"id": "media:portfolio-beta-hero", "url": "https://creative-studio.example.com/wp-content/uploads/portfolio-beta-hero.jpg", "alt": "Project Beta", "mime_type": "image/jpeg"},
+    {"id": "media:gallery-alpha-1", "url": "https://creative-studio.example.com/wp-content/uploads/gallery-alpha-1.jpg", "alt": "Homepage design", "mime_type": "image/jpeg"},
+    {"id": "media:gallery-alpha-2", "url": "https://creative-studio.example.com/wp-content/uploads/gallery-alpha-2.jpg", "alt": "Dashboard view", "mime_type": "image/jpeg"}
+  ],
+  "theme_mods": {},
+  "global_styles": {},
+  "customizer_settings": {},
+  "css_sources": {},
+  "plugins_fingerprint": {
+    "plugins": [
+      {"slug": "advanced-custom-fields-pro", "version": "6.2.5", "status": "active", "family": "acf"},
+      {"slug": "pods", "version": "3.0.10", "status": "active", "family": "pods"},
+      {"slug": "seo-by-rank-math", "version": "1.0.207", "status": "active", "family": "rank_math"}
+    ]
+  },
+  "plugin_behaviors": {},
+  "blocks_usage": {},
+  "block_patterns": {},
+  "acf_field_groups": {},
+  "custom_fields_config": {},
+  "shortcodes_inventory": {},
+  "forms_config": {},
+  "widgets": {},
+  "page_templates": {
+    "templates": [
+      {"slug": "template-portfolio-grid", "name": "Portfolio Grid", "file": "template-portfolio-grid.php", "post_types": ["page"]},
+      {"slug": "template-portfolio-single", "name": "Portfolio Single", "file": "template-portfolio-single.php", "post_types": ["portfolio"]},
+      {"slug": "template-testimonials", "name": "Testimonials", "file": "template-testimonials.php", "post_types": ["page", "testimonial"]}
+    ]
+  },
+  "rewrite_rules": {},
+  "rest_api_endpoints": {},
+  "hooks_registry": {},
+  "error_log": {},
+
+  "content_relationships": {
+    "schema_version": "1.0.0",
+    "relationships": [
+      {"source_id": "post:portfolio:project-alpha", "target_id": "media:portfolio-alpha-hero", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:portfolio:project-beta", "target_id": "media:portfolio-beta-hero", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:portfolio:project-alpha", "target_id": "media:gallery-alpha-1", "relation_type": "post_to_media", "source_plugin": "acf", "metadata": {"context": "acf_gallery", "field": "gallery"}},
+      {"source_id": "post:portfolio:project-alpha", "target_id": "media:gallery-alpha-2", "relation_type": "post_to_media", "source_plugin": "acf", "metadata": {"context": "acf_gallery", "field": "gallery"}},
+      {"source_id": "post:portfolio:project-alpha", "target_id": "post:testimonial:client-review", "relation_type": "post_to_post", "source_plugin": "pods", "metadata": {"context": "related_testimonials", "field": "related_testimonials"}},
+      {"source_id": "post:portfolio:project-beta", "target_id": "post:testimonial:client-review", "relation_type": "post_to_post", "source_plugin": "pods", "metadata": {"context": "related_testimonials", "field": "related_testimonials"}},
+      {"source_id": "post:portfolio:project-alpha", "target_id": "term:portfolio_category:web-design", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:portfolio:project-alpha", "target_id": "term:skill:react", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:portfolio:project-alpha", "target_id": "term:skill:nodejs", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:portfolio:project-beta", "target_id": "term:portfolio_category:branding", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:portfolio:project-beta", "target_id": "term:portfolio_tag:responsive", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:portfolio:project-beta", "target_id": "term:skill:figma", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:testimonial:client-review", "target_id": "user:author-admin", "relation_type": "post_to_user", "source_plugin": null, "metadata": {"context": "author"}},
+      {"source_id": "post:page:home", "target_id": "media:hero-home", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:page:home", "target_id": "post:portfolio:project-alpha", "relation_type": "post_to_post", "source_plugin": null, "metadata": {"context": "internal_link"}}
+    ]
+  },
+  "field_usage_report": {
+    "schema_version": "1.0.0",
+    "fields": [
+      {"post_type": "portfolio", "field_name": "client_name", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": false, "cardinality": "single", "distinct_value_count": 8, "sample_values": ["Acme Corp", "Globex Industries"], "behaves_as": null},
+      {"post_type": "portfolio", "field_name": "project_url", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 6, "sample_values": ["https://acme-corp.example.com", "https://globex.example.com"], "behaves_as": "reference"},
+      {"post_type": "portfolio", "field_name": "gallery", "source_plugin": "acf", "source_system": "acf", "inferred_type": "repeater", "nullable": true, "cardinality": "multiple", "distinct_value_count": 12, "sample_values": [{"image_id": "media:gallery-alpha-1", "caption": "Homepage design"}, {"image_id": "media:gallery-alpha-2", "caption": "Dashboard view"}], "behaves_as": "repeater"},
+      {"post_type": "portfolio", "field_name": "technologies", "source_plugin": "acf", "source_system": "acf", "inferred_type": "flexible", "nullable": true, "cardinality": "multiple", "distinct_value_count": 5, "sample_values": [{"acf_fc_layout": "frontend_stack", "framework": "React", "version": "18.2"}, {"acf_fc_layout": "backend_stack", "language": "Node.js", "database": "PostgreSQL"}], "behaves_as": "flexible"},
+      {"post_type": "portfolio", "field_name": "related_testimonials", "source_plugin": "pods", "source_system": "pods", "inferred_type": "reference", "nullable": true, "cardinality": "multiple", "distinct_value_count": 4, "sample_values": ["post:testimonial:client-review"], "behaves_as": "reference"},
+      {"post_type": "testimonial", "field_name": "author_name", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": false, "cardinality": "single", "distinct_value_count": 5, "sample_values": ["Sarah Johnson", "Mike Chen"], "behaves_as": null},
+      {"post_type": "testimonial", "field_name": "company", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 4, "sample_values": ["Acme Corp", "Globex Industries"], "behaves_as": null},
+      {"post_type": "testimonial", "field_name": "rating", "source_plugin": "acf", "source_system": "acf", "inferred_type": "number", "nullable": false, "cardinality": "single", "distinct_value_count": 3, "sample_values": [4, 5], "behaves_as": "enum"},
+      {"post_type": "page", "field_name": "hero_heading", "source_plugin": null, "source_system": "core", "inferred_type": "text", "nullable": false, "cardinality": "single", "distinct_value_count": 3, "sample_values": ["Creative Portfolio", "About Us"], "behaves_as": null}
+    ]
+  },
+  "plugin_instances": {
+    "schema_version": "1.0.0",
+    "instances": [
+      {"instance_id": "plugin:rank_math:seo-config", "source_plugin": "rank_math", "instance_type": "seo_object", "config": {"title_separator": "—", "company_name": "Creative Studio", "company_logo": "media:logo-studio"}, "references": []},
+      {"instance_id": "plugin:acf:field-group-portfolio-details", "source_plugin": "acf", "instance_type": "field_group", "config": {"title": "Portfolio Details", "fields": ["client_name", "project_url", "gallery", "technologies"], "location_rules": [{"param": "post_type", "operator": "==", "value": "portfolio"}]}, "references": []},
+      {"instance_id": "plugin:acf:field-group-testimonial-fields", "source_plugin": "acf", "instance_type": "field_group", "config": {"title": "Testimonial Fields", "fields": ["author_name", "company", "rating"], "location_rules": [{"param": "post_type", "operator": "==", "value": "testimonial"}]}, "references": []},
+      {"instance_id": "plugin:pods:portfolio-related-testimonials", "source_plugin": "pods", "instance_type": "field_group", "config": {"title": "Portfolio Relationships", "fields": ["related_testimonials"], "pod_name": "portfolio", "field_type": "pick", "pick_object": "post_type", "pick_val": "testimonial"}, "references": []}
+    ]
+  },
+  "page_composition": {
+    "schema_version": "1.0.0",
+    "pages": [
+      {"canonical_url": "/", "template": "template-portfolio-grid.php", "blocks": [{"blockName": "core/group", "attrs": {"className": "hero-section"}, "innerBlocks": []}, {"blockName": "core/heading", "attrs": {"level": 1, "content": "Creative Studio"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "We build digital experiences."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "portfolio-grid.js"], "content_sections": [{"type": "hero", "source": "core", "fields": ["hero_heading"]}, {"type": "portfolio_grid", "source": "core", "fields": []}], "snapshot_ref": "snapshots/home.html"},
+      {"canonical_url": "/about", "template": "page.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "About Us"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "We are a small creative studio."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}], "snapshot_ref": null},
+      {"canonical_url": "/portfolio/project-alpha", "template": "template-portfolio-single.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "Project Alpha"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "A complete web platform for Acme Corp."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "lightbox.js", "lightbox.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}, {"type": "custom_fields", "source": "acf", "fields": ["client_name", "project_url", "gallery", "technologies"]}, {"type": "relationship", "source": "pods", "fields": ["related_testimonials"]}], "snapshot_ref": "snapshots/portfolio-item.html"},
+      {"canonical_url": "/portfolio/project-beta", "template": "template-portfolio-single.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "Project Beta"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "Brand identity redesign for Globex Industries."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "lightbox.js", "lightbox.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}, {"type": "custom_fields", "source": "acf", "fields": ["client_name", "project_url", "gallery", "technologies"]}, {"type": "relationship", "source": "pods", "fields": ["related_testimonials"]}], "snapshot_ref": null},
+      {"canonical_url": "/testimonials/client-review", "template": "template-testimonials.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "What Our Clients Say"}, "innerBlocks": []}, {"blockName": "core/quote", "attrs": {"value": "Outstanding work on our website redesign."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "testimonials.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}, {"type": "custom_fields", "source": "acf", "fields": ["author_name", "company", "rating"]}], "snapshot_ref": null}
+    ]
+  },
+  "seo_full": {
+    "schema_version": "1.0.0",
+    "pages": [
+      {"canonical_url": "/", "source_plugin": "rank_math", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%title% %sep% %sitename%", "resolved_title": "Creative Studio — Portfolio & Design", "meta_description": "Creative Studio builds digital experiences. View our portfolio of web design and branding projects.", "og_metadata": {"og:title": "Creative Studio — Portfolio & Design", "og:description": "We build digital experiences.", "og:image": "https://creative-studio.example.com/wp-content/uploads/hero-home.jpg", "og:type": "website"}, "twitter_metadata": {"twitter:card": "summary_large_image", "twitter:title": "Creative Studio"}, "schema_type_hints": ["WebSite", "Organization"], "breadcrumb_config": null, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/about", "source_plugin": "rank_math", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%title% %sep% %sitename%", "resolved_title": "About Us — Creative Studio", "meta_description": "Learn about Creative Studio and our approach to design and development.", "og_metadata": {"og:title": "About Us — Creative Studio", "og:type": "website"}, "twitter_metadata": {}, "schema_type_hints": ["AboutPage"], "breadcrumb_config": {"enabled": true, "separator": "»"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/portfolio/project-alpha", "source_plugin": "rank_math", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%title% %sep% %sitename%", "resolved_title": "Project Alpha — Creative Studio", "meta_description": "A complete web platform built for Acme Corp featuring React and Node.js.", "og_metadata": {"og:title": "Project Alpha — Creative Studio", "og:description": "Web platform for Acme Corp.", "og:image": "https://creative-studio.example.com/wp-content/uploads/portfolio-alpha-hero.jpg", "og:type": "article"}, "twitter_metadata": {"twitter:card": "summary_large_image"}, "schema_type_hints": ["Article", "CreativeWork"], "breadcrumb_config": {"enabled": true, "separator": "»"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/portfolio/project-beta", "source_plugin": "rank_math", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%title% %sep% %sitename%", "resolved_title": "Project Beta — Creative Studio", "meta_description": "Brand identity redesign for Globex Industries.", "og_metadata": {"og:title": "Project Beta — Creative Studio", "og:type": "article"}, "twitter_metadata": {}, "schema_type_hints": ["Article", "CreativeWork"], "breadcrumb_config": {"enabled": true, "separator": "»"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/testimonials/client-review", "source_plugin": "rank_math", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%title% %sep% %sitename%", "resolved_title": "Client Testimonials — Creative Studio", "meta_description": "Read what our clients say about working with Creative Studio.", "og_metadata": {"og:title": "Client Testimonials — Creative Studio", "og:type": "website"}, "twitter_metadata": {}, "schema_type_hints": ["WebPage"], "breadcrumb_config": {"enabled": true, "separator": "»"}, "sitemap_inclusion": true, "redirect_ownership": null}
+    ]
+  },
+  "editorial_workflows": {
+    "schema_version": "1.0.0",
+    "statuses_in_use": ["publish", "draft"],
+    "scheduled_publishing": false,
+    "draft_behavior": "standard WordPress draft with preview",
+    "preview_expectations": "default WordPress preview via ?preview=true",
+    "revision_policy": "WordPress default revisions enabled, no limit configured",
+    "comments_enabled": false,
+    "authoring_model": "single_editor"
+  },
+  "plugin_table_exports": [
+    {
+      "table_name": "wp_pods_rel",
+      "schema_version": "1.0.0",
+      "source_plugin": "pods",
+      "row_count": 2,
+      "primary_key": "id",
+      "foreign_key_candidates": ["pod_id", "related_pod_id"],
+      "rows": [
+        {"id": 1, "pod_id": "post:portfolio:project-alpha", "field_id": "related_testimonials", "related_pod_id": "post:testimonial:client-review", "weight": 0},
+        {"id": 2, "pod_id": "post:portfolio:project-beta", "field_id": "related_testimonials", "related_pod_id": "post:testimonial:client-review", "weight": 0}
+      ]
+    }
+  ],
+  "search_config": {
+    "schema_version": "1.0.0",
+    "searchable_types": ["portfolio", "testimonial", "page"],
+    "ranking_hints": [{"field": "title", "weight": 1.0}, {"field": "content", "weight": 0.5}, {"field": "client_name", "weight": 0.8}],
+    "facets": [{"name": "portfolio_category", "taxonomy": "portfolio_category", "type": "checkbox"}, {"name": "skill", "taxonomy": "skill", "type": "checkbox"}],
+    "archive_behavior": {"posts_per_page": 12, "orderby": "date", "order": "DESC"},
+    "search_template_hints": {"template": "search.php", "results_layout": "grid"}
+  },
+  "integration_manifest": {
+    "schema_version": "1.0.0",
+    "integrations": [
+      {"integration_id": "integration:google-analytics", "integration_type": "third_party_script", "target": "https://www.googletagmanager.com/gtag/js", "config": {"tracking_id": "G-XXXXXXXXXX"}, "business_critical": false},
+      {"integration_id": "integration:lightbox-cdn", "integration_type": "third_party_script", "target": "https://cdn.jsdelivr.net/npm/lightbox2/dist/js/lightbox.min.js", "config": {}, "business_critical": false}
+    ]
+  }
+}

@@ -1,9 +1,3 @@
-"""Pipeline API endpoints.
-
-Provides routes for presigned upload URLs, migration triggering,
-status polling, and artifact retrieval.
-"""
-
 from __future__ import annotations
 
 import uuid

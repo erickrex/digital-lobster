@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "pages": [
+    {
+      "canonical_url": "/",
+      "template": "template-portfolio-grid.php",
+      "blocks": [
+        {"blockName": "core/group", "attrs": {"className": "hero-section"}, "innerBlocks": []},
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Creative Studio"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "We build digital experiences."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "portfolio-grid.js"],
+      "content_sections": [
+        {"type": "hero", "source": "core", "fields": ["hero_heading"]},
+        {"type": "portfolio_grid", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": "snapshots/home.html"
+    },
+    {
+      "canonical_url": "/about",
+      "template": "page.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "About Us"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "We are a small creative studio."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/portfolio/project-alpha",
+      "template": "template-portfolio-single.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Project Alpha"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "A complete web platform for Acme Corp."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "lightbox.js", "lightbox.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "custom_fields", "source": "acf", "fields": ["client_name", "project_url", "gallery", "technologies"]},
+        {"type": "relationship", "source": "pods", "fields": ["related_testimonials"]}
+      ],
+      "snapshot_ref": "snapshots/portfolio-item.html"
+    },
+    {
+      "canonical_url": "/portfolio/project-beta",
+      "template": "template-portfolio-single.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Project Beta"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "Brand identity redesign for Globex Industries."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "lightbox.js", "lightbox.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "custom_fields", "source": "acf", "fields": ["client_name", "project_url", "gallery", "technologies"]},
+        {"type": "relationship", "source": "pods", "fields": ["related_testimonials"]}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/testimonials/client-review",
+      "template": "template-testimonials.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "What Our Clients Say"}, "innerBlocks": []},
+        {"blockName": "core/quote", "attrs": {"value": "Outstanding work on our website redesign."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "testimonials.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "custom_fields", "source": "acf", "fields": ["author_name", "company", "rating"]}
+      ],
+      "snapshot_ref": null
+    }
+  ]
+}

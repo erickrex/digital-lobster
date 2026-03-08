@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "fields": [
+    {
+      "post_type": "portfolio",
+      "field_name": "client_name",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 8,
+      "sample_values": ["Acme Corp", "Globex Industries"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "portfolio",
+      "field_name": "project_url",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 6,
+      "sample_values": ["https://acme-corp.example.com", "https://globex.example.com"],
+      "behaves_as": "reference"
+    },
+    {
+      "post_type": "portfolio",
+      "field_name": "gallery",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "repeater",
+      "nullable": true,
+      "cardinality": "multiple",
+      "distinct_value_count": 12,
+      "sample_values": [
+        {"image_id": "media:gallery-alpha-1", "caption": "Homepage design"},
+        {"image_id": "media:gallery-alpha-2", "caption": "Dashboard view"}
+      ],
+      "behaves_as": "repeater"
+    },
+    {
+      "post_type": "portfolio",
+      "field_name": "technologies",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "flexible",
+      "nullable": true,
+      "cardinality": "multiple",
+      "distinct_value_count": 5,
+      "sample_values": [
+        {"acf_fc_layout": "frontend_stack", "framework": "React", "version": "18.2"},
+        {"acf_fc_layout": "backend_stack", "language": "Node.js", "database": "PostgreSQL"}
+      ],
+      "behaves_as": "flexible"
+    },
+    {
+      "post_type": "portfolio",
+      "field_name": "related_testimonials",
+      "source_plugin": "pods",
+      "source_system": "pods",
+      "inferred_type": "reference",
+      "nullable": true,
+      "cardinality": "multiple",
+      "distinct_value_count": 4,
+      "sample_values": ["post:testimonial:client-review"],
+      "behaves_as": "reference"
+    },
+    {
+      "post_type": "testimonial",
+      "field_name": "author_name",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 5,
+      "sample_values": ["Sarah Johnson", "Mike Chen"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "testimonial",
+      "field_name": "company",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 4,
+      "sample_values": ["Acme Corp", "Globex Industries"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "testimonial",
+      "field_name": "rating",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "number",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 3,
+      "sample_values": [4, 5],
+      "behaves_as": "enum"
+    },
+    {
+      "post_type": "page",
+      "field_name": "hero_heading",
+      "source_plugin": null,
+      "source_system": "core",
+      "inferred_type": "text",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 3,
+      "sample_values": ["Creative Portfolio", "About Us"],
+      "behaves_as": null
+    }
+  ]
+}

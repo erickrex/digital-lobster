@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "searchable_types": ["post", "page", "review"],
+  "ranking_hints": [
+    {"field": "title", "weight": 1.0},
+    {"field": "content", "weight": 0.7},
+    {"field": "excerpt", "weight": 0.5}
+  ],
+  "facets": [
+    {"name": "category", "taxonomy": "category", "type": "checkbox"},
+    {"name": "tag", "taxonomy": "post_tag", "type": "checkbox"}
+  ],
+  "archive_behavior": {
+    "posts_per_page": 10,
+    "orderby": "date",
+    "order": "DESC"
+  },
+  "search_template_hints": {
+    "template": "search.php",
+    "results_layout": "list"
+  }
+}

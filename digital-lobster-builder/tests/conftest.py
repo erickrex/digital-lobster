@@ -1,5 +1,3 @@
-"""Shared fixtures and Hypothesis strategies for the test suite."""
-
 import io
 import json
 import zipfile
@@ -698,3 +696,684 @@ def media_manifests(draw):
         min_size=1,
         max_size=20,
     ))
+
+
+# ---------------------------------------------------------------------------
+# Production pipeline model imports
+# ---------------------------------------------------------------------------
+
+from src.models.finding import Finding, FindingSeverity
+from src.models.capability_manifest import Capability, CapabilityManifest
+from src.models.bundle_manifest import BundleManifest
+from src.models.bundle_artifacts import (
+    ContentRelationship,
+    ContentRelationshipsArtifact,
+    EditorialWorkflowsArtifact,
+    FieldUsageEntry,
+    FieldUsageReportArtifact,
+    IntegrationEntry,
+    IntegrationManifestArtifact,
+    PageCompositionEntry,
+    PageCompositionArtifact,
+    PluginInstance,
+    PluginInstancesArtifact,
+    PluginTableExport,
+    SearchConfigArtifact,
+    SeoPageEntry,
+    SeoFullArtifact,
+)
+from src.models.content_model_manifest import (
+    ContentModelManifest,
+    SeoComponentStrategy,
+    StrapiCollection,
+    StrapiComponent,
+    StrapiRelation,
+    ValidationHint,
+)
+from src.models.presentation_manifest import (
+    FallbackZone,
+    LayoutDefinition,
+    PresentationManifest,
+    RouteTemplate,
+    SectionDefinition,
+)
+from src.models.behavior_manifest import (
+    BehaviorManifest,
+    FormStrategy,
+    IntegrationBoundary,
+    RedirectRule,
+    SearchStrategy,
+)
+from src.models.migration_mapping_manifest import (
+    FieldMapping,
+    MediaMappingStrategy,
+    MigrationMappingManifest,
+    PluginInstanceMapping,
+    RelationMapping,
+    TemplateMapping,
+    TermMapping,
+    TypeMapping,
+)
+from src.models.parity_report import ParityReport, SnapshotComparison, PARITY_CATEGORIES
+from src.models.readiness_report import ReadinessReport
+
+
+# ---------------------------------------------------------------------------
+# Primitive helpers for production pipeline strategies
+# ---------------------------------------------------------------------------
+
+_finding_stage = st.sampled_from([
+    "blueprint_intake", "qualification", "capability_resolution",
+    "schema_compiler", "presentation_compiler", "behavior_compiler",
+    "content_migrator", "parity_qa",
+])
+_capability_type = st.sampled_from([
+    "content_model", "seo", "widget", "form", "shortcode",
+    "search_filter", "integration", "editorial", "template",
+])
+_classification = st.sampled_from([
+    "strapi_native", "astro_runtime", "unsupported",
+])
+_source_system = st.sampled_from([
+    "acf", "pods", "meta_box", "carbon_fields", "core",
+])
+_inferred_type = st.sampled_from([
+    "text", "number", "boolean", "date", "reference",
+    "repeater", "flexible", "object", "enum",
+])
+_cardinality = st.sampled_from(["single", "multiple"])
+_behaves_as = st.sampled_from([
+    None, "enum", "reference", "repeater", "object", "flexible",
+])
+_instance_type = st.sampled_from([
+    "form", "directory", "filter", "cta", "seo_object",
+    "widget", "singleton",
+])
+_relation_type_str = st.sampled_from([
+    "post_to_post", "post_to_term", "post_to_media",
+    "post_to_user", "plugin_entity",
+])
+_seo_plugin = st.sampled_from(["yoast", "rank_math", "aioseo"])
+_authoring_model = st.sampled_from(["single_editor", "two_editor"])
+_integration_type = st.sampled_from([
+    "form_destination", "webhook", "crm", "embed",
+    "runtime_api", "third_party_script",
+])
+_disposition = st.sampled_from(["rebuild", "proxy", "drop"])
+_target_system = st.sampled_from(["strapi", "astro", "external"])
+_form_target = st.sampled_from([
+    "strapi_collection", "astro_api_route", "external_proxy",
+])
+_search_impl = st.sampled_from([
+    "strapi_filter", "astro_search", "external",
+])
+_strapi_relation = st.sampled_from([
+    "oneToOne", "oneToMany", "manyToMany", "manyToOne",
+])
+_section_source_type = st.sampled_from([
+    "widget", "sidebar", "block", "plugin_component",
+])
+_transform = st.sampled_from([
+    None, "direct", "component", "dynamic_zone", "json",
+])
+_migration_strategy = st.sampled_from([
+    "collection", "singleton", "component", "skip",
+])
+_parity_score = st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False)
+
+
+# ---------------------------------------------------------------------------
+# Strategy: findings
+# ---------------------------------------------------------------------------
+
+@st.composite
+def findings(draw):
+    """Generate random Finding instances."""
+    return Finding(
+        severity=draw(st.sampled_from(list(FindingSeverity))),
+        stage=draw(_finding_stage),
+        construct=draw(_slug),
+        message=draw(_name),
+        recommended_action=draw(_name),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: capabilities
+# ---------------------------------------------------------------------------
+
+@st.composite
+def capabilities(draw):
+    """Generate random Capability instances."""
+    return Capability(
+        capability_type=draw(_capability_type),
+        source_plugin=draw(st.one_of(st.none(), _slug)),
+        classification=draw(_classification),
+        confidence=draw(st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False)),
+        details=draw(st.fixed_dictionaries({}, optional={"note": _name})),
+        findings=draw(st.lists(findings(), max_size=2)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: capability_manifests
+# ---------------------------------------------------------------------------
+
+@st.composite
+def capability_manifests(draw):
+    """Generate random CapabilityManifest instances."""
+    caps = draw(st.lists(capabilities(), max_size=5))
+    return CapabilityManifest(
+        capabilities=caps,
+        findings=draw(st.lists(findings(), max_size=3)),
+        content_model_capabilities=draw(st.lists(capabilities(), max_size=2)),
+        presentation_capabilities=draw(st.lists(capabilities(), max_size=2)),
+        behavior_capabilities=draw(st.lists(capabilities(), max_size=2)),
+        plugin_capabilities=draw(st.dictionaries(
+            keys=_slug, values=st.lists(capabilities(), max_size=2), max_size=2,
+        )),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: bundle_manifests
+# ---------------------------------------------------------------------------
+
+@st.composite
+def bundle_manifests(draw):
+    """Generate random BundleManifest instances with all 23 existing + 9 new artifacts."""
+    empty_dict = st.just({})
+    empty_list_of_dicts = st.just([])
+
+    # New CMS artifact sub-models
+    content_rels = ContentRelationshipsArtifact(
+        schema_version=draw(_version),
+        relationships=draw(st.lists(
+            st.builds(
+                ContentRelationship,
+                source_id=_slug,
+                target_id=_slug,
+                relation_type=_relation_type_str,
+                source_plugin=st.one_of(st.none(), _slug),
+            ),
+            max_size=5,
+        )),
+    )
+    field_usage = FieldUsageReportArtifact(
+        schema_version=draw(_version),
+        fields=draw(st.lists(
+            st.builds(
+                FieldUsageEntry,
+                post_type=_post_type,
+                field_name=_slug,
+                source_plugin=st.one_of(st.none(), _slug),
+                source_system=_source_system,
+                inferred_type=_inferred_type,
+                nullable=st.booleans(),
+                cardinality=_cardinality,
+                distinct_value_count=st.integers(min_value=0, max_value=100),
+                sample_values=st.just([]),
+                behaves_as=_behaves_as,
+            ),
+            max_size=5,
+        )),
+    )
+    plugin_insts = PluginInstancesArtifact(
+        schema_version=draw(_version),
+        instances=draw(st.lists(
+            st.builds(
+                PluginInstance,
+                instance_id=_slug,
+                source_plugin=_slug,
+                instance_type=_instance_type,
+            ),
+            max_size=3,
+        )),
+    )
+    page_comp = PageCompositionArtifact(
+        schema_version=draw(_version),
+        pages=draw(st.lists(
+            st.builds(
+                PageCompositionEntry,
+                canonical_url=_url,
+                template=_slug,
+                blocks=st.just([]),
+                shortcodes=st.just([]),
+                widget_placements=st.just([]),
+                forms_embedded=st.just([]),
+                plugin_components=st.just([]),
+                enqueued_assets=st.just([]),
+                content_sections=st.just([]),
+                snapshot_ref=st.one_of(st.none(), _slug),
+            ),
+            max_size=3,
+        )),
+    )
+    seo = SeoFullArtifact(
+        schema_version=draw(_version),
+        pages=draw(st.lists(
+            st.builds(
+                SeoPageEntry,
+                canonical_url=_url,
+                source_plugin=_seo_plugin,
+            ),
+            max_size=3,
+        )),
+    )
+    editorial = draw(st.builds(
+        EditorialWorkflowsArtifact,
+        schema_version=_version,
+        statuses_in_use=st.just(["publish", "draft"]),
+        scheduled_publishing=st.booleans(),
+        draft_behavior=st.sampled_from(["standard", "auto_save"]),
+        preview_expectations=st.sampled_from(["live_preview", "manual_refresh"]),
+        revision_policy=st.sampled_from(["keep_all", "limit_10", "none"]),
+        comments_enabled=st.booleans(),
+        authoring_model=_authoring_model,
+    ))
+    table_exports = draw(st.lists(
+        st.builds(
+            PluginTableExport,
+            table_name=_slug,
+            schema_version=_version,
+            source_plugin=_slug,
+            row_count=st.integers(min_value=0, max_value=100),
+            primary_key=st.just("id"),
+            foreign_key_candidates=st.just([]),
+            rows=st.just([]),
+        ),
+        max_size=2,
+    ))
+    search_cfg = draw(st.builds(
+        SearchConfigArtifact,
+        schema_version=_version,
+        searchable_types=st.just(["post", "page"]),
+        ranking_hints=st.just([]),
+        facets=st.just([]),
+    ))
+    integration = IntegrationManifestArtifact(
+        schema_version=draw(_version),
+        integrations=draw(st.lists(
+            st.builds(
+                IntegrationEntry,
+                integration_id=_slug,
+                integration_type=_integration_type,
+                target=_url,
+                business_critical=st.booleans(),
+            ),
+            max_size=3,
+        )),
+    )
+
+    return BundleManifest(
+        schema_version=draw(_version),
+        site_url=draw(_url),
+        site_name=draw(_name),
+        wordpress_version=draw(_version),
+        # 23 existing artifacts as dicts/lists
+        site_blueprint=draw(empty_dict),
+        site_settings=draw(empty_dict),
+        site_options=draw(empty_dict),
+        site_environment=draw(empty_dict),
+        taxonomies=draw(empty_dict),
+        menus=draw(empty_list_of_dicts),
+        media_map=draw(empty_list_of_dicts),
+        theme_mods=draw(empty_dict),
+        global_styles=draw(empty_dict),
+        customizer_settings=draw(empty_dict),
+        css_sources=draw(empty_dict),
+        plugins_fingerprint=draw(empty_dict),
+        plugin_behaviors=draw(empty_dict),
+        blocks_usage=draw(empty_dict),
+        block_patterns=draw(empty_dict),
+        acf_field_groups=draw(empty_dict),
+        custom_fields_config=draw(empty_dict),
+        shortcodes_inventory=draw(empty_dict),
+        forms_config=draw(empty_dict),
+        widgets=draw(empty_dict),
+        page_templates=draw(empty_dict),
+        rewrite_rules=draw(empty_dict),
+        rest_api_endpoints=draw(empty_dict),
+        hooks_registry=draw(empty_dict),
+        error_log=draw(empty_dict),
+        # 9 new CMS artifacts
+        content_relationships=content_rels,
+        field_usage_report=field_usage,
+        plugin_instances=plugin_insts,
+        page_composition=page_comp,
+        seo_full=seo,
+        editorial_workflows=editorial,
+        plugin_table_exports=table_exports,
+        search_config=search_cfg,
+        integration_manifest=integration,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: content_model_manifests
+# ---------------------------------------------------------------------------
+
+@st.composite
+def content_model_manifests(draw):
+    """Generate random ContentModelManifest instances."""
+    fields_st = st.lists(strapi_field_definitions(), min_size=1, max_size=4)
+
+    collections = draw(st.lists(
+        st.builds(
+            StrapiCollection,
+            display_name=_name,
+            singular_name=_slug,
+            plural_name=_slug,
+            api_id=st.builds(lambda s: f"api::{s}.{s}", _slug),
+            fields=fields_st,
+            components=st.lists(st.builds(lambda s: f"shared.{s}", _slug), max_size=2),
+            source_post_type=st.one_of(st.none(), _post_type),
+            source_plugin=st.one_of(st.none(), _slug),
+        ),
+        min_size=1,
+        max_size=4,
+    ))
+    components = draw(st.lists(
+        st.builds(
+            StrapiComponent,
+            uid=st.builds(lambda s: f"shared.{s}", _slug),
+            display_name=_name,
+            category=st.sampled_from(["shared", "seo", "layout"]),
+            fields=fields_st,
+        ),
+        max_size=3,
+    ))
+    relations = draw(st.lists(
+        st.builds(
+            StrapiRelation,
+            source_collection=st.builds(lambda s: f"api::{s}.{s}", _slug),
+            target_collection=st.builds(lambda s: f"api::{s}.{s}", _slug),
+            field_name=_slug,
+            relation_type=_strapi_relation,
+            source_relationship_id=_slug,
+        ),
+        max_size=3,
+    ))
+    seo_strategy = draw(st.one_of(
+        st.none(),
+        st.builds(
+            SeoComponentStrategy,
+            component_uid=st.builds(lambda s: f"shared.{s}", _slug),
+            fields=fields_st,
+            applied_to=st.lists(st.builds(lambda s: f"api::{s}.{s}", _slug), min_size=1, max_size=3),
+        ),
+    ))
+    validation_hints = draw(st.lists(
+        st.builds(
+            ValidationHint,
+            collection_api_id=st.builds(lambda s: f"api::{s}.{s}", _slug),
+            field_name=_slug,
+            nullable=st.booleans(),
+            cardinality=_cardinality,
+            enum_values=st.one_of(st.none(), st.lists(_slug, min_size=1, max_size=4)),
+        ),
+        max_size=4,
+    ))
+    return ContentModelManifest(
+        collections=collections,
+        components=components,
+        relations=relations,
+        seo_strategy=seo_strategy,
+        validation_hints=validation_hints,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: presentation_manifests
+# ---------------------------------------------------------------------------
+
+@st.composite
+def presentation_manifests(draw):
+    """Generate random PresentationManifest instances."""
+    layouts = draw(st.lists(
+        st.builds(
+            LayoutDefinition,
+            name=_slug,
+            template_path=st.builds(lambda s: f"src/layouts/{s}.astro", _slug),
+            shared_sections=st.lists(_slug, max_size=3),
+        ),
+        min_size=1,
+        max_size=3,
+    ))
+    route_templates = draw(st.lists(
+        st.builds(
+            RouteTemplate,
+            route_pattern=st.builds(lambda s: f"/{s}/[slug]", _slug),
+            layout=_slug,
+            source_template=_slug,
+            content_collection=st.one_of(st.none(), _slug),
+        ),
+        max_size=4,
+    ))
+    sections = draw(st.lists(
+        st.builds(
+            SectionDefinition,
+            name=_slug,
+            source_type=_section_source_type,
+            source_plugin=st.one_of(st.none(), _slug),
+            component_path=st.builds(lambda s: f"src/components/{s}.astro", _slug),
+        ),
+        max_size=4,
+    ))
+    fallback_zones = draw(st.lists(
+        st.builds(
+            FallbackZone,
+            page_url=_url,
+            zone_name=_slug,
+            raw_html=st.text(min_size=1, max_size=100, alphabet=st.characters(categories=("L", "N", "P", "Z"))),
+            reason=_name,
+        ),
+        max_size=3,
+    ))
+    return PresentationManifest(
+        layouts=layouts,
+        route_templates=route_templates,
+        sections=sections,
+        fallback_zones=fallback_zones,
+        style_tokens=draw(st.fixed_dictionaries({}, optional={"primary_color": _slug})),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: behavior_manifests
+# ---------------------------------------------------------------------------
+
+@st.composite
+def behavior_manifests(draw):
+    """Generate random BehaviorManifest instances."""
+    redirects = draw(st.lists(
+        st.builds(
+            RedirectRule,
+            source_url=st.builds(lambda s: f"/{s}/", _slug),
+            target_url=st.builds(lambda s: f"/{s}/", _slug),
+            status_code=st.sampled_from([301, 302, 307, 308]),
+            source_plugin=st.one_of(st.none(), _slug),
+        ),
+        max_size=5,
+    ))
+    forms = draw(st.lists(
+        st.builds(
+            FormStrategy,
+            form_id=_slug,
+            source_plugin=st.sampled_from(["contact_form_7", "wpforms", "gravity_forms", "ninja_forms"]),
+            target=_form_target,
+            fields=st.just([{"name": "email", "type": "email"}]),
+            submission_destination=_url,
+        ),
+        max_size=3,
+    ))
+    search = draw(st.one_of(
+        st.none(),
+        st.builds(
+            SearchStrategy,
+            enabled=st.booleans(),
+            searchable_collections=st.lists(_slug, min_size=1, max_size=3),
+            facets=st.just([]),
+            implementation=_search_impl,
+        ),
+    ))
+    boundaries = draw(st.lists(
+        st.builds(
+            IntegrationBoundary,
+            integration_id=_slug,
+            disposition=_disposition,
+            target_system=_target_system,
+        ),
+        max_size=3,
+    ))
+    return BehaviorManifest(
+        redirects=redirects,
+        metadata_strategy=draw(st.fixed_dictionaries({}, optional={"strategy": _slug})),
+        forms_strategy=forms,
+        preview_rules=draw(st.fixed_dictionaries({}, optional={"enabled": st.booleans()})),
+        search_strategy=search,
+        integration_boundaries=boundaries,
+        unsupported_constructs=draw(st.lists(findings(), max_size=2)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: migration_mapping_manifests
+# ---------------------------------------------------------------------------
+
+@st.composite
+def migration_mapping_manifests(draw):
+    """Generate random MigrationMappingManifest instances."""
+    return MigrationMappingManifest(
+        type_mappings=draw(st.lists(
+            st.builds(
+                TypeMapping,
+                source_post_type=_post_type,
+                target_api_id=st.builds(lambda s: f"api::{s}.{s}", _slug),
+                source_plugin=st.one_of(st.none(), _slug),
+            ),
+            min_size=1,
+            max_size=4,
+        )),
+        field_mappings=draw(st.lists(
+            st.builds(
+                FieldMapping,
+                source_post_type=_post_type,
+                source_field=_slug,
+                target_api_id=st.builds(lambda s: f"api::{s}.{s}", _slug),
+                target_field=_slug,
+                transform=_transform,
+            ),
+            max_size=5,
+        )),
+        relation_mappings=draw(st.lists(
+            st.builds(
+                RelationMapping,
+                source_relationship_id=_slug,
+                source_collection=st.builds(lambda s: f"api::{s}.{s}", _slug),
+                target_collection=st.builds(lambda s: f"api::{s}.{s}", _slug),
+                target_field=_slug,
+                relation_type=_strapi_relation,
+            ),
+            max_size=3,
+        )),
+        media_mapping_strategy=draw(st.builds(
+            MediaMappingStrategy,
+            url_rewrite_pattern=st.just("/uploads/{filename}"),
+            relation_aware=st.booleans(),
+            preserve_alt_text=st.booleans(),
+            preserve_caption=st.booleans(),
+        )),
+        term_mappings=draw(st.lists(
+            st.builds(
+                TermMapping,
+                source_taxonomy=_taxonomy,
+                target_api_id=st.builds(lambda s: f"api::{s}.{s}", _slug),
+                target_field=_slug,
+            ),
+            max_size=3,
+        )),
+        template_mappings=draw(st.lists(
+            st.builds(
+                TemplateMapping,
+                source_template=_slug,
+                target_layout=_slug,
+                target_route_pattern=st.builds(lambda s: f"/{s}/[slug]", _slug),
+            ),
+            max_size=3,
+        )),
+        plugin_instance_mappings=draw(st.lists(
+            st.builds(
+                PluginInstanceMapping,
+                source_plugin=_slug,
+                source_instance_type=_instance_type,
+                target_api_id=st.one_of(st.none(), st.builds(lambda s: f"api::{s}.{s}", _slug)),
+                target_component_uid=st.one_of(st.none(), st.builds(lambda s: f"shared.{s}", _slug)),
+                migration_strategy=_migration_strategy,
+            ),
+            max_size=3,
+        )),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: parity_reports
+# ---------------------------------------------------------------------------
+
+@st.composite
+def parity_reports(draw):
+    """Generate random ParityReport instances with consistent score invariants.
+
+    Invariant: overall_score == mean of category_scores.
+    """
+    scores = {cat: draw(_parity_score) for cat in PARITY_CATEGORIES}
+    overall = sum(scores.values()) / len(scores)
+
+    return ParityReport(
+        category_scores=scores,
+        overall_score=overall,
+        findings=draw(st.lists(findings(), max_size=3)),
+        snapshot_comparisons=draw(st.lists(snapshot_comparisons(), max_size=3)),
+        plugin_assertions=draw(st.dictionaries(
+            keys=_slug,
+            values=st.just([{"assertion": "ok"}]),
+            max_size=2,
+        )),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: snapshot_comparisons
+# ---------------------------------------------------------------------------
+
+@st.composite
+def snapshot_comparisons(draw):
+    """Generate random SnapshotComparison instances."""
+    return SnapshotComparison(
+        page_url=draw(_url),
+        visual_parity_score=draw(_parity_score),
+        content_match=draw(st.booleans()),
+        differences=draw(st.lists(_name, max_size=3)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy: readiness_reports
+# ---------------------------------------------------------------------------
+
+@st.composite
+def readiness_reports(draw):
+    """Generate random ReadinessReport instances."""
+    return ReadinessReport(
+        qualified=draw(st.booleans()),
+        findings=draw(st.lists(findings(), max_size=4)),
+        checked_criteria=draw(st.lists(
+            st.sampled_from([
+                "gutenberg_first", "no_woocommerce", "no_multilingual",
+                "no_membership", "no_enterprise_editorial", "supported_plugins",
+            ]),
+            min_size=1,
+            max_size=6,
+            unique=True,
+        )),
+    )

@@ -1,9 +1,3 @@
-"""Strapi Provisioner agent — provisions a DigitalOcean Droplet via Terraform,
-verifies Strapi health, creates the initial admin user, and generates an API token.
-
-Requirements: 1.8, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6
-"""
-
 from __future__ import annotations
 
 import asyncio

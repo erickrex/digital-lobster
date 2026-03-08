@@ -1,5 +1,3 @@
-"""FastAPI application setup for the Pipeline API."""
-
 from __future__ import annotations
 
 from fastapi import FastAPI

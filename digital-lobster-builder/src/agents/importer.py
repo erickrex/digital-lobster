@@ -1,9 +1,3 @@
-"""Agent 5: Importer — converts WordPress content to Astro content collection entries.
-
-Converts WordPress content JSON into Markdown/MDX files with YAML frontmatter,
-generates media maps, navigation JSON, and redirect configurations.
-"""
-
 import logging
 import re
 import time

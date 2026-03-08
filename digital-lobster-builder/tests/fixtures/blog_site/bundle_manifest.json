@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0.0",
+  "site_url": "https://devblog.example.com",
+  "site_name": "DevBlog",
+  "wordpress_version": "6.4.3",
+
+  "site_blueprint": {},
+  "site_settings": {},
+  "site_options": {},
+  "site_environment": {},
+  "taxonomies": {
+    "category": {
+      "terms": [
+        {"term_id": "term:category:tutorials", "name": "Tutorials", "slug": "tutorials", "count": 5},
+        {"term_id": "term:category:news", "name": "News", "slug": "news", "count": 3},
+        {"term_id": "term:category:reviews", "name": "Reviews", "slug": "reviews", "count": 2}
+      ]
+    },
+    "post_tag": {
+      "terms": [
+        {"term_id": "term:tag:javascript", "name": "JavaScript", "slug": "javascript", "count": 4},
+        {"term_id": "term:tag:beginner", "name": "Beginner", "slug": "beginner", "count": 2},
+        {"term_id": "term:tag:industry", "name": "Industry", "slug": "industry", "count": 3},
+        {"term_id": "term:tag:css", "name": "CSS", "slug": "css", "count": 2},
+        {"term_id": "term:tag:review", "name": "Review", "slug": "review", "count": 1}
+      ]
+    }
+  },
+  "menus": [
+    {
+      "name": "Primary Menu",
+      "location": "primary",
+      "items": [
+        {"title": "Home", "url": "/", "type": "page", "object_id": "post:page:home"},
+        {"title": "About", "url": "/about", "type": "page", "object_id": "post:page:about"},
+        {"title": "Blog", "url": "/blog/first-post", "type": "custom", "object_id": null},
+        {"title": "Reviews", "url": "/reviews/product-review", "type": "custom", "object_id": null},
+        {"title": "Contact", "url": "/contact", "type": "page", "object_id": "post:page:contact"}
+      ]
+    },
+    {
+      "name": "Footer Menu",
+      "location": "footer",
+      "items": [
+        {"title": "About", "url": "/about", "type": "page", "object_id": "post:page:about"},
+        {"title": "Contact", "url": "/contact", "type": "page", "object_id": "post:page:contact"},
+        {"title": "Privacy Policy", "url": "/privacy-policy", "type": "page", "object_id": "post:page:privacy"},
+        {"title": "RSS Feed", "url": "/feed/", "type": "custom", "object_id": null}
+      ]
+    },
+    {
+      "name": "Sidebar Menu",
+      "location": "sidebar",
+      "items": [
+        {"title": "Tutorials", "url": "/category/tutorials/", "type": "taxonomy", "object_id": "term:category:tutorials"},
+        {"title": "News", "url": "/category/news/", "type": "taxonomy", "object_id": "term:category:news"},
+        {"title": "Reviews", "url": "/category/reviews/", "type": "taxonomy", "object_id": "term:category:reviews"}
+      ]
+    }
+  ],
+  "media_map": [
+    {"id": "media:logo-devblog", "url": "https://devblog.example.com/wp-content/uploads/logo-devblog.png", "alt": "DevBlog Logo", "mime_type": "image/png"},
+    {"id": "media:hero-blog", "url": "https://devblog.example.com/wp-content/uploads/hero-blog.jpg", "alt": "Blog hero image", "mime_type": "image/jpeg"},
+    {"id": "media:featured-first-post", "url": "https://devblog.example.com/wp-content/uploads/featured-first-post.jpg", "alt": "Modern JavaScript", "mime_type": "image/jpeg"},
+    {"id": "media:featured-second-post", "url": "https://devblog.example.com/wp-content/uploads/featured-second-post.jpg", "alt": "Tech roundup", "mime_type": "image/jpeg"},
+    {"id": "media:inline-code-screenshot", "url": "https://devblog.example.com/wp-content/uploads/inline-code-screenshot.png", "alt": "Code screenshot", "mime_type": "image/png"},
+    {"id": "media:product-photo", "url": "https://devblog.example.com/wp-content/uploads/product-photo.jpg", "alt": "Laptop Pro X", "mime_type": "image/jpeg"}
+  ],
+  "theme_mods": {},
+  "global_styles": {},
+  "customizer_settings": {},
+  "css_sources": {},
+  "plugins_fingerprint": {
+    "plugins": [
+      {"slug": "wordpress-seo", "version": "21.8", "status": "active", "family": "yoast"},
+      {"slug": "advanced-custom-fields", "version": "6.2.5", "status": "active", "family": "acf"},
+      {"slug": "contact-form-7", "version": "5.8.6", "status": "active", "family": "contact_form_7"},
+      {"slug": "redirection", "version": "5.4.1", "status": "active", "family": "redirect"}
+    ]
+  },
+  "plugin_behaviors": {},
+  "blocks_usage": {},
+  "block_patterns": {},
+  "acf_field_groups": {},
+  "custom_fields_config": {},
+  "shortcodes_inventory": {},
+  "forms_config": {},
+  "widgets": {
+    "sidebars": [
+      {
+        "id": "sidebar-blog",
+        "name": "Blog Sidebar",
+        "widgets": [
+          {"widget_id": "plugin:core:widget-recent-posts", "type": "recent-posts", "position": 0},
+          {"widget_id": "plugin:core:widget-categories", "type": "categories", "position": 1},
+          {"widget_id": "plugin:core:widget-tag-cloud", "type": "tag_cloud", "position": 2},
+          {"widget_id": "plugin:core:widget-search", "type": "search", "position": 3}
+        ]
+      },
+      {
+        "id": "sidebar-home",
+        "name": "Home Sidebar",
+        "widgets": [
+          {"widget_id": "plugin:core:widget-recent-posts", "type": "recent-posts", "position": 0},
+          {"widget_id": "plugin:core:widget-search", "type": "search", "position": 1}
+        ]
+      }
+    ]
+  },
+  "page_templates": {},
+  "rewrite_rules": {
+    "rules": [
+      {"source": "/2023/01/getting-started-modern-javascript/", "target": "/blog/first-post", "status_code": 301, "source_plugin": "redirect"},
+      {"source": "/2023/03/tech-roundup-q1/", "target": "/blog/second-post", "status_code": 301, "source_plugin": "redirect"},
+      {"source": "/2024/01/laptop-pro-x-review/", "target": "/reviews/product-review", "status_code": 301, "source_plugin": "redirect"},
+      {"source": "/category/uncategorized/", "target": "/category/tutorials/", "status_code": 301, "source_plugin": "redirect"}
+    ]
+  },
+  "rest_api_endpoints": {},
+  "hooks_registry": {},
+  "error_log": {},
+
+  "content_relationships": {
+    "schema_version": "1.0.0",
+    "relationships": [
+      {"source_id": "post:post:first-post", "target_id": "media:featured-first-post", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:post:second-post", "target_id": "media:featured-second-post", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:post:first-post", "target_id": "media:inline-code-screenshot", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "inline_image"}},
+      {"source_id": "post:post:first-post", "target_id": "term:category:tutorials", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:post:first-post", "target_id": "term:tag:javascript", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:post:first-post", "target_id": "term:tag:beginner", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:post:second-post", "target_id": "term:category:news", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:post:second-post", "target_id": "term:tag:industry", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:review:product-review", "target_id": "term:category:reviews", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:review:product-review", "target_id": "media:product-photo", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:post:first-post", "target_id": "user:author-jane", "relation_type": "post_to_user", "source_plugin": null, "metadata": {"context": "author"}},
+      {"source_id": "post:post:second-post", "target_id": "user:author-jane", "relation_type": "post_to_user", "source_plugin": null, "metadata": {"context": "author"}},
+      {"source_id": "post:page:about", "target_id": "post:page:contact", "relation_type": "post_to_post", "source_plugin": null, "metadata": {"context": "cta_link"}},
+      {"source_id": "post:post:second-post", "target_id": "post:post:first-post", "relation_type": "post_to_post", "source_plugin": null, "metadata": {"context": "related_post"}},
+      {"source_id": "post:page:home", "target_id": "media:hero-blog", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}}
+    ]
+  },
+  "field_usage_report": {
+    "schema_version": "1.0.0",
+    "fields": [
+      {"post_type": "post", "field_name": "subtitle", "source_plugin": null, "source_system": "core", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 8, "sample_values": ["A deep dive into modern JS", "What changed this quarter"], "behaves_as": null},
+      {"post_type": "post", "field_name": "reading_time", "source_plugin": null, "source_system": "core", "inferred_type": "number", "nullable": true, "cardinality": "single", "distinct_value_count": 5, "sample_values": [4, 7, 12], "behaves_as": null},
+      {"post_type": "review", "field_name": "rating", "source_plugin": "acf", "source_system": "acf", "inferred_type": "number", "nullable": false, "cardinality": "single", "distinct_value_count": 5, "sample_values": [3, 4, 5], "behaves_as": "enum"},
+      {"post_type": "review", "field_name": "pros_cons", "source_plugin": "acf", "source_system": "acf", "inferred_type": "repeater", "nullable": true, "cardinality": "multiple", "distinct_value_count": 6, "sample_values": [{"type": "pro", "text": "Great battery life"}, {"type": "con", "text": "Heavy"}], "behaves_as": "repeater"},
+      {"post_type": "review", "field_name": "product_url", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 3, "sample_values": ["https://example.com/product-a"], "behaves_as": "reference"},
+      {"post_type": "page", "field_name": "hero_heading", "source_plugin": null, "source_system": "core", "inferred_type": "text", "nullable": false, "cardinality": "single", "distinct_value_count": 3, "sample_values": ["Welcome to DevBlog", "About Us"], "behaves_as": null}
+    ]
+  },
+  "plugin_instances": {
+    "schema_version": "1.0.0",
+    "instances": [
+      {"instance_id": "plugin:yoast:seo-config", "source_plugin": "yoast", "instance_type": "seo_object", "config": {"title_separator": "—", "company_name": "DevBlog", "company_logo": "media:logo-devblog"}, "references": []},
+      {"instance_id": "plugin:acf:field-group-reviews", "source_plugin": "acf", "instance_type": "field_group", "config": {"title": "Product Review Fields", "fields": ["rating", "pros_cons", "product_url"], "location_rules": [{"param": "post_type", "operator": "==", "value": "review"}]}, "references": []},
+      {"instance_id": "plugin:cf7:newsletter-form", "source_plugin": "contact_form_7", "instance_type": "form", "config": {"title": "Newsletter Signup", "fields": [{"name": "your-email", "type": "email", "required": true}], "mail_to": "[email]", "mail_subject": "New subscriber: [your-email]"}, "references": ["post:page:home"]},
+      {"instance_id": "plugin:core:widget-recent-posts", "source_plugin": "core", "instance_type": "widget", "config": {"title": "Recent Posts", "number": 5, "show_date": true}, "references": []},
+      {"instance_id": "plugin:core:widget-categories", "source_plugin": "core", "instance_type": "widget", "config": {"title": "Categories", "count": true, "hierarchical": true}, "references": []},
+      {"instance_id": "plugin:core:widget-tag-cloud", "source_plugin": "core", "instance_type": "widget", "config": {"title": "Tags", "taxonomy": "post_tag"}, "references": []},
+      {"instance_id": "plugin:core:widget-search", "source_plugin": "core", "instance_type": "widget", "config": {"title": "Search"}, "references": []}
+    ]
+  },
+  "page_composition": {
+    "schema_version": "1.0.0",
+    "pages": [
+      {"canonical_url": "/", "template": "template-home.php", "blocks": [{"blockName": "core/group", "attrs": {"className": "hero-section"}, "innerBlocks": []}, {"blockName": "core/heading", "attrs": {"level": 1, "content": "DevBlog"}, "innerBlocks": []}, {"blockName": "core/latest-posts", "attrs": {"postsToShow": 5}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [{"sidebar": "sidebar-home", "widget_id": "plugin:core:widget-recent-posts", "position": 0}, {"sidebar": "sidebar-home", "widget_id": "plugin:core:widget-search", "position": 1}], "forms_embedded": ["plugin:cf7:newsletter-form"], "plugin_components": [{"source_plugin": "contact_form_7", "component_type": "form", "instance_id": "plugin:cf7:newsletter-form"}], "enqueued_assets": ["style.css", "hero.js", "cf7-scripts.js"], "content_sections": [{"type": "hero", "source": "core", "fields": ["hero_heading"]}, {"type": "latest_posts", "source": "core", "fields": []}, {"type": "form", "source": "contact_form_7", "fields": []}], "snapshot_ref": "snapshots/home.html"},
+      {"canonical_url": "/about", "template": "page.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "About DevBlog"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "A blog about web development and tech reviews."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}], "snapshot_ref": null},
+      {"canonical_url": "/contact", "template": "page.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "Contact"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "Get in touch with us."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}], "snapshot_ref": null},
+      {"canonical_url": "/blog/first-post", "template": "single.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "Getting Started with Modern JavaScript"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "JavaScript has evolved significantly..."}, "innerBlocks": []}, {"blockName": "core/image", "attrs": {"id": "media:inline-code-screenshot", "alt": "Code screenshot"}, "innerBlocks": []}, {"blockName": "core/code", "attrs": {"content": "const hello = () => console.log('world');"}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [{"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-recent-posts", "position": 0}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-categories", "position": 1}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-tag-cloud", "position": 2}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-search", "position": 3}], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "prism.js", "prism.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}, {"type": "sidebar", "source": "core", "fields": []}], "snapshot_ref": "snapshots/sample-post.html"},
+      {"canonical_url": "/blog/second-post", "template": "single.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "Tech Industry Roundup Q1 2024"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "Here is what happened this quarter..."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [{"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-recent-posts", "position": 0}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-categories", "position": 1}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-tag-cloud", "position": 2}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-search", "position": 3}], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}, {"type": "sidebar", "source": "core", "fields": []}], "snapshot_ref": null},
+      {"canonical_url": "/reviews/product-review", "template": "single-review.php", "blocks": [{"blockName": "core/heading", "attrs": {"level": 1, "content": "Laptop Pro X Review"}, "innerBlocks": []}, {"blockName": "core/paragraph", "attrs": {"content": "We tested the Laptop Pro X for two weeks..."}, "innerBlocks": []}], "shortcodes": [], "widget_placements": [{"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-recent-posts", "position": 0}, {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-categories", "position": 1}], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "review-stars.css"], "content_sections": [{"type": "content", "source": "core", "fields": []}, {"type": "custom_fields", "source": "acf", "fields": ["rating", "pros_cons", "product_url"]}], "snapshot_ref": null}
+    ]
+  },
+  "seo_full": {
+    "schema_version": "1.0.0",
+    "pages": [
+      {"canonical_url": "/", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%sitename%% %%sep%% %%tagline%%", "resolved_title": "DevBlog — Web Development & Tech Reviews", "meta_description": "DevBlog covers modern web development tutorials, tech industry news, and honest product reviews.", "og_metadata": {"og:title": "DevBlog — Web Development & Tech Reviews", "og:description": "Tutorials, news, and reviews for developers.", "og:image": "https://devblog.example.com/wp-content/uploads/hero-blog.jpg", "og:type": "website"}, "twitter_metadata": {"twitter:card": "summary_large_image", "twitter:site": "@devblog"}, "schema_type_hints": ["WebSite", "Blog"], "breadcrumb_config": null, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/about", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%title%% %%sep%% %%sitename%%", "resolved_title": "About — DevBlog", "meta_description": "Learn about DevBlog and the team behind the content.", "og_metadata": {"og:title": "About — DevBlog", "og:type": "website"}, "twitter_metadata": {}, "schema_type_hints": ["AboutPage"], "breadcrumb_config": {"enabled": true, "separator": "›"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/contact", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%title%% %%sep%% %%sitename%%", "resolved_title": "Contact — DevBlog", "meta_description": "Get in touch with the DevBlog team.", "og_metadata": {"og:title": "Contact — DevBlog", "og:type": "website"}, "twitter_metadata": {}, "schema_type_hints": ["ContactPage"], "breadcrumb_config": {"enabled": true, "separator": "›"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/blog/first-post", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%title%% %%sep%% %%sitename%%", "resolved_title": "Getting Started with Modern JavaScript — DevBlog", "meta_description": "A beginner-friendly guide to modern JavaScript features including ES modules, async/await, and more.", "og_metadata": {"og:title": "Getting Started with Modern JavaScript", "og:description": "A beginner-friendly guide to modern JavaScript.", "og:image": "https://devblog.example.com/wp-content/uploads/featured-first-post.jpg", "og:type": "article"}, "twitter_metadata": {"twitter:card": "summary_large_image", "twitter:site": "@devblog"}, "schema_type_hints": ["Article", "BlogPosting"], "breadcrumb_config": {"enabled": true, "separator": "›"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/blog/second-post", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%title%% %%sep%% %%sitename%%", "resolved_title": "Tech Industry Roundup Q1 2024 — DevBlog", "meta_description": "A summary of the biggest tech industry developments in Q1 2024.", "og_metadata": {"og:title": "Tech Industry Roundup Q1 2024", "og:type": "article"}, "twitter_metadata": {"twitter:card": "summary", "twitter:site": "@devblog"}, "schema_type_hints": ["Article", "BlogPosting"], "breadcrumb_config": {"enabled": true, "separator": "›"}, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/reviews/product-review", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%title%% %%sep%% %%sitename%%", "resolved_title": "Laptop Pro X Review — DevBlog", "meta_description": "An honest two-week review of the Laptop Pro X for developers.", "og_metadata": {"og:title": "Laptop Pro X Review", "og:description": "An honest review of the Laptop Pro X.", "og:image": "https://devblog.example.com/wp-content/uploads/product-photo.jpg", "og:type": "article"}, "twitter_metadata": {"twitter:card": "summary_large_image", "twitter:site": "@devblog"}, "schema_type_hints": ["Article", "Review"], "breadcrumb_config": {"enabled": true, "separator": "›"}, "sitemap_inclusion": true, "redirect_ownership": null}
+    ]
+  },
+  "editorial_workflows": {
+    "schema_version": "1.0.0",
+    "statuses_in_use": ["publish", "draft", "future", "pending"],
+    "scheduled_publishing": true,
+    "draft_behavior": "standard WordPress draft with preview, posts queued for editorial review",
+    "preview_expectations": "default WordPress preview via ?preview=true with Yoast SEO preview panel",
+    "revision_policy": "WordPress default revisions enabled, limited to 10 revisions per post",
+    "comments_enabled": true,
+    "authoring_model": "two_editor"
+  },
+  "plugin_table_exports": [
+    {
+      "table_name": "wp_cf7_submissions",
+      "schema_version": "1.0.0",
+      "source_plugin": "contact_form_7",
+      "row_count": 3,
+      "primary_key": "id",
+      "foreign_key_candidates": ["form_id"],
+      "rows": [
+        {"id": 1, "form_id": "plugin:cf7:newsletter-form", "submitted_at": "2024-01-10T08:15:00Z", "fields": {"your-email": "[email]"}},
+        {"id": 2, "form_id": "plugin:cf7:newsletter-form", "submitted_at": "2024-02-05T12:30:00Z", "fields": {"your-email": "[email]"}},
+        {"id": 3, "form_id": "plugin:cf7:newsletter-form", "submitted_at": "2024-03-20T16:45:00Z", "fields": {"your-email": "[email]"}}
+      ]
+    }
+  ],
+  "search_config": {
+    "schema_version": "1.0.0",
+    "searchable_types": ["post", "page", "review"],
+    "ranking_hints": [{"field": "title", "weight": 1.0}, {"field": "content", "weight": 0.7}, {"field": "excerpt", "weight": 0.5}],
+    "facets": [{"name": "category", "taxonomy": "category", "type": "checkbox"}, {"name": "tag", "taxonomy": "post_tag", "type": "checkbox"}],
+    "archive_behavior": {"posts_per_page": 10, "orderby": "date", "order": "DESC"},
+    "search_template_hints": {"template": "search.php", "results_layout": "list"}
+  },
+  "integration_manifest": {
+    "schema_version": "1.0.0",
+    "integrations": [
+      {"integration_id": "integration:cf7-newsletter", "integration_type": "form_destination", "target": "mailto:[email]", "config": {"form_id": "plugin:cf7:newsletter-form", "method": "wp_mail"}, "business_critical": true},
+      {"integration_id": "integration:rss-feed", "integration_type": "runtime_api", "target": "/feed/", "config": {"format": "rss2", "posts_per_feed": 10}, "business_critical": true},
+      {"integration_id": "integration:google-analytics", "integration_type": "third_party_script", "target": "https://www.googletagmanager.com/gtag/js", "config": {"tracking_id": "G-XXXXXXXXXX"}, "business_critical": false},
+      {"integration_id": "integration:disqus-comments", "integration_type": "embed", "target": "https://devblog.disqus.com/embed.js", "config": {"shortname": "devblog"}, "business_critical": false}
+    ]
+  }
+}

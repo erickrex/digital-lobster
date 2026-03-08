@@ -1,9 +1,3 @@
-"""Pipeline run state model.
-
-Tracks the lifecycle of a single pipeline run including status transitions,
-agent execution tracking, artifact accumulation, and error recording.
-"""
-
 import traceback
 from datetime import datetime, timezone
 from typing import Any

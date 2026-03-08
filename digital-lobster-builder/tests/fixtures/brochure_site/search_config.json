@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "searchable_types": ["page"],
+  "ranking_hints": [
+    {"field": "title", "weight": 1.0},
+    {"field": "content", "weight": 0.5}
+  ],
+  "facets": [],
+  "archive_behavior": {},
+  "search_template_hints": {}
+}

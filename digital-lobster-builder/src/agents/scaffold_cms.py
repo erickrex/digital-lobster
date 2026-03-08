@@ -1,5 +1,3 @@
-"""CMS-backed Astro project assembly for the scaffold agent."""
-
 from __future__ import annotations
 
 import time

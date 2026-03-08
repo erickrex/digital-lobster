@@ -141,6 +141,15 @@ class Digital_Lobster_Exporter_Scanner {
 			'database'       => array( 'class' => 'Digital_Lobster_Exporter_Database_Scanner',       'priority' => 155 ),
 			'translations'   => array( 'class' => 'Digital_Lobster_Exporter_Translation_Scanner',    'priority' => 160 ),
 			'environment'    => array( 'class' => 'Digital_Lobster_Exporter_Environment_Scanner',    'priority' => 165 ),
+			'content_relationships' => array( 'class' => 'Digital_Lobster_Exporter_Content_Relationships_Scanner', 'priority' => 170 ),
+			'field_usage'           => array( 'class' => 'Digital_Lobster_Exporter_Field_Usage_Scanner',           'priority' => 175 ),
+			'plugin_instances'      => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Instances_Scanner',      'priority' => 180 ),
+			'page_composition'      => array( 'class' => 'Digital_Lobster_Exporter_Page_Composition_Scanner',      'priority' => 185 ),
+			'seo_full'              => array( 'class' => 'Digital_Lobster_Exporter_Seo_Full_Scanner',              'priority' => 190 ),
+			'editorial_workflows'   => array( 'class' => 'Digital_Lobster_Exporter_Editorial_Workflows_Scanner',   'priority' => 195 ),
+			'plugin_table_exports'  => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Table_Exports_Scanner',  'priority' => 200 ),
+			'search_config'         => array( 'class' => 'Digital_Lobster_Exporter_Search_Config_Scanner',         'priority' => 205 ),
+			'integration_manifest'  => array( 'class' => 'Digital_Lobster_Exporter_Integration_Manifest_Scanner',  'priority' => 210 ),
 		);
 	}
 
@@ -238,6 +247,15 @@ class Digital_Lobster_Exporter_Scanner {
 				'class-translation-scanner.php',
 				'class-environment-scanner.php',
 				'class-assets-scanner.php',
+				'class-content-relationships-scanner.php',
+				'class-field-usage-scanner.php',
+				'class-plugin-instances-scanner.php',
+				'class-page-composition-scanner.php',
+				'class-seo-full-scanner.php',
+				'class-editorial-workflows-scanner.php',
+				'class-plugin-table-exports-scanner.php',
+				'class-search-config-scanner.php',
+				'class-integration-manifest-scanner.php',
 			);
 
 			foreach ( $scanner_files as $file ) {

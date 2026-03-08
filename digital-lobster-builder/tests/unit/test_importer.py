@@ -1,5 +1,3 @@
-"""Unit tests for Agent 5: Importer."""
-
 import pytest
 from unittest.mock import AsyncMock
 from typing import Any

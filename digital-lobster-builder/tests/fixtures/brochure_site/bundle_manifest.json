@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0.0",
+  "site_url": "https://acme-co.example.com",
+  "site_name": "Acme Co",
+  "wordpress_version": "6.4.2",
+
+  "site_blueprint": {},
+  "site_settings": {},
+  "site_options": {},
+  "site_environment": {},
+  "taxonomies": {},
+  "menus": [
+    {
+      "name": "Primary Menu",
+      "location": "primary",
+      "items": [
+        {"title": "Home", "url": "/", "type": "page", "object_id": "post:page:home"},
+        {"title": "About", "url": "/about", "type": "page", "object_id": "post:page:about"},
+        {"title": "Services", "url": "/services", "type": "page", "object_id": "post:page:services"},
+        {"title": "Team", "url": "/team", "type": "page", "object_id": "post:page:team"},
+        {"title": "Contact", "url": "/contact", "type": "page", "object_id": "post:page:contact"}
+      ]
+    },
+    {
+      "name": "Footer Menu",
+      "location": "footer",
+      "items": [
+        {"title": "Privacy Policy", "url": "/privacy-policy", "type": "page", "object_id": "post:page:privacy"},
+        {"title": "Contact", "url": "/contact", "type": "page", "object_id": "post:page:contact"}
+      ]
+    }
+  ],
+  "media_map": [
+    {"id": "media:logo-main", "url": "https://acme-co.example.com/wp-content/uploads/logo.png", "alt": "Acme Co Logo", "mime_type": "image/png"},
+    {"id": "media:hero-home", "url": "https://acme-co.example.com/wp-content/uploads/hero-home.jpg", "alt": "Hero image", "mime_type": "image/jpeg"},
+    {"id": "media:team-photo", "url": "https://acme-co.example.com/wp-content/uploads/team-photo.jpg", "alt": "Our team", "mime_type": "image/jpeg"}
+  ],
+  "theme_mods": {},
+  "global_styles": {},
+  "customizer_settings": {},
+  "css_sources": {},
+  "plugins_fingerprint": {
+    "plugins": [
+      {"slug": "advanced-custom-fields", "version": "6.2.4", "status": "active", "family": "acf"},
+      {"slug": "contact-form-7", "version": "5.8.5", "status": "active", "family": "contact_form_7"},
+      {"slug": "wordpress-seo", "version": "21.6", "status": "active", "family": "yoast"}
+    ]
+  },
+  "plugin_behaviors": {},
+  "blocks_usage": {},
+  "block_patterns": {},
+  "acf_field_groups": {},
+  "custom_fields_config": {},
+  "shortcodes_inventory": {},
+  "forms_config": {},
+  "widgets": {},
+  "page_templates": {},
+  "rewrite_rules": {},
+  "rest_api_endpoints": {},
+  "hooks_registry": {},
+  "error_log": {},
+
+  "content_relationships": {
+    "schema_version": "1.0.0",
+    "relationships": [
+      {"source_id": "post:page:home", "target_id": "media:logo-main", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "featured_image"}},
+      {"source_id": "post:page:home", "target_id": "media:hero-home", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "inline_image"}},
+      {"source_id": "post:page:about", "target_id": "media:team-photo", "relation_type": "post_to_media", "source_plugin": null, "metadata": {"context": "inline_image"}},
+      {"source_id": "post:page:services", "target_id": "post:page:contact", "relation_type": "post_to_post", "source_plugin": null, "metadata": {"context": "cta_link"}},
+      {"source_id": "post:page:contact", "target_id": "plugin:cf7:contact-form-1", "relation_type": "post_to_plugin_entity", "source_plugin": "contact_form_7", "metadata": {"context": "embedded_form"}},
+      {"source_id": "post:page:team", "target_id": "term:category:staff", "relation_type": "post_to_term", "source_plugin": null, "metadata": {}},
+      {"source_id": "post:page:home", "target_id": "post:page:services", "relation_type": "post_to_post", "source_plugin": null, "metadata": {"context": "internal_link"}}
+    ]
+  },
+  "field_usage_report": {
+    "schema_version": "1.0.0",
+    "fields": [
+      {"post_type": "page", "field_name": "hero_heading", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": false, "cardinality": "single", "distinct_value_count": 5, "sample_values": ["Welcome to Acme Co", "About Our Team"], "behaves_as": null},
+      {"post_type": "page", "field_name": "hero_subtitle", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 4, "sample_values": ["Building solutions since 2010"], "behaves_as": null},
+      {"post_type": "page", "field_name": "team_members", "source_plugin": "acf", "source_system": "acf", "inferred_type": "repeater", "nullable": true, "cardinality": "multiple", "distinct_value_count": 3, "sample_values": [{"name": "Jane Smith", "role": "CEO"}], "behaves_as": "repeater"},
+      {"post_type": "page", "field_name": "service_items", "source_plugin": "acf", "source_system": "acf", "inferred_type": "repeater", "nullable": true, "cardinality": "multiple", "distinct_value_count": 4, "sample_values": [{"title": "Web Design"}], "behaves_as": "repeater"},
+      {"post_type": "page", "field_name": "cta_button_text", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 3, "sample_values": ["Get in Touch"], "behaves_as": null},
+      {"post_type": "page", "field_name": "cta_button_url", "source_plugin": "acf", "source_system": "acf", "inferred_type": "text", "nullable": true, "cardinality": "single", "distinct_value_count": 2, "sample_values": ["/contact"], "behaves_as": "reference"}
+    ]
+  },
+  "plugin_instances": {
+    "schema_version": "1.0.0",
+    "instances": [
+      {"instance_id": "plugin:cf7:contact-form-1", "source_plugin": "contact_form_7", "instance_type": "form", "config": {"title": "Contact Form"}, "references": ["post:page:contact"]},
+      {"instance_id": "plugin:yoast:seo-config", "source_plugin": "yoast", "instance_type": "seo_object", "config": {"title_separator": "|", "company_name": "Acme Co"}, "references": []},
+      {"instance_id": "plugin:acf:field-group-hero", "source_plugin": "acf", "instance_type": "field_group", "config": {"title": "Hero Section"}, "references": []},
+      {"instance_id": "plugin:acf:field-group-team", "source_plugin": "acf", "instance_type": "field_group", "config": {"title": "Team Members"}, "references": []},
+      {"instance_id": "plugin:acf:field-group-services", "source_plugin": "acf", "instance_type": "field_group", "config": {"title": "Service Items"}, "references": []}
+    ]
+  },
+  "page_composition": {
+    "schema_version": "1.0.0",
+    "pages": [
+      {"canonical_url": "/", "template": "template-home.php", "blocks": [{"blockName": "core/group"}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css", "hero.js"], "content_sections": [{"type": "hero", "source": "acf"}], "snapshot_ref": "snapshots/home.html"},
+      {"canonical_url": "/about", "template": "page.php", "blocks": [{"blockName": "core/heading"}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "content", "source": "core"}], "snapshot_ref": "snapshots/about.html"},
+      {"canonical_url": "/services", "template": "template-services.php", "blocks": [{"blockName": "core/heading"}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "repeater", "source": "acf"}], "snapshot_ref": null},
+      {"canonical_url": "/contact", "template": "page.php", "blocks": [{"blockName": "core/heading"}], "shortcodes": [{"tag": "contact-form-7"}], "widget_placements": [], "forms_embedded": ["plugin:cf7:contact-form-1"], "plugin_components": [{"source_plugin": "contact_form_7", "component_type": "form"}], "enqueued_assets": ["style.css", "cf7-scripts.js"], "content_sections": [{"type": "form", "source": "contact_form_7"}], "snapshot_ref": null},
+      {"canonical_url": "/team", "template": "template-team.php", "blocks": [{"blockName": "core/heading"}], "shortcodes": [], "widget_placements": [], "forms_embedded": [], "plugin_components": [], "enqueued_assets": ["style.css"], "content_sections": [{"type": "repeater", "source": "acf"}], "snapshot_ref": null}
+    ]
+  },
+  "seo_full": {
+    "schema_version": "1.0.0",
+    "pages": [
+      {"canonical_url": "/", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "title_template": "%%title%% %%sep%% %%sitename%%", "resolved_title": "Home | Acme Co", "meta_description": "Acme Co builds modern solutions for small businesses.", "og_metadata": {"og:title": "Acme Co"}, "twitter_metadata": {}, "schema_type_hints": ["WebSite", "Organization"], "breadcrumb_config": null, "sitemap_inclusion": true, "redirect_ownership": null},
+      {"canonical_url": "/about", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "resolved_title": "About Us | Acme Co", "meta_description": "Learn about the Acme Co team.", "og_metadata": {}, "twitter_metadata": {}, "schema_type_hints": ["AboutPage"], "sitemap_inclusion": true},
+      {"canonical_url": "/services", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "resolved_title": "Services | Acme Co", "meta_description": "Explore our services.", "og_metadata": {}, "twitter_metadata": {}, "schema_type_hints": ["WebPage"], "sitemap_inclusion": true},
+      {"canonical_url": "/contact", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "resolved_title": "Contact Us | Acme Co", "meta_description": "Get in touch with Acme Co.", "og_metadata": {}, "twitter_metadata": {}, "schema_type_hints": ["ContactPage"], "sitemap_inclusion": true},
+      {"canonical_url": "/team", "source_plugin": "yoast", "robots": "index, follow", "noindex": false, "nofollow": false, "resolved_title": "Our Team | Acme Co", "meta_description": "Meet the people behind Acme Co.", "og_metadata": {}, "twitter_metadata": {}, "schema_type_hints": ["WebPage"], "sitemap_inclusion": true}
+    ]
+  },
+  "editorial_workflows": {
+    "schema_version": "1.0.0",
+    "statuses_in_use": ["publish", "draft"],
+    "scheduled_publishing": false,
+    "draft_behavior": "standard WordPress draft with preview",
+    "preview_expectations": "default WordPress preview via ?preview=true",
+    "revision_policy": "WordPress default revisions enabled, no limit configured",
+    "comments_enabled": false,
+    "authoring_model": "single_editor"
+  },
+  "plugin_table_exports": [
+    {
+      "table_name": "wp_cf7_submissions",
+      "schema_version": "1.0.0",
+      "source_plugin": "contact_form_7",
+      "row_count": 2,
+      "primary_key": "id",
+      "foreign_key_candidates": ["form_id"],
+      "rows": [
+        {"id": 1, "form_id": "plugin:cf7:contact-form-1", "submitted_at": "2024-01-15T10:30:00Z"},
+        {"id": 2, "form_id": "plugin:cf7:contact-form-1", "submitted_at": "2024-02-01T14:00:00Z"}
+      ]
+    }
+  ],
+  "search_config": {
+    "schema_version": "1.0.0",
+    "searchable_types": ["page"],
+    "ranking_hints": [{"field": "title", "weight": 1.0}],
+    "facets": [],
+    "archive_behavior": {},
+    "search_template_hints": {}
+  },
+  "integration_manifest": {
+    "schema_version": "1.0.0",
+    "integrations": [
+      {"integration_id": "integration:cf7-email", "integration_type": "form_destination", "target": "mailto:[email]", "config": {"form_id": "plugin:cf7:contact-form-1"}, "business_critical": true},
+      {"integration_id": "integration:google-analytics", "integration_type": "third_party_script", "target": "https://www.googletagmanager.com/gtag/js", "config": {"tracking_id": "G-XXXXXXXXXX"}, "business_critical": false}
+    ]
+  }
+}

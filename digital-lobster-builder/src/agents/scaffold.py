@@ -1,10 +1,3 @@
-"""Agent 4: Scaffold — generates a complete Astro JS 5 project.
-
-Receives the modeling manifest, theme layouts, and inventory from prior agents
-and produces a full Astro project directory structure as an in-memory dict,
-then packages it as a ZIP archive.
-"""
-
 from __future__ import annotations
 
 import io

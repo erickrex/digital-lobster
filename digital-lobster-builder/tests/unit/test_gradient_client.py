@@ -1,5 +1,3 @@
-"""Unit tests for the Gradient AI Platform client wrapper."""
-
 from __future__ import annotations
 
 import asyncio

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "instances": [
+    {
+      "instance_id": "plugin:cf7:contact-form-1",
+      "source_plugin": "contact_form_7",
+      "instance_type": "form",
+      "config": {
+        "title": "Contact Form",
+        "fields": [
+          {"name": "your-name", "type": "text", "required": true},
+          {"name": "your-email", "type": "email", "required": true},
+          {"name": "your-subject", "type": "text", "required": false},
+          {"name": "your-message", "type": "textarea", "required": true}
+        ],
+        "mail_to": "[email]",
+        "mail_subject": "New contact from [your-name]"
+      },
+      "references": ["post:page:contact"]
+    },
+    {
+      "instance_id": "plugin:yoast:seo-config",
+      "source_plugin": "yoast",
+      "instance_type": "seo_object",
+      "config": {
+        "title_separator": "|",
+        "company_name": "Acme Co",
+        "company_logo": "media:logo-main"
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:acf:field-group-hero",
+      "source_plugin": "acf",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Hero Section",
+        "fields": ["hero_heading", "hero_subtitle", "cta_button_text", "cta_button_url"],
+        "location_rules": [{"param": "post_type", "operator": "==", "value": "page"}]
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:acf:field-group-team",
+      "source_plugin": "acf",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Team Members",
+        "fields": ["team_members"],
+        "location_rules": [{"param": "page_template", "operator": "==", "value": "template-team.php"}]
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:acf:field-group-services",
+      "source_plugin": "acf",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Service Items",
+        "fields": ["service_items"],
+        "location_rules": [{"param": "page_template", "operator": "==", "value": "template-services.php"}]
+      },
+      "references": []
+    }
+  ]
+}

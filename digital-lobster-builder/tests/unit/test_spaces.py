@@ -1,5 +1,3 @@
-"""Unit tests for the DigitalOcean Spaces storage client."""
-
 from __future__ import annotations
 
 import hashlib

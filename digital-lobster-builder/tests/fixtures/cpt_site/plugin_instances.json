@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "instances": [
+    {
+      "instance_id": "plugin:rank_math:seo-config",
+      "source_plugin": "rank_math",
+      "instance_type": "seo_object",
+      "config": {
+        "title_separator": "—",
+        "company_name": "Creative Studio",
+        "company_logo": "media:logo-studio"
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:acf:field-group-portfolio-details",
+      "source_plugin": "acf",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Portfolio Details",
+        "fields": ["client_name", "project_url", "gallery", "technologies"],
+        "location_rules": [{"param": "post_type", "operator": "==", "value": "portfolio"}]
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:acf:field-group-testimonial-fields",
+      "source_plugin": "acf",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Testimonial Fields",
+        "fields": ["author_name", "company", "rating"],
+        "location_rules": [{"param": "post_type", "operator": "==", "value": "testimonial"}]
+      },
+      "references": []
+    },
+    {
+      "instance_id": "plugin:pods:portfolio-related-testimonials",
+      "source_plugin": "pods",
+      "instance_type": "field_group",
+      "config": {
+        "title": "Portfolio Relationships",
+        "fields": ["related_testimonials"],
+        "pod_name": "portfolio",
+        "field_type": "pick",
+        "pick_object": "post_type",
+        "pick_val": "testimonial"
+      },
+      "references": []
+    }
+  ]
+}

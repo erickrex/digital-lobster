@@ -1,10 +1,3 @@
-"""Agent 6: QA — builds the Astro project, smoke-tests pages, checks
-visual parity against HTML snapshots, and runs basic accessibility audits.
-
-All subprocess / HTTP operations are isolated in helper methods so that
-tests can mock them without touching the filesystem or network.
-"""
-
 from __future__ import annotations
 
 import asyncio

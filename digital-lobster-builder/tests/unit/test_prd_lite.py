@@ -1,11 +1,3 @@
-"""Unit tests for Agent 1: PRD-Lite.
-
-Tests PRD generation with mock LLM responses, section presence
-validation, word count constraint, and KB querying.
-
-Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
-"""
-
 from __future__ import annotations
 
 from typing import Any

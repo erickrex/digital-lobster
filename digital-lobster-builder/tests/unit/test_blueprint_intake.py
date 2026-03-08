@@ -1,12 +1,3 @@
-"""Unit tests for Agent 0: Blueprint Intake.
-
-Tests known bundle structures (valid, missing files, malformed JSON),
-plugin family detection, inventory building, KB document collection,
-and edge cases (empty ZIP, minimal valid bundle).
-
-Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
-"""
-
 from __future__ import annotations
 
 import io

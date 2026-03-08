@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0.0",
+  "pages": [
+    {
+      "canonical_url": "/",
+      "template": "template-home.php",
+      "blocks": [
+        {"blockName": "core/group", "attrs": {"className": "hero-section"}, "innerBlocks": []},
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "DevBlog"}, "innerBlocks": []},
+        {"blockName": "core/latest-posts", "attrs": {"postsToShow": 5}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [
+        {"sidebar": "sidebar-home", "widget_id": "plugin:core:widget-recent-posts", "position": 0},
+        {"sidebar": "sidebar-home", "widget_id": "plugin:core:widget-search", "position": 1}
+      ],
+      "forms_embedded": ["plugin:cf7:newsletter-form"],
+      "plugin_components": [
+        {"source_plugin": "contact_form_7", "component_type": "form", "instance_id": "plugin:cf7:newsletter-form"}
+      ],
+      "enqueued_assets": ["style.css", "hero.js", "cf7-scripts.js"],
+      "content_sections": [
+        {"type": "hero", "source": "core", "fields": ["hero_heading"]},
+        {"type": "latest_posts", "source": "core", "fields": []},
+        {"type": "form", "source": "contact_form_7", "fields": []}
+      ],
+      "snapshot_ref": "snapshots/home.html"
+    },
+    {
+      "canonical_url": "/about",
+      "template": "page.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "About DevBlog"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "A blog about web development and tech reviews."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/contact",
+      "template": "page.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Contact"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "Get in touch with us."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/blog/first-post",
+      "template": "single.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Getting Started with Modern JavaScript"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "JavaScript has evolved significantly..."}, "innerBlocks": []},
+        {"blockName": "core/image", "attrs": {"id": "media:inline-code-screenshot", "alt": "Code screenshot"}, "innerBlocks": []},
+        {"blockName": "core/code", "attrs": {"content": "const hello = () => console.log('world');"}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-recent-posts", "position": 0},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-categories", "position": 1},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-tag-cloud", "position": 2},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-search", "position": 3}
+      ],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "prism.js", "prism.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "sidebar", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": "snapshots/sample-post.html"
+    },
+    {
+      "canonical_url": "/blog/second-post",
+      "template": "single.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Tech Industry Roundup Q1 2024"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "Here is what happened this quarter..."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-recent-posts", "position": 0},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-categories", "position": 1},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-tag-cloud", "position": 2},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-search", "position": 3}
+      ],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "sidebar", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/reviews/product-review",
+      "template": "single-review.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Laptop Pro X Review"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "We tested the Laptop Pro X for two weeks..."}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-recent-posts", "position": 0},
+        {"sidebar": "sidebar-blog", "widget_id": "plugin:core:widget-categories", "position": 1}
+      ],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "review-stars.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "custom_fields", "source": "acf", "fields": ["rating", "pros_cons", "product_url"]}
+      ],
+      "snapshot_ref": null
+    }
+  ]
+}

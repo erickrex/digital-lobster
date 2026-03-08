@@ -1,8 +1,3 @@
-"""Unit tests for PipelineOrchestrator.
-
-Tests use mock BaseAgent instances — no actual agent classes are imported.
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -246,27 +241,19 @@ class TestArtifactAccumulation:
         orch = _make_orchestrator(agents)
         await orch.run("bundle.zip", "run-002")
 
-        # First agent sees only bundle_key
-        assert received_contexts[0] == {
-            "bundle_key": "bundle.zip",
-            "run_id": "run-002",
-            "cms_mode": False,
-        }
+        # First agent sees only seed context keys
+        assert received_contexts[0]["bundle_key"] == "bundle.zip"
+        assert received_contexts[0]["run_id"] == "run-002"
+        assert received_contexts[0]["cms_mode"] is False
+        assert "inv" not in received_contexts[0]
+
         # Second agent sees bundle_key + first agent's artifact
-        assert received_contexts[1] == {
-            "bundle_key": "bundle.zip",
-            "inv": "inventory_data",
-            "run_id": "run-002",
-            "cms_mode": False,
-        }
+        assert received_contexts[1]["inv"] == "inventory_data"
+        assert "prd" not in received_contexts[1]
+
         # Third agent sees all prior artifacts
-        assert received_contexts[2] == {
-            "bundle_key": "bundle.zip",
-            "inv": "inventory_data",
-            "prd": "prd_data",
-            "run_id": "run-002",
-            "cms_mode": False,
-        }
+        assert received_contexts[2]["inv"] == "inventory_data"
+        assert received_contexts[2]["prd"] == "prd_data"
 
 
 class TestPipelineHaltOnFailure:

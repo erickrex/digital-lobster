@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "integrations": [
+    {
+      "integration_id": "integration:cf7-newsletter",
+      "integration_type": "form_destination",
+      "target": "mailto:[email]",
+      "config": {
+        "form_id": "plugin:cf7:newsletter-form",
+        "method": "wp_mail"
+      },
+      "business_critical": true
+    },
+    {
+      "integration_id": "integration:rss-feed",
+      "integration_type": "runtime_api",
+      "target": "/feed/",
+      "config": {
+        "format": "rss2",
+        "posts_per_feed": 10
+      },
+      "business_critical": true
+    },
+    {
+      "integration_id": "integration:google-analytics",
+      "integration_type": "third_party_script",
+      "target": "https://www.googletagmanager.com/gtag/js",
+      "config": {
+        "tracking_id": "G-XXXXXXXXXX"
+      },
+      "business_critical": false
+    },
+    {
+      "integration_id": "integration:disqus-comments",
+      "integration_type": "embed",
+      "target": "https://devblog.disqus.com/embed.js",
+      "config": {
+        "shortname": "devblog"
+      },
+      "business_critical": false
+    }
+  ]
+}

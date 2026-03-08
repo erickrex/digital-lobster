@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.0",
+  "pages": [
+    {
+      "canonical_url": "/",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Home | Acme Co",
+      "meta_description": "Acme Co builds modern solutions for small businesses. Web design, SEO, and consulting.",
+      "og_metadata": {
+        "og:title": "Acme Co — Modern Solutions",
+        "og:description": "Building solutions since 2010.",
+        "og:image": "https://acme-co.example.com/wp-content/uploads/hero-home.jpg",
+        "og:type": "website"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary_large_image",
+        "twitter:title": "Acme Co — Modern Solutions"
+      },
+      "schema_type_hints": ["WebSite", "Organization"],
+      "breadcrumb_config": null,
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/about",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "About Us | Acme Co",
+      "meta_description": "Learn about the Acme Co team and our mission to help small businesses grow.",
+      "og_metadata": {
+        "og:title": "About Us | Acme Co",
+        "og:description": "Learn about the Acme Co team.",
+        "og:type": "website"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary"
+      },
+      "schema_type_hints": ["AboutPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/services",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Services | Acme Co",
+      "meta_description": "Explore our web design, SEO, and consulting services.",
+      "og_metadata": {
+        "og:title": "Services | Acme Co",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["WebPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/contact",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Contact Us | Acme Co",
+      "meta_description": "Get in touch with Acme Co. We'd love to hear from you.",
+      "og_metadata": {
+        "og:title": "Contact Us | Acme Co",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["ContactPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/team",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Our Team | Acme Co",
+      "meta_description": "Meet the people behind Acme Co.",
+      "og_metadata": {
+        "og:title": "Our Team | Acme Co",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["WebPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    }
+  ]
+}

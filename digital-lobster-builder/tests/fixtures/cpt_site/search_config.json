@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "searchable_types": ["portfolio", "testimonial", "page"],
+  "ranking_hints": [
+    {"field": "title", "weight": 1.0},
+    {"field": "content", "weight": 0.5},
+    {"field": "client_name", "weight": 0.8}
+  ],
+  "facets": [
+    {"name": "portfolio_category", "taxonomy": "portfolio_category", "type": "checkbox"},
+    {"name": "skill", "taxonomy": "skill", "type": "checkbox"}
+  ],
+  "archive_behavior": {
+    "posts_per_page": 12,
+    "orderby": "date",
+    "order": "DESC"
+  },
+  "search_template_hints": {
+    "template": "search.php",
+    "results_layout": "grid"
+  }
+}

@@ -1,9 +1,3 @@
-"""Credential scrubbing utilities for pipeline outputs.
-
-Ensures sensitive values like API tokens, passwords, and SSH keys
-never appear in serialized JSON output from pipeline models.
-"""
-
 from typing import Any
 
 REDACTED = "***REDACTED***"

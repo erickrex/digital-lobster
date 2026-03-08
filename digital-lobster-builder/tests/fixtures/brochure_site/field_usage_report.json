@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "fields": [
+    {
+      "post_type": "page",
+      "field_name": "hero_heading",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 5,
+      "sample_values": ["Welcome to Acme Co", "About Our Team", "Our Services"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "page",
+      "field_name": "hero_subtitle",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 4,
+      "sample_values": ["Building solutions since 2010", "Meet the people behind Acme"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "page",
+      "field_name": "team_members",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "repeater",
+      "nullable": true,
+      "cardinality": "multiple",
+      "distinct_value_count": 3,
+      "sample_values": [
+        {"name": "Jane Smith", "role": "CEO", "bio": "Founder and CEO of Acme Co."},
+        {"name": "John Doe", "role": "CTO", "bio": "Leads our technology team."}
+      ],
+      "behaves_as": "repeater"
+    },
+    {
+      "post_type": "page",
+      "field_name": "service_items",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "repeater",
+      "nullable": true,
+      "cardinality": "multiple",
+      "distinct_value_count": 4,
+      "sample_values": [
+        {"title": "Web Design", "description": "Custom websites tailored to your brand."},
+        {"title": "SEO", "description": "Search engine optimization services."}
+      ],
+      "behaves_as": "repeater"
+    },
+    {
+      "post_type": "page",
+      "field_name": "cta_button_text",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 3,
+      "sample_values": ["Get in Touch", "Learn More", "Contact Us"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "page",
+      "field_name": "cta_button_url",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 2,
+      "sample_values": ["/contact", "/services"],
+      "behaves_as": "reference"
+    }
+  ]
+}

@@ -1,5 +1,3 @@
-"""Unit tests for Pydantic data models."""
-
 import yaml
 
 from src.models.manifest import ExportManifest

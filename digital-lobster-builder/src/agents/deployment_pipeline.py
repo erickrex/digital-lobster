@@ -1,10 +1,3 @@
-"""Deployment Pipeline agent.
-
-Builds the Astro static site on the VPS, deploys it behind Nginx,
-verifies the live site, and registers a Strapi webhook for automatic
-rebuilds on content changes.
-"""
-
 from __future__ import annotations
 
 import asyncio

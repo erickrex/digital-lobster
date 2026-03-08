@@ -1,10 +1,3 @@
-"""DigitalOcean Spaces (S3-compatible) storage client.
-
-Uses httpx for upload/download operations and implements AWS Signature V4
-presigned URL generation for client-side uploads. DigitalOcean Spaces is
-fully S3-compatible, so standard S3 signing works out of the box.
-"""
-
 from __future__ import annotations
 
 import datetime

@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "fields": [
+    {
+      "post_type": "post",
+      "field_name": "subtitle",
+      "source_plugin": null,
+      "source_system": "core",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 8,
+      "sample_values": ["A deep dive into modern JS", "What changed this quarter"],
+      "behaves_as": null
+    },
+    {
+      "post_type": "post",
+      "field_name": "reading_time",
+      "source_plugin": null,
+      "source_system": "core",
+      "inferred_type": "number",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 5,
+      "sample_values": [4, 7, 12],
+      "behaves_as": null
+    },
+    {
+      "post_type": "review",
+      "field_name": "rating",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "number",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 5,
+      "sample_values": [3, 4, 5],
+      "behaves_as": "enum"
+    },
+    {
+      "post_type": "review",
+      "field_name": "pros_cons",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "repeater",
+      "nullable": true,
+      "cardinality": "multiple",
+      "distinct_value_count": 6,
+      "sample_values": [{"type": "pro", "text": "Great battery life"}, {"type": "con", "text": "Heavy"}],
+      "behaves_as": "repeater"
+    },
+    {
+      "post_type": "review",
+      "field_name": "product_url",
+      "source_plugin": "acf",
+      "source_system": "acf",
+      "inferred_type": "text",
+      "nullable": true,
+      "cardinality": "single",
+      "distinct_value_count": 3,
+      "sample_values": ["https://example.com/product-a"],
+      "behaves_as": "reference"
+    },
+    {
+      "post_type": "page",
+      "field_name": "hero_heading",
+      "source_plugin": null,
+      "source_system": "core",
+      "inferred_type": "text",
+      "nullable": false,
+      "cardinality": "single",
+      "distinct_value_count": 3,
+      "sample_values": ["Welcome to DevBlog", "About Us"],
+      "behaves_as": null
+    }
+  ]
+}

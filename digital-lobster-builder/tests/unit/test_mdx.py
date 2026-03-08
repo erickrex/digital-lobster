@@ -1,5 +1,3 @@
-"""Unit tests for block-to-MDX converter."""
-
 from src.models.content import WordPressBlock
 from src.models.modeling_manifest import ComponentMapping
 from src.serialization.mdx import block_to_mdx, blocks_to_mdx

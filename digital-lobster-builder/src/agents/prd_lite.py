@@ -1,13 +1,3 @@
-"""Agent 1: PRD-Lite — generates a concise product requirements document
-with goals, information architecture, scope, and success metrics.
-
-Queries the Gradient Knowledge Base for site metadata, plugin features,
-and content type summaries, then uses LLM inference to produce a PRD.md
-string constrained to ≤2 pages (~1500 words).
-
-Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
-"""
-
 from __future__ import annotations
 
 import logging

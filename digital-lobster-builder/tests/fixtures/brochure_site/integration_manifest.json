@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "integrations": [
+    {
+      "integration_id": "integration:cf7-email",
+      "integration_type": "form_destination",
+      "target": "mailto:[email]",
+      "config": {
+        "form_id": "plugin:cf7:contact-form-1",
+        "method": "wp_mail"
+      },
+      "business_critical": true
+    },
+    {
+      "integration_id": "integration:google-analytics",
+      "integration_type": "third_party_script",
+      "target": "https://www.googletagmanager.com/gtag/js",
+      "config": {
+        "tracking_id": "G-XXXXXXXXXX"
+      },
+      "business_critical": false
+    }
+  ]
+}

@@ -1,14 +1,19 @@
-"""Shared pipeline context models and extraction helpers."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.models.behavior_manifest import BehaviorManifest
+from src.models.bundle_manifest import BundleManifest
+from src.models.capability_manifest import CapabilityManifest
 from src.models.content import WordPressContentItem
+from src.models.content_model_manifest import ContentModelManifest
 from src.models.inventory import Inventory
+from src.models.migration_mapping_manifest import MigrationMappingManifest
 from src.models.modeling_manifest import ModelingManifest
+from src.models.parity_report import ParityReport
+from src.models.presentation_manifest import PresentationManifest
 from src.models.strapi_types import ContentTypeMap
 
 
@@ -123,3 +128,73 @@ def extract_bundle_artifacts(context: dict[str, Any]) -> BundleArtifacts:
         html_snapshots=context.get("html_snapshots", {}),
         media_manifest=extract_media_manifest(context),
     )
+
+
+def extract_bundle_manifest(context: dict[str, Any]) -> BundleManifest:
+    """Extract a :class:`BundleManifest` from pipeline context."""
+    raw = context.get("bundle_manifest")
+    if raw is None:
+        raise KeyError("'bundle_manifest' missing from pipeline context")
+    if isinstance(raw, BundleManifest):
+        return raw
+    return BundleManifest.model_validate(raw)
+
+
+def extract_capability_manifest(context: dict[str, Any]) -> CapabilityManifest:
+    """Extract a :class:`CapabilityManifest` from pipeline context."""
+    raw = context.get("capability_manifest")
+    if raw is None:
+        raise KeyError("'capability_manifest' missing from pipeline context")
+    if isinstance(raw, CapabilityManifest):
+        return raw
+    return CapabilityManifest.model_validate(raw)
+
+
+def extract_content_model_manifest(context: dict[str, Any]) -> ContentModelManifest:
+    """Extract a :class:`ContentModelManifest` from pipeline context."""
+    raw = context.get("content_model_manifest")
+    if raw is None:
+        raise KeyError("'content_model_manifest' missing from pipeline context")
+    if isinstance(raw, ContentModelManifest):
+        return raw
+    return ContentModelManifest.model_validate(raw)
+
+
+def extract_presentation_manifest(context: dict[str, Any]) -> PresentationManifest:
+    """Extract a :class:`PresentationManifest` from pipeline context."""
+    raw = context.get("presentation_manifest")
+    if raw is None:
+        raise KeyError("'presentation_manifest' missing from pipeline context")
+    if isinstance(raw, PresentationManifest):
+        return raw
+    return PresentationManifest.model_validate(raw)
+
+
+def extract_behavior_manifest(context: dict[str, Any]) -> BehaviorManifest:
+    """Extract a :class:`BehaviorManifest` from pipeline context."""
+    raw = context.get("behavior_manifest")
+    if raw is None:
+        raise KeyError("'behavior_manifest' missing from pipeline context")
+    if isinstance(raw, BehaviorManifest):
+        return raw
+    return BehaviorManifest.model_validate(raw)
+
+
+def extract_migration_mapping_manifest(context: dict[str, Any]) -> MigrationMappingManifest:
+    """Extract a :class:`MigrationMappingManifest` from pipeline context."""
+    raw = context.get("migration_mapping_manifest")
+    if raw is None:
+        raise KeyError("'migration_mapping_manifest' missing from pipeline context")
+    if isinstance(raw, MigrationMappingManifest):
+        return raw
+    return MigrationMappingManifest.model_validate(raw)
+
+
+def extract_parity_report(context: dict[str, Any]) -> ParityReport:
+    """Extract a :class:`ParityReport` from pipeline context."""
+    raw = context.get("parity_report")
+    if raw is None:
+        raise KeyError("'parity_report' missing from pipeline context")
+    if isinstance(raw, ParityReport):
+        return raw
+    return ParityReport.model_validate(raw)

@@ -1,0 +1,26 @@
+[
+  {
+    "table_name": "wp_pods_rel",
+    "schema_version": "1.0.0",
+    "source_plugin": "pods",
+    "row_count": 2,
+    "primary_key": "id",
+    "foreign_key_candidates": ["pod_id", "related_pod_id"],
+    "rows": [
+      {
+        "id": 1,
+        "pod_id": "post:portfolio:project-alpha",
+        "field_id": "related_testimonials",
+        "related_pod_id": "post:testimonial:client-review",
+        "weight": 0
+      },
+      {
+        "id": 2,
+        "pod_id": "post:portfolio:project-beta",
+        "field_id": "related_testimonials",
+        "related_pod_id": "post:testimonial:client-review",
+        "weight": 0
+      }
+    ]
+  }
+]

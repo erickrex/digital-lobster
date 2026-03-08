@@ -1,5 +1,3 @@
-"""Unit tests for block-to-Markdown converter."""
-
 from src.models.content import WordPressBlock
 from src.serialization.markdown import block_to_markdown, blocks_to_markdown
 

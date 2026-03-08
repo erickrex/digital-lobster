@@ -1,5 +1,3 @@
-"""Unit tests for pipeline run state and error types."""
-
 from src.orchestrator.state import PipelineRunState
 from src.orchestrator.errors import AgentError, PipelineError
 

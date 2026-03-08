@@ -29,6 +29,66 @@ from .migration_report import (
     MigrationReport,
 )
 from .deployment_report import DeploymentReport
+from .finding import Finding, FindingSeverity
+from .bundle_schema import (
+    ArtifactDefinition,
+    ArtifactRequirement,
+    BundleSchema,
+    BUNDLE_SCHEMA_V1,
+)
+from .bundle_artifacts import (
+    ContentRelationship,
+    ContentRelationshipsArtifact,
+    EditorialWorkflowsArtifact,
+    FieldUsageEntry,
+    FieldUsageReportArtifact,
+    IntegrationEntry,
+    IntegrationManifestArtifact,
+    PageCompositionArtifact,
+    PageCompositionEntry,
+    PluginInstance,
+    PluginInstancesArtifact,
+    PluginTableExport,
+    SearchConfigArtifact,
+    SeoFullArtifact,
+    SeoPageEntry,
+)
+from .bundle_manifest import BundleManifest
+from .capability_manifest import Capability, CapabilityManifest
+from .content_model_manifest import (
+    ContentModelManifest,
+    SeoComponentStrategy,
+    StrapiCollection,
+    StrapiComponent,
+    StrapiRelation,
+    ValidationHint,
+)
+from .presentation_manifest import (
+    FallbackZone,
+    LayoutDefinition,
+    PresentationManifest,
+    RouteTemplate,
+    SectionDefinition,
+)
+from .behavior_manifest import (
+    BehaviorManifest,
+    FormStrategy,
+    IntegrationBoundary,
+    RedirectRule,
+    SearchStrategy,
+)
+from .readiness_report import ReadinessReport
+from .parity_report import ParityReport, SnapshotComparison
+from .migration_mapping_manifest import (
+    FieldMapping,
+    MediaMappingStrategy,
+    MigrationMappingManifest,
+    PluginInstanceMapping,
+    RelationMapping,
+    TemplateMapping,
+    TermMapping,
+    TypeMapping,
+)
 
 __all__ = [
     "ExportManifest",
@@ -58,4 +118,55 @@ __all__ = [
     "MediaMigrationStats",
     "MigrationReport",
     "DeploymentReport",
+    "Finding",
+    "FindingSeverity",
+    "ArtifactDefinition",
+    "ArtifactRequirement",
+    "BundleSchema",
+    "BUNDLE_SCHEMA_V1",
+    "ContentRelationship",
+    "ContentRelationshipsArtifact",
+    "EditorialWorkflowsArtifact",
+    "FieldUsageEntry",
+    "FieldUsageReportArtifact",
+    "IntegrationEntry",
+    "IntegrationManifestArtifact",
+    "PageCompositionArtifact",
+    "PageCompositionEntry",
+    "PluginInstance",
+    "PluginInstancesArtifact",
+    "PluginTableExport",
+    "SearchConfigArtifact",
+    "SeoFullArtifact",
+    "SeoPageEntry",
+    "BundleManifest",
+    "Capability",
+    "CapabilityManifest",
+    "ContentModelManifest",
+    "SeoComponentStrategy",
+    "StrapiCollection",
+    "StrapiComponent",
+    "StrapiRelation",
+    "ValidationHint",
+    "FallbackZone",
+    "LayoutDefinition",
+    "PresentationManifest",
+    "RouteTemplate",
+    "SectionDefinition",
+    "BehaviorManifest",
+    "FormStrategy",
+    "IntegrationBoundary",
+    "RedirectRule",
+    "SearchStrategy",
+    "ReadinessReport",
+    "ParityReport",
+    "SnapshotComparison",
+    "FieldMapping",
+    "MediaMappingStrategy",
+    "MigrationMappingManifest",
+    "PluginInstanceMapping",
+    "RelationMapping",
+    "TemplateMapping",
+    "TermMapping",
+    "TypeMapping",
 ]

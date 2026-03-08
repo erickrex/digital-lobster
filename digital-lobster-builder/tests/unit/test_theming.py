@@ -1,5 +1,3 @@
-"""Unit tests for Agent 3: Theming."""
-
 from __future__ import annotations
 
 import pytest

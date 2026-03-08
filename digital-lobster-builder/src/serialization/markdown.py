@@ -1,10 +1,3 @@
-"""Block-to-Markdown converter.
-
-Converts WordPress blocks to Markdown syntax preserving semantic structure
-(headings, paragraphs, lists, code blocks, images, quotes, tables, etc.).
-Unknown block types fall back to raw HTML passthrough.
-"""
-
 import html
 import re
 

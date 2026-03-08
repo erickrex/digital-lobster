@@ -1,9 +1,3 @@
-"""Unit tests for Pipeline API endpoints.
-
-Uses httpx AsyncClient with the FastAPI test client. Dependencies
-(SpacesClient, PipelineOrchestrator) are mocked.
-"""
-
 from __future__ import annotations
 
 import asyncio

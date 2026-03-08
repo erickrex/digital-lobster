@@ -1,5 +1,3 @@
-"""Content migration report models."""
-
 from typing import Any
 
 from pydantic import BaseModel

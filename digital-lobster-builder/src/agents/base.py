@@ -1,10 +1,3 @@
-"""Base agent interface for the multi-agent pipeline.
-
-Every agent implements BaseAgent and returns an AgentResult from execute().
-The Orchestrator calls execute() on each agent in sequence, passing
-accumulated pipeline context.
-"""
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any

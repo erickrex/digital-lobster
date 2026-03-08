@@ -1,5 +1,3 @@
-"""CMS pipeline configuration model."""
-
 from pydantic import BaseModel, SecretStr
 
 

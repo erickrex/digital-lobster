@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0.0",
+  "pages": [
+    {
+      "canonical_url": "/",
+      "template": "template-home.php",
+      "blocks": [
+        {"blockName": "core/group", "attrs": {"className": "hero-section"}, "innerBlocks": []},
+        {"blockName": "core/heading", "attrs": {"level": 2, "content": "Welcome to Acme Co"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "Building solutions since 2010."}, "innerBlocks": []},
+        {"blockName": "core/buttons", "attrs": {}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css", "hero.js"],
+      "content_sections": [
+        {"type": "hero", "source": "acf", "fields": ["hero_heading", "hero_subtitle", "cta_button_text", "cta_button_url"]},
+        {"type": "content", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": "snapshots/home.html"
+    },
+    {
+      "canonical_url": "/about",
+      "template": "page.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "About Us"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "Learn about our story."}, "innerBlocks": []},
+        {"blockName": "core/image", "attrs": {"id": "media:team-photo", "alt": "Our team"}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []}
+      ],
+      "snapshot_ref": "snapshots/about.html"
+    },
+    {
+      "canonical_url": "/services",
+      "template": "template-services.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Our Services"}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "hero", "source": "acf", "fields": ["hero_heading", "hero_subtitle"]},
+        {"type": "repeater", "source": "acf", "fields": ["service_items"]}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/contact",
+      "template": "page.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Contact Us"}, "innerBlocks": []},
+        {"blockName": "core/paragraph", "attrs": {"content": "We'd love to hear from you."}, "innerBlocks": []}
+      ],
+      "shortcodes": [
+        {"tag": "contact-form-7", "attrs": {"id": "plugin:cf7:contact-form-1", "title": "Contact Form"}}
+      ],
+      "widget_placements": [],
+      "forms_embedded": ["plugin:cf7:contact-form-1"],
+      "plugin_components": [
+        {"source_plugin": "contact_form_7", "component_type": "form", "instance_id": "plugin:cf7:contact-form-1"}
+      ],
+      "enqueued_assets": ["style.css", "cf7-scripts.js", "cf7-styles.css"],
+      "content_sections": [
+        {"type": "content", "source": "core", "fields": []},
+        {"type": "form", "source": "contact_form_7", "fields": []}
+      ],
+      "snapshot_ref": null
+    },
+    {
+      "canonical_url": "/team",
+      "template": "template-team.php",
+      "blocks": [
+        {"blockName": "core/heading", "attrs": {"level": 1, "content": "Our Team"}, "innerBlocks": []}
+      ],
+      "shortcodes": [],
+      "widget_placements": [],
+      "forms_embedded": [],
+      "plugin_components": [],
+      "enqueued_assets": ["style.css"],
+      "content_sections": [
+        {"type": "repeater", "source": "acf", "fields": ["team_members"]}
+      ],
+      "snapshot_ref": null
+    }
+  ]
+}

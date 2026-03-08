@@ -1,5 +1,3 @@
-"""Shared project assembly helpers for Astro scaffold generation."""
-
 from __future__ import annotations
 
 from pathlib import PurePosixPath

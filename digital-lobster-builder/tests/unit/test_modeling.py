@@ -1,11 +1,3 @@
-"""Unit tests for Agent 2: Modeling.
-
-Tests mapping of WordPress post types, blocks, and taxonomies to Astro
-content collections, components, and taxonomy definitions.
-
-Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6
-"""
-
 from __future__ import annotations
 
 import pytest

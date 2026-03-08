@@ -1,10 +1,3 @@
-"""Block-to-MDX converter.
-
-Converts WordPress blocks to MDX component references using ComponentMapping
-from the modeling manifest. Handles fallback to raw HTML for unrecognized blocks,
-and delegates to the Markdown converter for unmapped core blocks.
-"""
-
 from src.models.content import WordPressBlock
 from src.models.modeling_manifest import ComponentMapping
 from src.serialization.markdown import block_to_markdown

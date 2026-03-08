@@ -1,5 +1,3 @@
-"""Shared SSH, SCP, and local tunnel helpers for CMS agents."""
-
 from __future__ import annotations
 
 import asyncio

@@ -1,5 +1,3 @@
-"""Unit tests for Agent 6: QA."""
-
 from __future__ import annotations
 
 import os

@@ -1,10 +1,3 @@
-"""Thin wrapper around gradientai-sdk for LLM inference.
-
-Provides retry logic with exponential backoff for timeouts,
-respects Retry-After headers for rate limiting, and fails
-immediately on authentication errors.
-"""
-
 from __future__ import annotations
 
 import asyncio

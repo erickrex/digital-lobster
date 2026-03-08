@@ -1,5 +1,3 @@
-"""Unit tests for Agent 4: Scaffold."""
-
 from __future__ import annotations
 
 import json

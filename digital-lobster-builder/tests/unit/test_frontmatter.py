@@ -1,5 +1,3 @@
-"""Unit tests for YAML frontmatter serialization and parsing."""
-
 import yaml
 
 from src.serialization.frontmatter import (

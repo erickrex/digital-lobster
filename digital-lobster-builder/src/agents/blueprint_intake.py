@@ -1,10 +1,3 @@
-"""Agent 0: Blueprint Intake — validates the Export_Bundle, loads artifacts,
-normalizes data into an Inventory, detects plugin families, and creates a
-Gradient Knowledge Base for the run.
-
-Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
-"""
-
 from __future__ import annotations
 
 import io
@@ -15,7 +8,25 @@ import zipfile
 from pathlib import PurePosixPath
 from typing import Any
 
+from pydantic import ValidationError as PydanticValidationError
+
 from src.agents.base import AgentResult, BaseAgent
+from src.models.bundle_artifacts import (
+    ContentRelationshipsArtifact,
+    EditorialWorkflowsArtifact,
+    FieldUsageReportArtifact,
+    IntegrationManifestArtifact,
+    PageCompositionArtifact,
+    PluginInstancesArtifact,
+    PluginTableExport,
+    SearchConfigArtifact,
+    SeoFullArtifact,
+)
+from src.models.bundle_manifest import BundleManifest
+from src.models.bundle_schema import (
+    ArtifactRequirement,
+    BUNDLE_SCHEMA_V1,
+)
 from src.models.content import WordPressBlock, WordPressContentItem
 from src.models.inventory import (
     ContentTypeSummary,
@@ -26,6 +37,7 @@ from src.models.inventory import (
     ThemeMetadata,
 )
 from src.models.manifest import ExportManifest
+from src.orchestrator.errors import BundleValidationError
 from src.pipeline_context import MediaManifestEntry
 
 logger = logging.getLogger(__name__)
@@ -113,7 +125,28 @@ class BlueprintIntakeAgent(BaseAgent):
         html_snapshots = extract_html_snapshots(zf, warnings)
         media_manifest = extract_media_manifest(zf, warnings)
 
-        # 6. Create Knowledge Base and upload documents
+        # 6. CMS mode: validate bundle against Bundle_Schema and produce BundleManifest
+        cms_mode = context.get("cms_mode", False)
+        if cms_mode:
+            bundle_manifest = validate_cms_bundle(zf, site_info, warnings)
+            zf.close()
+            return AgentResult(
+                agent_name="blueprint_intake",
+                artifacts={
+                    "inventory": inventory,
+                    "bundle_manifest": bundle_manifest,
+                    "export_bundle": export_bundle,
+                    "content_items": content_items,
+                    "menus": menus,
+                    "redirect_rules": redirect_rules,
+                    "html_snapshots": html_snapshots,
+                    "media_manifest": [entry.model_dump() for entry in media_manifest],
+                },
+                warnings=warnings,
+                duration_seconds=time.monotonic() - start,
+            )
+
+        # 7. Create Knowledge Base and upload documents
         kb_ref: str | None = None
         if self.kb_client is not None:
             run_id = context.get("run_id", bundle_key)
@@ -206,6 +239,268 @@ def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
                 errors.append({"path": req_file, "error": f"malformed JSON: {exc}"})
 
     return errors
+
+
+# ---------------------------------------------------------------------------
+# CMS bundle validation — used when cms_mode=True
+# ---------------------------------------------------------------------------
+
+# Mapping from artifact file_path in the schema to the Pydantic model class
+# used for parsing.  Existing artifacts (the 23 scanner outputs) are stored
+# as plain dicts, so they don't appear here.
+_NEW_ARTIFACT_MODELS: dict[str, type] = {
+    "content_relationships.json": ContentRelationshipsArtifact,
+    "field_usage_report.json": FieldUsageReportArtifact,
+    "plugin_instances.json": PluginInstancesArtifact,
+    "page_composition.json": PageCompositionArtifact,
+    "seo_full.json": SeoFullArtifact,
+    "editorial_workflows.json": EditorialWorkflowsArtifact,
+    "plugin_table_exports.json": list,  # sentinel — handled specially
+    "search_config.json": SearchConfigArtifact,
+    "integration_manifest.json": IntegrationManifestArtifact,
+}
+
+# BundleManifest field name for each artifact file_path.
+_ARTIFACT_FIELD_MAP: dict[str, str] = {
+    "site_blueprint.json": "site_blueprint",
+    "site_settings.json": "site_settings",
+    "site_options.json": "site_options",
+    "site_environment.json": "site_environment",
+    "taxonomies.json": "taxonomies",
+    "menus.json": "menus",
+    "media_map.json": "media_map",
+    "theme_mods.json": "theme_mods",
+    "global_styles.json": "global_styles",
+    "customizer_settings.json": "customizer_settings",
+    "css_sources.json": "css_sources",
+    "plugins_fingerprint.json": "plugins_fingerprint",
+    "plugin_behaviors.json": "plugin_behaviors",
+    "blocks_usage.json": "blocks_usage",
+    "block_patterns.json": "block_patterns",
+    "acf_field_groups.json": "acf_field_groups",
+    "custom_fields_config.json": "custom_fields_config",
+    "shortcodes_inventory.json": "shortcodes_inventory",
+    "forms_config.json": "forms_config",
+    "widgets.json": "widgets",
+    "page_templates.json": "page_templates",
+    "rewrite_rules.json": "rewrite_rules",
+    "rest_api_endpoints.json": "rest_api_endpoints",
+    "hooks_registry.json": "hooks_registry",
+    "error_log.json": "error_log",
+    "content_relationships.json": "content_relationships",
+    "field_usage_report.json": "field_usage_report",
+    "plugin_instances.json": "plugin_instances",
+    "page_composition.json": "page_composition",
+    "seo_full.json": "seo_full",
+    "editorial_workflows.json": "editorial_workflows",
+    "plugin_table_exports.json": "plugin_table_exports",
+    "search_config.json": "search_config",
+    "integration_manifest.json": "integration_manifest",
+}
+
+
+def _is_version_compatible(actual: str, expected: str) -> bool:
+    """Check semver major-version compatibility.
+
+    Two versions are compatible when they share the same major version and
+    the actual version is not newer than the expected version's next major.
+    For example, ``"1.2.0"`` is compatible with expected ``"1.0.0"`` but
+    ``"2.0.0"`` is not.
+    """
+    try:
+        actual_parts = [int(p) for p in actual.split(".")]
+        expected_parts = [int(p) for p in expected.split(".")]
+    except (ValueError, AttributeError):
+        return False
+    if len(actual_parts) < 1 or len(expected_parts) < 1:
+        return False
+    return actual_parts[0] == expected_parts[0]
+
+
+def validate_cms_bundle(
+    zf: zipfile.ZipFile,
+    site_info: dict[str, Any],
+    warnings: list[str],
+) -> BundleManifest:
+    """Validate the export bundle against BUNDLE_SCHEMA_V1 and produce a BundleManifest.
+
+    Raises :class:`BundleValidationError` when required artifacts are missing
+    or when any artifact fails schema/version validation.
+    """
+    names = set(zf.namelist())
+    schema = BUNDLE_SCHEMA_V1
+
+    # --- Phase 1: check presence of all required artifacts -----------------
+    missing: list[str] = []
+    for artifact_def in schema.artifacts:
+        if artifact_def.requirement == ArtifactRequirement.REQUIRED:
+            if artifact_def.file_path not in names:
+                missing.append(artifact_def.file_path)
+
+    if missing:
+        raise BundleValidationError(
+            message=f"Missing {len(missing)} required artifact(s): {', '.join(sorted(missing))}",
+            missing_artifacts=sorted(missing),
+        )
+
+    # --- Phase 2: load, parse, and validate each artifact ------------------
+    parsed: dict[str, Any] = {}
+    validation_failures: list[dict[str, str]] = []
+
+    for artifact_def in schema.artifacts:
+        file_path = artifact_def.file_path
+        if file_path not in names:
+            # Optional artifact not present — skip
+            continue
+
+        # Load raw JSON
+        try:
+            raw = json.loads(zf.read(file_path))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            validation_failures.append({
+                "artifact": file_path,
+                "error": f"Malformed JSON: {exc}",
+            })
+            continue
+
+        # Validate schema_version compatibility
+        if isinstance(raw, dict):
+            artifact_version = raw.get("schema_version", "")
+            if artifact_version and not _is_version_compatible(
+                artifact_version, artifact_def.schema_version
+            ):
+                validation_failures.append({
+                    "artifact": file_path,
+                    "error": (
+                        f"Incompatible schema_version: artifact has '{artifact_version}', "
+                        f"expected major version compatible with '{artifact_def.schema_version}'"
+                    ),
+                })
+                continue
+        elif isinstance(raw, list):
+            # List-shaped artifacts (e.g. plugin_table_exports) — check
+            # version on each element if present
+            for idx, item in enumerate(raw):
+                if isinstance(item, dict):
+                    item_version = item.get("schema_version", "")
+                    if item_version and not _is_version_compatible(
+                        item_version, artifact_def.schema_version
+                    ):
+                        validation_failures.append({
+                            "artifact": file_path,
+                            "error": (
+                                f"Incompatible schema_version at index {idx}: "
+                                f"has '{item_version}', expected compatible with "
+                                f"'{artifact_def.schema_version}'"
+                            ),
+                        })
+                        break
+
+        # Parse into typed Pydantic model (new artifacts) or keep as dict/list
+        model_cls = _NEW_ARTIFACT_MODELS.get(file_path)
+        if model_cls is not None and model_cls is not list:
+            try:
+                parsed[file_path] = model_cls.model_validate(raw)
+            except PydanticValidationError as exc:
+                field_errors = "; ".join(
+                    f"{'.'.join(str(l) for l in e['loc'])}: {e['msg']}"
+                    for e in exc.errors()[:5]
+                )
+                validation_failures.append({
+                    "artifact": file_path,
+                    "error": f"Validation failed — {field_errors}",
+                })
+                continue
+        elif file_path == "plugin_table_exports.json":
+            # List of PluginTableExport entries
+            try:
+                entries = [PluginTableExport.model_validate(item) for item in raw] if isinstance(raw, list) else []
+                parsed[file_path] = entries
+            except PydanticValidationError as exc:
+                field_errors = "; ".join(
+                    f"{'.'.join(str(l) for l in e['loc'])}: {e['msg']}"
+                    for e in exc.errors()[:5]
+                )
+                validation_failures.append({
+                    "artifact": file_path,
+                    "error": f"Validation failed — {field_errors}",
+                })
+                continue
+        else:
+            # Existing artifact — store as raw dict/list
+            parsed[file_path] = raw
+
+    if validation_failures:
+        raise BundleValidationError(
+            message=(
+                f"Validation failed for {len(validation_failures)} artifact(s): "
+                + ", ".join(f["artifact"] for f in validation_failures)
+            ),
+            validation_failures=validation_failures,
+        )
+
+    # --- Phase 3: assemble BundleManifest ----------------------------------
+    logger.info("CMS bundle validation passed, assembling BundleManifest")
+
+    def _get(fp: str, default: Any = None) -> Any:
+        return parsed.get(fp, default)
+
+    def _get_dict(fp: str) -> dict[str, Any]:
+        val = parsed.get(fp)
+        if isinstance(val, dict):
+            return val
+        return {}
+
+    def _get_list(fp: str) -> list[dict[str, Any]]:
+        val = parsed.get(fp)
+        if isinstance(val, list):
+            return val
+        return []
+
+    manifest = BundleManifest(
+        schema_version=schema.schema_version,
+        site_url=site_info.get("site_url", ""),
+        site_name=site_info.get("site_name", ""),
+        wordpress_version=site_info.get("wordpress_version", ""),
+        # Existing artifacts
+        site_blueprint=_get_dict("site_blueprint.json"),
+        site_settings=_get_dict("site_settings.json"),
+        site_options=_get_dict("site_options.json"),
+        site_environment=_get_dict("site_environment.json"),
+        taxonomies=_get_dict("taxonomies.json"),
+        menus=_get_list("menus.json"),
+        media_map=_get_list("media_map.json"),
+        theme_mods=_get_dict("theme_mods.json"),
+        global_styles=_get_dict("global_styles.json"),
+        customizer_settings=_get_dict("customizer_settings.json"),
+        css_sources=_get_dict("css_sources.json"),
+        plugins_fingerprint=_get_dict("plugins_fingerprint.json"),
+        plugin_behaviors=_get_dict("plugin_behaviors.json"),
+        blocks_usage=_get_dict("blocks_usage.json"),
+        block_patterns=_get_dict("block_patterns.json"),
+        acf_field_groups=_get_dict("acf_field_groups.json"),
+        custom_fields_config=_get_dict("custom_fields_config.json"),
+        shortcodes_inventory=_get_dict("shortcodes_inventory.json"),
+        forms_config=_get_dict("forms_config.json"),
+        widgets=_get_dict("widgets.json"),
+        page_templates=_get_dict("page_templates.json"),
+        rewrite_rules=_get_dict("rewrite_rules.json"),
+        rest_api_endpoints=_get_dict("rest_api_endpoints.json"),
+        hooks_registry=_get_dict("hooks_registry.json"),
+        error_log=_get_dict("error_log.json"),
+        # New CMS artifacts (typed)
+        content_relationships=_get("content_relationships.json"),
+        field_usage_report=_get("field_usage_report.json"),
+        plugin_instances=_get("plugin_instances.json"),
+        page_composition=_get("page_composition.json"),
+        seo_full=_get("seo_full.json"),
+        editorial_workflows=_get("editorial_workflows.json"),
+        plugin_table_exports=_get("plugin_table_exports.json", []),
+        search_config=_get("search_config.json"),
+        integration_manifest=_get("integration_manifest.json"),
+    )
+
+    return manifest
 
 
 def build_inventory(

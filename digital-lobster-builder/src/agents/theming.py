@@ -1,10 +1,3 @@
-"""Agent 3: Theming — preserves WordPress theme CSS and layout structure for Astro.
-
-Copies theme CSS to the Astro project structure, extracts design tokens from
-theme.json into CSS custom properties, and generates Astro layout files that
-preserve the original DOM structure and CSS class names.
-"""
-
 from __future__ import annotations
 
 import json

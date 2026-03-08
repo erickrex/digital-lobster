@@ -1,5 +1,3 @@
-"""Strapi content type definition models."""
-
 from pydantic import BaseModel
 
 

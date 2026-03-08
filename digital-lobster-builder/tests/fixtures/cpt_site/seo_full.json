@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0.0",
+  "pages": [
+    {
+      "canonical_url": "/",
+      "source_plugin": "rank_math",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%title% %sep% %sitename%",
+      "resolved_title": "Creative Studio — Portfolio & Design",
+      "meta_description": "Creative Studio builds digital experiences. View our portfolio of web design and branding projects.",
+      "og_metadata": {
+        "og:title": "Creative Studio — Portfolio & Design",
+        "og:description": "We build digital experiences.",
+        "og:image": "https://creative-studio.example.com/wp-content/uploads/hero-home.jpg",
+        "og:type": "website"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary_large_image",
+        "twitter:title": "Creative Studio"
+      },
+      "schema_type_hints": ["WebSite", "Organization"],
+      "breadcrumb_config": null,
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/about",
+      "source_plugin": "rank_math",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%title% %sep% %sitename%",
+      "resolved_title": "About Us — Creative Studio",
+      "meta_description": "Learn about Creative Studio and our approach to design and development.",
+      "og_metadata": {
+        "og:title": "About Us — Creative Studio",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["AboutPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "»"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/portfolio/project-alpha",
+      "source_plugin": "rank_math",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%title% %sep% %sitename%",
+      "resolved_title": "Project Alpha — Creative Studio",
+      "meta_description": "A complete web platform built for Acme Corp featuring React and Node.js.",
+      "og_metadata": {
+        "og:title": "Project Alpha — Creative Studio",
+        "og:description": "Web platform for Acme Corp.",
+        "og:image": "https://creative-studio.example.com/wp-content/uploads/portfolio-alpha-hero.jpg",
+        "og:type": "article"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary_large_image"
+      },
+      "schema_type_hints": ["Article", "CreativeWork"],
+      "breadcrumb_config": {"enabled": true, "separator": "»"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/portfolio/project-beta",
+      "source_plugin": "rank_math",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%title% %sep% %sitename%",
+      "resolved_title": "Project Beta — Creative Studio",
+      "meta_description": "Brand identity redesign for Globex Industries.",
+      "og_metadata": {
+        "og:title": "Project Beta — Creative Studio",
+        "og:type": "article"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["Article", "CreativeWork"],
+      "breadcrumb_config": {"enabled": true, "separator": "»"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/testimonials/client-review",
+      "source_plugin": "rank_math",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%title% %sep% %sitename%",
+      "resolved_title": "Client Testimonials — Creative Studio",
+      "meta_description": "Read what our clients say about working with Creative Studio.",
+      "og_metadata": {
+        "og:title": "Client Testimonials — Creative Studio",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["WebPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "»"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    }
+  ]
+}

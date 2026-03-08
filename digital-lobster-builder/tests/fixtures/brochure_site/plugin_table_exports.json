@@ -1,0 +1,24 @@
+[
+  {
+    "table_name": "wp_cf7_submissions",
+    "schema_version": "1.0.0",
+    "source_plugin": "contact_form_7",
+    "row_count": 2,
+    "primary_key": "id",
+    "foreign_key_candidates": ["form_id"],
+    "rows": [
+      {
+        "id": 1,
+        "form_id": "plugin:cf7:contact-form-1",
+        "submitted_at": "2024-01-15T10:30:00Z",
+        "fields": {"your-name": "Alice", "your-email": "[email]", "your-message": "Hello!"}
+      },
+      {
+        "id": 2,
+        "form_id": "plugin:cf7:contact-form-1",
+        "submitted_at": "2024-02-01T14:00:00Z",
+        "fields": {"your-name": "Bob", "your-email": "[email]", "your-message": "Inquiry about services."}
+      }
+    ]
+  }
+]

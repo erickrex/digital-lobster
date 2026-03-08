@@ -1,5 +1,3 @@
-"""Unit tests for the base agent interface."""
-
 from typing import Any
 
 import pytest

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0.0",
+  "relationships": [
+    {
+      "source_id": "post:page:home",
+      "target_id": "media:logo-main",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:page:home",
+      "target_id": "media:hero-home",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "inline_image"}
+    },
+    {
+      "source_id": "post:page:about",
+      "target_id": "media:team-photo",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "inline_image"}
+    },
+    {
+      "source_id": "post:page:services",
+      "target_id": "post:page:contact",
+      "relation_type": "post_to_post",
+      "source_plugin": null,
+      "metadata": {"context": "cta_link"}
+    },
+    {
+      "source_id": "post:page:contact",
+      "target_id": "plugin:cf7:contact-form-1",
+      "relation_type": "post_to_plugin_entity",
+      "source_plugin": "contact_form_7",
+      "metadata": {"context": "embedded_form"}
+    },
+    {
+      "source_id": "post:page:team",
+      "target_id": "term:category:staff",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:page:home",
+      "target_id": "post:page:services",
+      "relation_type": "post_to_post",
+      "source_plugin": null,
+      "metadata": {"context": "internal_link"}
+    }
+  ]
+}

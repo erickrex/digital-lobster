@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0.0",
+  "relationships": [
+    {
+      "source_id": "post:post:first-post",
+      "target_id": "media:featured-first-post",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:post:second-post",
+      "target_id": "media:featured-second-post",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:post:first-post",
+      "target_id": "media:inline-code-screenshot",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "inline_image"}
+    },
+    {
+      "source_id": "post:post:first-post",
+      "target_id": "term:category:tutorials",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:post:first-post",
+      "target_id": "term:tag:javascript",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:post:first-post",
+      "target_id": "term:tag:beginner",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:post:second-post",
+      "target_id": "term:category:news",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:post:second-post",
+      "target_id": "term:tag:industry",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:review:product-review",
+      "target_id": "term:category:reviews",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:review:product-review",
+      "target_id": "media:product-photo",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:post:first-post",
+      "target_id": "user:author-jane",
+      "relation_type": "post_to_user",
+      "source_plugin": null,
+      "metadata": {"context": "author"}
+    },
+    {
+      "source_id": "post:post:second-post",
+      "target_id": "user:author-jane",
+      "relation_type": "post_to_user",
+      "source_plugin": null,
+      "metadata": {"context": "author"}
+    },
+    {
+      "source_id": "post:page:about",
+      "target_id": "post:page:contact",
+      "relation_type": "post_to_post",
+      "source_plugin": null,
+      "metadata": {"context": "cta_link"}
+    },
+    {
+      "source_id": "post:post:second-post",
+      "target_id": "post:post:first-post",
+      "relation_type": "post_to_post",
+      "source_plugin": null,
+      "metadata": {"context": "related_post"}
+    },
+    {
+      "source_id": "post:page:home",
+      "target_id": "media:hero-blog",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    }
+  ]
+}

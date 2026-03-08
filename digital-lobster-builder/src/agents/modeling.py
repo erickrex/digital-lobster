@@ -1,13 +1,3 @@
-"""Agent 2: Modeling — maps WordPress content types, blocks, and taxonomies
-to Astro content collections, components, and page routes.
-
-Queries the Gradient Knowledge Base for block usage data, CPT definitions,
-and taxonomy structures, then produces a ModelingManifest containing content
-collection schemas, component mappings, and taxonomy definitions.
-
-Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6
-"""
-
 from __future__ import annotations
 
 import json

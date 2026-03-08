@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "statuses_in_use": ["publish", "draft", "future", "pending"],
+  "scheduled_publishing": true,
+  "draft_behavior": "standard WordPress draft with preview, posts queued for editorial review",
+  "preview_expectations": "default WordPress preview via ?preview=true with Yoast SEO preview panel",
+  "revision_policy": "WordPress default revisions enabled, limited to 10 revisions per post",
+  "comments_enabled": true,
+  "authoring_model": "two_editor"
+}

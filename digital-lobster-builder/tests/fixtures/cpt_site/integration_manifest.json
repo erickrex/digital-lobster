@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "integrations": [
+    {
+      "integration_id": "integration:google-analytics",
+      "integration_type": "third_party_script",
+      "target": "https://www.googletagmanager.com/gtag/js",
+      "config": {
+        "tracking_id": "G-XXXXXXXXXX"
+      },
+      "business_critical": false
+    },
+    {
+      "integration_id": "integration:lightbox-cdn",
+      "integration_type": "third_party_script",
+      "target": "https://cdn.jsdelivr.net/npm/lightbox2/dist/js/lightbox.min.js",
+      "config": {},
+      "business_critical": false
+    }
+  ]
+}

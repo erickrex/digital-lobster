@@ -1,12 +1,3 @@
-"""Gradient Knowledge Base management for per-run RAG retrieval.
-
-Each pipeline run creates a dedicated Knowledge Base, uploads relevant
-export artifacts, and agents query it for context. This isolates runs
-and keeps LLM context windows manageable for large sites.
-
-Upload failures are retried up to 2 times before failing the agent.
-"""
-
 from __future__ import annotations
 
 import asyncio

@@ -1,16 +1,3 @@
-"""Gradient AI Platform tracing helpers.
-
-Provides structured trace spans that wrap agent execution, recording
-agent start, completion, error, and reasoning chain per step. Designed
-as async context managers so the Orchestrator can wrap each agent call
-in a trace span.
-
-The Gradient SDK does not yet expose a dedicated tracing API, so spans
-are recorded locally and logged. When Gradient adds an observability
-endpoint, the ``TracingBackend`` protocol can be implemented to push
-spans to the platform dashboard.
-"""
-
 from __future__ import annotations
 
 import logging

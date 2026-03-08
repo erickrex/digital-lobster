@@ -1,10 +1,3 @@
-"""YAML frontmatter serialization and parsing.
-
-Handles special YAML characters (colons, quotes, newlines, Unicode)
-with proper escaping via pyyaml. Provides round-trip fidelity for
-content serialization.
-"""
-
 import yaml
 
 

@@ -1,5 +1,3 @@
-"""Unit tests for credential scrubbing utilities and model safe serialization."""
-
 import json
 
 from src.models.deployment_report import DeploymentReport

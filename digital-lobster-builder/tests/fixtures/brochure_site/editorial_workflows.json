@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "statuses_in_use": ["publish", "draft"],
+  "scheduled_publishing": false,
+  "draft_behavior": "standard WordPress draft with preview",
+  "preview_expectations": "default WordPress preview via ?preview=true",
+  "revision_policy": "WordPress default revisions enabled, no limit configured",
+  "comments_enabled": false,
+  "authoring_model": "single_editor"
+}

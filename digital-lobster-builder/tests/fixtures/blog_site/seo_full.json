@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0.0",
+  "pages": [
+    {
+      "canonical_url": "/",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%sitename%% %%sep%% %%tagline%%",
+      "resolved_title": "DevBlog — Web Development & Tech Reviews",
+      "meta_description": "DevBlog covers modern web development tutorials, tech industry news, and honest product reviews.",
+      "og_metadata": {
+        "og:title": "DevBlog — Web Development & Tech Reviews",
+        "og:description": "Tutorials, news, and reviews for developers.",
+        "og:image": "https://devblog.example.com/wp-content/uploads/hero-blog.jpg",
+        "og:type": "website"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary_large_image",
+        "twitter:site": "@devblog"
+      },
+      "schema_type_hints": ["WebSite", "Blog"],
+      "breadcrumb_config": null,
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/about",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "About — DevBlog",
+      "meta_description": "Learn about DevBlog and the team behind the content.",
+      "og_metadata": {
+        "og:title": "About — DevBlog",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["AboutPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/contact",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Contact — DevBlog",
+      "meta_description": "Get in touch with the DevBlog team.",
+      "og_metadata": {
+        "og:title": "Contact — DevBlog",
+        "og:type": "website"
+      },
+      "twitter_metadata": {},
+      "schema_type_hints": ["ContactPage"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/blog/first-post",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Getting Started with Modern JavaScript — DevBlog",
+      "meta_description": "A beginner-friendly guide to modern JavaScript features including ES modules, async/await, and more.",
+      "og_metadata": {
+        "og:title": "Getting Started with Modern JavaScript",
+        "og:description": "A beginner-friendly guide to modern JavaScript.",
+        "og:image": "https://devblog.example.com/wp-content/uploads/featured-first-post.jpg",
+        "og:type": "article"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary_large_image",
+        "twitter:site": "@devblog"
+      },
+      "schema_type_hints": ["Article", "BlogPosting"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/blog/second-post",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Tech Industry Roundup Q1 2024 — DevBlog",
+      "meta_description": "A summary of the biggest tech industry developments in Q1 2024.",
+      "og_metadata": {
+        "og:title": "Tech Industry Roundup Q1 2024",
+        "og:type": "article"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary",
+        "twitter:site": "@devblog"
+      },
+      "schema_type_hints": ["Article", "BlogPosting"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    },
+    {
+      "canonical_url": "/reviews/product-review",
+      "source_plugin": "yoast",
+      "robots": "index, follow",
+      "noindex": false,
+      "nofollow": false,
+      "title_template": "%%title%% %%sep%% %%sitename%%",
+      "resolved_title": "Laptop Pro X Review — DevBlog",
+      "meta_description": "An honest two-week review of the Laptop Pro X for developers.",
+      "og_metadata": {
+        "og:title": "Laptop Pro X Review",
+        "og:description": "An honest review of the Laptop Pro X.",
+        "og:image": "https://devblog.example.com/wp-content/uploads/product-photo.jpg",
+        "og:type": "article"
+      },
+      "twitter_metadata": {
+        "twitter:card": "summary_large_image",
+        "twitter:site": "@devblog"
+      },
+      "schema_type_hints": ["Article", "Review"],
+      "breadcrumb_config": {"enabled": true, "separator": "›"},
+      "sitemap_inclusion": true,
+      "redirect_ownership": null
+    }
+  ]
+}

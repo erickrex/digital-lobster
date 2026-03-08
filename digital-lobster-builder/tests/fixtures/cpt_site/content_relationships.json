@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0.0",
+  "relationships": [
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "media:portfolio-alpha-hero",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:portfolio:project-beta",
+      "target_id": "media:portfolio-beta-hero",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "media:gallery-alpha-1",
+      "relation_type": "post_to_media",
+      "source_plugin": "acf",
+      "metadata": {"context": "acf_gallery", "field": "gallery"}
+    },
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "media:gallery-alpha-2",
+      "relation_type": "post_to_media",
+      "source_plugin": "acf",
+      "metadata": {"context": "acf_gallery", "field": "gallery"}
+    },
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "post:testimonial:client-review",
+      "relation_type": "post_to_post",
+      "source_plugin": "pods",
+      "metadata": {"context": "related_testimonials", "field": "related_testimonials"}
+    },
+    {
+      "source_id": "post:portfolio:project-beta",
+      "target_id": "post:testimonial:client-review",
+      "relation_type": "post_to_post",
+      "source_plugin": "pods",
+      "metadata": {"context": "related_testimonials", "field": "related_testimonials"}
+    },
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "term:portfolio_category:web-design",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "term:skill:react",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:portfolio:project-alpha",
+      "target_id": "term:skill:nodejs",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:portfolio:project-beta",
+      "target_id": "term:portfolio_category:branding",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:portfolio:project-beta",
+      "target_id": "term:portfolio_tag:responsive",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:portfolio:project-beta",
+      "target_id": "term:skill:figma",
+      "relation_type": "post_to_term",
+      "source_plugin": null,
+      "metadata": {}
+    },
+    {
+      "source_id": "post:testimonial:client-review",
+      "target_id": "user:author-admin",
+      "relation_type": "post_to_user",
+      "source_plugin": null,
+      "metadata": {"context": "author"}
+    },
+    {
+      "source_id": "post:page:home",
+      "target_id": "media:hero-home",
+      "relation_type": "post_to_media",
+      "source_plugin": null,
+      "metadata": {"context": "featured_image"}
+    },
+    {
+      "source_id": "post:page:home",
+      "target_id": "post:portfolio:project-alpha",
+      "relation_type": "post_to_post",
+      "source_plugin": null,
+      "metadata": {"context": "internal_link"}
+    }
+  ]
+}
