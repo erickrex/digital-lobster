@@ -30,11 +30,9 @@ from src.models.presentation_manifest import (
 )
 from src.orchestrator.errors import ParityGateError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for parity QA tests."""
@@ -105,12 +103,10 @@ def _make_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _make_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(capabilities=[], findings=[])
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _make_presentation(**overrides: Any) -> PresentationManifest:
     defaults: dict[str, Any] = dict(
@@ -118,7 +114,6 @@ def _make_presentation(**overrides: Any) -> PresentationManifest:
     )
     defaults.update(overrides)
     return PresentationManifest(**defaults)
-
 
 def _make_behavior(**overrides: Any) -> BehaviorManifest:
     defaults: dict[str, Any] = dict(
@@ -132,7 +127,6 @@ def _make_behavior(**overrides: Any) -> BehaviorManifest:
     )
     defaults.update(overrides)
     return BehaviorManifest(**defaults)
-
 
 def _make_context(
     bundle: BundleManifest | None = None,
@@ -150,7 +144,6 @@ def _make_context(
     ctx.update(extra)
     return ctx
 
-
 def _make_agent(
     adapters: list[PluginAdapter] | None = None,
     threshold: float = 0.8,
@@ -159,19 +152,15 @@ def _make_agent(
         gradient_client=None, adapters=adapters or [], threshold=threshold
     )
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 # ---------------------------------------------------------------------------
 # Parity score calculation — Requirements 20.1, 20.3
 # ---------------------------------------------------------------------------
 
-
 class TestParityScoreCalculation:
     """Overall score is the arithmetic mean of 7 category scores."""
-
     def test_all_categories_perfect_gives_overall_1(self):
         """When every category scores 1.0, overall = 1.0."""
         agent = _make_agent(threshold=0.0)
@@ -244,15 +233,12 @@ class TestParityScoreCalculation:
         for score in report.category_scores.values():
             assert 0.0 <= score <= 1.0
 
-
 # ---------------------------------------------------------------------------
 # Threshold enforcement — Requirement 20.4
 # ---------------------------------------------------------------------------
 
-
 class TestThresholdEnforcement:
     """When overall score < threshold, ParityGateError is raised."""
-
     def test_below_threshold_raises_parity_gate_error(self):
         """Score below threshold blocks deployment with ParityGateError."""
         # Force low route parity: 2 pages, 0 matching templates.
@@ -353,15 +339,12 @@ class TestThresholdEnforcement:
         ]
         assert len(critical_findings) == 1
 
-
 # ---------------------------------------------------------------------------
 # Snapshot comparison — Requirement 20.2 (via 20.1)
 # ---------------------------------------------------------------------------
 
-
 class TestSnapshotComparison:
     """Pages with snapshot_ref are compared against html_snapshots context."""
-
     def test_snapshot_found_scores_1(self):
         """When html_snapshots has content for the ref, score is 1.0."""
         bundle = _make_bundle(
@@ -467,15 +450,12 @@ class TestSnapshotComparison:
 
         assert report.snapshot_comparisons == []
 
-
 # ---------------------------------------------------------------------------
 # Plugin assertions — Requirement 20.6
 # ---------------------------------------------------------------------------
 
-
 class _StubAdapter(PluginAdapter):
     """Minimal adapter that returns configurable QA assertions."""
-
     def __init__(self, family: str, assertions: list[QAAssertion]) -> None:
         self._family = family
         self._assertions = assertions
@@ -509,10 +489,8 @@ class _StubAdapter(PluginAdapter):
     def qa_assertions(self, capabilities) -> list[QAAssertion]:
         return self._assertions
 
-
 class TestPluginAssertions:
     """Plugin-specific QA assertions are collected from adapters."""
-
     def test_assertions_collected_for_registered_family(self):
         """Adapter qa_assertions() are included in the report for matching families."""
         assertion = QAAssertion(

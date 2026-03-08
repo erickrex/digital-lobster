@@ -25,12 +25,10 @@ TERRAFORM_DIR = Path(__file__).resolve().parent.parent.parent / "terraform"
 DEFAULT_HEALTH_TIMEOUT = 600  # seconds
 HEALTH_POLL_INTERVAL = 10  # seconds
 
-
 class StrapiProvisionerAgent(BaseAgent):
     """Provisions a DigitalOcean Droplet running Strapi via Terraform,
     polls the health endpoint, creates an admin user, and generates an
     API token."""
-
     def __init__(
         self,
         gradient_client: Any,
@@ -123,11 +121,9 @@ class StrapiProvisionerAgent(BaseAgent):
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 
-
 # ======================================================================
 # Pure / helper functions — testable in isolation
 # ======================================================================
-
 
 def write_tfvars(terraform_dir: Path, config: CMSConfig) -> Path:
     """Write a ``terraform.tfvars.json`` file from *config*.
@@ -146,7 +142,6 @@ def write_tfvars(terraform_dir: Path, config: CMSConfig) -> Path:
     tfvars_path = terraform_dir / "terraform.tfvars.json"
     tfvars_path.write_text(json.dumps(tfvars, indent=2))
     return tfvars_path
-
 
 async def run_terraform(terraform_dir: Path) -> dict[str, Any]:
     """Run ``terraform init`` and ``terraform apply -auto-approve``.
@@ -201,7 +196,6 @@ async def run_terraform(terraform_dir: Path) -> dict[str, Any]:
 
     return json.loads(output_stdout.decode("utf-8"))
 
-
 def _extract_failed_resource(stderr: str) -> str:
     """Best-effort extraction of the failed Terraform resource name from stderr.
 
@@ -219,7 +213,6 @@ def _extract_failed_resource(stderr: str) -> str:
         return match.group(1)
 
     return "unknown"
-
 
 async def poll_health(
     droplet_ip: str,
@@ -263,7 +256,6 @@ async def poll_health(
         f"Droplet IP: {droplet_ip}. "
         f"Check /var/log/cloud-init-output.log on the droplet for details."
     )
-
 
 async def create_admin_user(
     droplet_ip: str,
@@ -310,7 +302,6 @@ async def create_admin_user(
         )
     return token
 
-
 async def generate_api_token(
     droplet_ip: str,
     admin_jwt: str,
@@ -356,7 +347,6 @@ async def generate_api_token(
             f"API token creation succeeded but no accessKey in response: {data}"
         )
     return access_key
-
 
 def store_terraform_state(terraform_dir: Path, destination: str) -> Path:
     """Copy the Terraform state file to the configured destination.

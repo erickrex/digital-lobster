@@ -18,10 +18,8 @@ AWS4_REQUEST = "aws4_request"
 ALGORITHM = "AWS4-HMAC-SHA256"
 DEFAULT_PRESIGN_EXPIRES = 3600  # 1 hour
 
-
 class SpacesClient:
     """DigitalOcean Spaces (S3-compatible) client."""
-
     def __init__(
         self,
         access_key: str,
@@ -245,11 +243,9 @@ class SpacesClient:
             "x-amz-content-sha256": payload_hash,
         }
 
-
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
-
 
 def _derive_signing_key(
     secret_key: str, datestamp: str, region: str, service: str
@@ -261,7 +257,6 @@ def _derive_signing_key(
     k_region = _hmac_sha256(k_date, region)
     k_service = _hmac_sha256(k_region, service)
     return _hmac_sha256(k_service, AWS4_REQUEST)
-
 
 def _hmac_sha256(key: bytes, msg: str) -> bytes:
     """Compute HMAC-SHA256."""

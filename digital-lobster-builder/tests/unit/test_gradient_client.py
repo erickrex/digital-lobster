@@ -15,7 +15,6 @@ from src.gradient.client import (
     MAX_RETRIES,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -30,7 +29,6 @@ def _make_completion_response(content: str = "hello") -> MagicMock:
     resp.choices = [choice]
     return resp
 
-
 def _make_rate_limit_error(retry_after: str | None = None) -> RateLimitError:
     """Build a RateLimitError with an optional Retry-After header."""
     headers = {}
@@ -43,7 +41,6 @@ def _make_rate_limit_error(retry_after: str | None = None) -> RateLimitError:
     )
     return RateLimitError("rate limited", response=response, body=None)
 
-
 def _make_auth_error() -> AuthenticationError:
     response = httpx.Response(
         status_code=401,
@@ -51,11 +48,9 @@ def _make_auth_error() -> AuthenticationError:
     )
     return AuthenticationError("unauthorized", response=response, body=None)
 
-
 def _make_timeout_error() -> APITimeoutError:
     request = httpx.Request("POST", "https://api.gradient.ai")
     return APITimeoutError(request=request)
-
 
 # ---------------------------------------------------------------------------
 # Tests — complete()
@@ -63,7 +58,6 @@ def _make_timeout_error() -> APITimeoutError:
 
 class TestComplete:
     """Tests for GradientClient.complete()."""
-
     async def test_returns_content_on_success(self):
         client = GradientClient(api_key="test-key")
         mock_resp = _make_completion_response("world")
@@ -114,14 +108,12 @@ class TestComplete:
             "response_format": {"type": "json_object"}
         }
 
-
 # ---------------------------------------------------------------------------
 # Tests — complete_structured()
 # ---------------------------------------------------------------------------
 
 class TestCompleteStructured:
     """Tests for GradientClient.complete_structured()."""
-
     async def test_returns_validated_dict(self):
         from pydantic import BaseModel
 
@@ -189,14 +181,12 @@ class TestCompleteStructured:
         assert "value" in messages[0]["content"]
         assert messages[1] == {"role": "user", "content": "hi"}
 
-
 # ---------------------------------------------------------------------------
 # Tests — retry logic
 # ---------------------------------------------------------------------------
 
 class TestRetryLogic:
     """Tests for retry behavior on timeouts, rate limits, and auth errors."""
-
     async def test_auth_error_fails_immediately(self):
         client = GradientClient(api_key="bad-key")
         client._sdk.chat.completions.create = AsyncMock(
@@ -296,14 +286,12 @@ class TestRetryLogic:
         sleep_values = [call.args[0] for call in mock_sleep.call_args_list]
         assert sleep_values == [1.0, 2.0]
 
-
 # ---------------------------------------------------------------------------
 # Tests — _parse_retry_after
 # ---------------------------------------------------------------------------
 
 class TestParseRetryAfter:
     """Tests for Retry-After header parsing."""
-
     def test_parses_numeric_header(self):
         exc = _make_rate_limit_error(retry_after="2.5")
         assert GradientClient._parse_retry_after(exc) == 2.5

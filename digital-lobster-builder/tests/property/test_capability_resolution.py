@@ -22,7 +22,6 @@ from src.models.bundle_artifacts import (
 from src.models.bundle_manifest import BundleManifest
 from src.models.finding import FindingSeverity
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -40,7 +39,6 @@ _UNSUPPORTED_SLUGS = [
     "fancy-slider",
     "my-unknown-plugin",
 ]
-
 
 def _clean_bundle(**overrides) -> BundleManifest:
     """Build a minimal BundleManifest that passes capability resolution."""
@@ -111,7 +109,6 @@ def _clean_bundle(**overrides) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _inject_active_plugin(
     bundle: BundleManifest, slug: str, family: str = ""
 ) -> BundleManifest:
@@ -123,7 +120,6 @@ def _inject_active_plugin(
     existing.append(entry)
     return bundle.model_copy(update={"plugins_fingerprint": {"plugins": existing}})
 
-
 def _make_agent(
     adapters: list[PluginAdapter] | None = None,
 ) -> CapabilityResolutionAgent:
@@ -131,27 +127,20 @@ def _make_agent(
         gradient_client=None, adapters=adapters
     )
 
-
 def _run(coro):
     return asyncio.run(coro)
 
-
 # ===========================================================================
 # Property 8: Capability classification completeness
-# Validates: Requirements 13.2
 # ===========================================================================
-
 
 class TestCapabilityClassificationCompleteness:
     """For any bundle with active plugins, the CapabilityManifest must
     contain capabilities with valid classification and confidence values."""
-
     @given(family=st.sampled_from(_ADAPTER_FAMILIES))
     @settings(max_examples=100)
     def test_supported_plugin_produces_valid_capabilities(self, family: str):
-        """**Validates: Requirements 13.2**
-
-        For any supported plugin family, the CapabilityManifest must contain
+        """        For any supported plugin family, the CapabilityManifest must contain
         at least one capability with a valid classification value and a
         confidence score between 0.0 and 1.0.
         """
@@ -177,9 +166,7 @@ class TestCapabilityClassificationCompleteness:
     def test_unsupported_plugin_capabilities_have_valid_classification(
         self, slug: str
     ):
-        """**Validates: Requirements 13.2**
-
-        Even for unsupported plugins, any capabilities produced must have
+        """        Even for unsupported plugins, any capabilities produced must have
         valid classification values and confidence scores.
         """
         bundle = _inject_active_plugin(_clean_bundle(), slug=slug)
@@ -191,23 +178,17 @@ class TestCapabilityClassificationCompleteness:
             assert cap.classification in _VALID_CLASSIFICATIONS
             assert 0.0 <= cap.confidence <= 1.0
 
-
 # ===========================================================================
 # Property 9: Unsupported capability Finding production
-# Validates: Requirements 13.3, 18.5
 # ===========================================================================
-
 
 class TestUnsupportedCapabilityFindingProduction:
     """For any active plugin without an adapter, a Finding with
     stage='capability_resolution' must be produced."""
-
     @given(slug=st.sampled_from(_UNSUPPORTED_SLUGS))
     @settings(max_examples=100)
     def test_unsupported_plugin_produces_finding(self, slug: str):
-        """**Validates: Requirements 13.3, 18.5**
-
-        For any active plugin without a registered adapter, the
+        """        For any active plugin without a registered adapter, the
         CapabilityManifest must contain a Finding with
         stage='capability_resolution' referencing the plugin.
         """
@@ -236,9 +217,7 @@ class TestUnsupportedCapabilityFindingProduction:
     @given(slug=st.sampled_from(_UNSUPPORTED_SLUGS))
     @settings(max_examples=100)
     def test_unsupported_finding_has_required_fields(self, slug: str):
-        """**Validates: Requirements 13.3, 18.5**
-
-        Each Finding for an unsupported plugin must have non-empty construct,
+        """        Each Finding for an unsupported plugin must have non-empty construct,
         message, recommended_action, and severity of CRITICAL or WARNING.
         """
         bundle = _inject_active_plugin(_clean_bundle(), slug=slug)
@@ -263,25 +242,19 @@ class TestUnsupportedCapabilityFindingProduction:
                 FindingSeverity.WARNING,
             }, f"Unsupported finding severity must be CRITICAL or WARNING, got {finding.severity}"
 
-
 # ===========================================================================
 # Property 10: Adapter-first classification
-# Validates: Requirements 13.5, 18.4
 # ===========================================================================
-
 
 class TestAdapterFirstClassification:
     """When an adapter exists for a plugin family, the adapter's
     classify_capabilities() must be called (adapter-first, not LLM-first)."""
-
     @given(adapter=st.sampled_from(_ALL_ADAPTERS))
     @settings(max_examples=100)
     def test_adapter_classify_called_for_supported_family(
         self, adapter: PluginAdapter
     ):
-        """**Validates: Requirements 13.5, 18.4**
-
-        When a plugin with a registered adapter family is present in the
+        """        When a plugin with a registered adapter family is present in the
         bundle, the adapter's classify_capabilities() must be invoked and
         the resulting capabilities must have confidence >= 0.8.
         """
@@ -317,9 +290,7 @@ class TestAdapterFirstClassification:
     def test_adapter_family_produces_no_unsupported_finding(
         self, adapter: PluginAdapter
     ):
-        """**Validates: Requirements 13.5, 18.4**
-
-        When a plugin has a registered adapter, the capability resolution
+        """        When a plugin has a registered adapter, the capability resolution
         stage must NOT produce an 'unsupported' Finding for that plugin.
         """
         family = adapter.plugin_family()

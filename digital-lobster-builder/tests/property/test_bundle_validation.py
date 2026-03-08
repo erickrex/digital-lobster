@@ -14,7 +14,6 @@ from src.models.bundle_manifest import BundleManifest
 from src.models.bundle_schema import BUNDLE_SCHEMA_V1, ArtifactRequirement
 from src.orchestrator.errors import BundleValidationError
 
-
 # ---------------------------------------------------------------------------
 # Helpers — reuse the same patterns from unit tests
 # ---------------------------------------------------------------------------
@@ -86,11 +85,9 @@ _REQUIRED_ARTIFACTS = [
     if a.requirement == ArtifactRequirement.REQUIRED
 ]
 
-
 def _all_artifact_data() -> dict[str, Any]:
     """Return a complete set of artifact data for a valid CMS bundle."""
     return {**_EXISTING_ARTIFACT_DATA, **_NEW_ARTIFACT_DATA}
-
 
 def _make_zip(files: dict[str, Any], raw_overrides: dict[str, bytes] | None = None) -> zipfile.ZipFile:
     """Build an in-memory ZIP from a mapping of path → JSON-serialisable data.
@@ -107,7 +104,6 @@ def _make_zip(files: dict[str, Any], raw_overrides: dict[str, bytes] | None = No
                 zf.writestr(path, json.dumps(data))
     buf.seek(0)
     return zipfile.ZipFile(buf)
-
 
 # ---------------------------------------------------------------------------
 # Strategies
@@ -144,24 +140,18 @@ _incompatible_major = st.integers(min_value=2, max_value=9)
 _compatible_minor = st.integers(min_value=0, max_value=99)
 _compatible_patch = st.integers(min_value=0, max_value=99)
 
-
 # ===========================================================================
 # Property 4: Missing artifact detection
-# Validates: Requirements 3.1, 3.2
 # ===========================================================================
-
 
 class TestMissingArtifactDetection:
     """For any subset of required artifacts removed from a valid bundle,
     validate_cms_bundle raises BundleValidationError listing exactly
     those missing artifacts."""
-
     @given(to_remove=_required_artifact_subsets)
     @settings(max_examples=80)
     def test_removed_required_artifacts_are_all_reported(self, to_remove: list[str]):
-        """**Validates: Requirements 3.1, 3.2**
-
-        Removing any non-empty subset of required artifacts from a complete
+        """        Removing any non-empty subset of required artifacts from a complete
         bundle must raise BundleValidationError whose missing_artifacts
         field lists exactly the removed artifacts.
         """
@@ -176,24 +166,18 @@ class TestMissingArtifactDetection:
         err = exc_info.value
         assert set(err.missing_artifacts) == set(to_remove)
 
-
 # ===========================================================================
 # Property 5: Malformed artifact rejection
-# Validates: Requirements 2.3, 3.3
 # ===========================================================================
-
 
 class TestMalformedArtifactRejection:
     """For any artifact replaced with malformed JSON or invalid Pydantic data,
     validate_cms_bundle raises BundleValidationError with that artifact name
     in validation_failures."""
-
     @given(artifact_path=_new_artifact_to_corrupt)
     @settings(max_examples=50)
     def test_malformed_json_detected(self, artifact_path: str):
-        """**Validates: Requirements 2.3, 3.3**
-
-        Replacing any new typed artifact with invalid JSON must raise
+        """        Replacing any new typed artifact with invalid JSON must raise
         BundleValidationError with that artifact in validation_failures.
         """
         files = _all_artifact_data()
@@ -212,9 +196,7 @@ class TestMalformedArtifactRejection:
     ]))
     @settings(max_examples=50)
     def test_invalid_pydantic_data_detected_dict_artifacts(self, artifact_path: str):
-        """**Validates: Requirements 2.3, 3.3**
-
-        Replacing any new dict-shaped typed artifact with structurally wrong
+        """        Replacing any new dict-shaped typed artifact with structurally wrong
         JSON (valid JSON but missing required Pydantic fields) must raise
         BundleValidationError with that artifact in validation_failures.
         """
@@ -232,9 +214,7 @@ class TestMalformedArtifactRejection:
         assert artifact_path in failed_artifacts
 
     def test_invalid_pydantic_data_detected_list_artifact(self):
-        """**Validates: Requirements 2.3, 3.3**
-
-        Replacing plugin_table_exports.json with a list of entries that
+        """        Replacing plugin_table_exports.json with a list of entries that
         have invalid Pydantic data must raise BundleValidationError.
         """
         files = _all_artifact_data()
@@ -249,17 +229,13 @@ class TestMalformedArtifactRejection:
         failed_artifacts = [f["artifact"] for f in err.validation_failures]
         assert "plugin_table_exports.json" in failed_artifacts
 
-
 # ===========================================================================
 # Property 6: Schema version compatibility validation
-# Validates: Requirements 3.5
 # ===========================================================================
-
 
 class TestSchemaVersionCompatibility:
     """For any artifact with incompatible major version, validate_cms_bundle
     rejects; for compatible versions (same major), it accepts."""
-
     @given(
         artifact_path=st.sampled_from(_NEW_TYPED_ARTIFACT_PATHS),
         bad_major=_incompatible_major,
@@ -270,9 +246,7 @@ class TestSchemaVersionCompatibility:
     def test_incompatible_major_version_rejected(
         self, artifact_path: str, bad_major: int, minor: int, patch: int
     ):
-        """**Validates: Requirements 3.5**
-
-        Any artifact whose major version differs from the expected major
+        """        Any artifact whose major version differs from the expected major
         version must cause a BundleValidationError.
         """
         files = _all_artifact_data()
@@ -310,9 +284,7 @@ class TestSchemaVersionCompatibility:
     )
     @settings(max_examples=50)
     def test_compatible_version_accepted(self, minor: int, patch: int):
-        """**Validates: Requirements 3.5**
-
-        Artifacts with the same major version (1.x.y) as expected must
+        """        Artifacts with the same major version (1.x.y) as expected must
         be accepted and produce a valid BundleManifest.
         """
         files = _all_artifact_data()
@@ -328,23 +300,17 @@ class TestSchemaVersionCompatibility:
         result = validate_cms_bundle(zf, _SITE_INFO, [])
         assert isinstance(result, BundleManifest)
 
-
 # ===========================================================================
 # Property 7: Valid Bundle_Manifest production
-# Validates: Requirements 3.4
 # ===========================================================================
-
 
 class TestValidBundleManifestProduction:
     """For a complete valid bundle, validate_cms_bundle returns a
     BundleManifest with all artifacts populated."""
-
     @given(data=st.data())
     @settings(max_examples=30)
     def test_valid_bundle_produces_manifest_with_all_fields(self, data):
-        """**Validates: Requirements 3.4**
-
-        A complete valid bundle must produce a BundleManifest where every
+        """        A complete valid bundle must produce a BundleManifest where every
         expected field is populated (not None).
         """
         files = _all_artifact_data()
@@ -371,9 +337,7 @@ class TestValidBundleManifestProduction:
     @given(artifact_def=st.sampled_from(BUNDLE_SCHEMA_V1.artifacts))
     @settings(max_examples=50)
     def test_every_schema_artifact_represented_in_manifest(self, artifact_def):
-        """**Validates: Requirements 3.4**
-
-        For every artifact defined in BUNDLE_SCHEMA_V1, the resulting
+        """        For every artifact defined in BUNDLE_SCHEMA_V1, the resulting
         BundleManifest must have a corresponding non-None field.
         """
         files = _all_artifact_data()

@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 _LANDMARK_TAGS = {"main", "nav", "header", "footer"}
 
-
 def check_accessibility(html: str) -> list[str]:
     """Return a list of accessibility issues found in *html*.
 
@@ -67,11 +66,9 @@ def check_accessibility(html: str) -> list[str]:
 
     return issues
 
-
 # ---------------------------------------------------------------------------
 # Visual parity helper (pure function)
 # ---------------------------------------------------------------------------
-
 
 def compute_visual_parity(generated_html: str, snapshot_html: str) -> float:
     """Return a similarity score between 0.0 and 1.0.
@@ -85,17 +82,14 @@ def compute_visual_parity(generated_html: str, snapshot_html: str) -> float:
         return 1.0
     return SequenceMatcher(None, generated_text, snapshot_text).ratio()
 
-
 def _strip_tags(html: str) -> str:
     """Naively strip HTML tags and collapse whitespace."""
     text = re.sub(r"<[^>]+>", " ", html)
     return re.sub(r"\s+", " ", text).strip()
 
-
 # ---------------------------------------------------------------------------
 # Key-page URL derivation
 # ---------------------------------------------------------------------------
-
 
 def derive_key_pages(context: dict[str, Any]) -> list[str]:
     """Derive the list of key page URLs to check from the pipeline context.
@@ -138,11 +132,9 @@ def derive_key_pages(context: dict[str, Any]) -> list[str]:
 
     return urls
 
-
 # ---------------------------------------------------------------------------
 # CMS validation helpers (module-level pure/async functions)
 # ---------------------------------------------------------------------------
-
 
 async def count_strapi_entries(
     base_url: str, token: str, content_type_map: Any
@@ -182,7 +174,6 @@ async def count_strapi_entries(
 
     return total
 
-
 async def check_media_urls(
     media_url_map: dict[str, str], timeout: float = 10.0
 ) -> tuple[int, int]:
@@ -212,7 +203,6 @@ async def check_media_urls(
 
     return checked, valid
 
-
 def validate_content_counts(
     strapi_count: int, export_count: int, failed_count: int
 ) -> bool:
@@ -223,11 +213,9 @@ def validate_content_counts(
     """
     return export_count - strapi_count <= failed_count
 
-
 # ---------------------------------------------------------------------------
 # QAAgent
 # ---------------------------------------------------------------------------
-
 
 class QAAgent(BaseAgent):
     """Agent 6 — Quality Assurance.
@@ -236,7 +224,6 @@ class QAAgent(BaseAgent):
     HTML snapshots, runs accessibility checks, and produces a
     :class:`QAReport`.
     """
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         start = time.monotonic()
         warnings: list[str] = []

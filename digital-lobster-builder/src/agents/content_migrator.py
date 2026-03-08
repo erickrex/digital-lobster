@@ -52,11 +52,9 @@ DEFAULT_BATCH_SIZE = 50
 MAX_RETRIES = 3
 INITIAL_BACKOFF_SECONDS = 2.0
 
-
 # ---------------------------------------------------------------------------
 # Block HTML → Strapi Rich Text conversion (Requirement 6.3)
 # ---------------------------------------------------------------------------
-
 
 class _BlockHTMLParser(HTMLParser):
     """Converts WordPress block HTML into Strapi rich text blocks.
@@ -65,7 +63,6 @@ class _BlockHTMLParser(HTMLParser):
     nodes.  This parser handles: headings (h1-h6), paragraphs, lists
     (ul/ol with li), images, and links (a tags).
     """
-
     def __init__(self) -> None:
         super().__init__()
         self._blocks: list[dict[str, Any]] = []
@@ -193,7 +190,6 @@ class _BlockHTMLParser(HTMLParser):
             self._current_children = []
         return self._blocks
 
-
 def convert_blocks_to_rich_text(
     blocks: list[WordPressBlock],
 ) -> list[dict[str, Any]]:
@@ -210,11 +206,9 @@ def convert_blocks_to_rich_text(
     parser.feed(combined_html)
     return parser.get_blocks()
 
-
 # ---------------------------------------------------------------------------
 # Media URL replacement helper
 # ---------------------------------------------------------------------------
-
 
 def replace_media_urls(
     data: Any,
@@ -235,11 +229,9 @@ def replace_media_urls(
         return [replace_media_urls(item, media_url_map) for item in data]
     return data
 
-
 # ---------------------------------------------------------------------------
 # Menu URL rewriting helper (Requirement 8.3, 8.4)
 # ---------------------------------------------------------------------------
-
 
 def rewrite_menu_url(
     url: str,
@@ -281,11 +273,9 @@ def rewrite_menu_url(
 
     return url
 
-
 # ---------------------------------------------------------------------------
 # Strapi API helpers with retry logic
 # ---------------------------------------------------------------------------
-
 
 async def _upload_single_media(
     client: httpx.AsyncClient,
@@ -362,7 +352,6 @@ async def _upload_single_media(
             logger.warning("Media upload error for %s: %s", original_url, exc)
             return original_url, None
 
-
 async def upload_media_files(
     base_url: str,
     token: str,
@@ -406,11 +395,9 @@ async def upload_media_files(
     )
     return media_url_map, stats
 
-
 # ---------------------------------------------------------------------------
 # Content entry creation with batching and retry (Requirement 6.5, 6.6, 6.7)
 # ---------------------------------------------------------------------------
-
 
 async def _create_entry_with_retry(
     client: httpx.AsyncClient,
@@ -489,7 +476,6 @@ async def _create_entry_with_retry(
 
     return None
 
-
 def _build_entry_payload(
     item: WordPressContentItem,
     content_type_map: ContentTypeMap,
@@ -550,7 +536,6 @@ def _build_entry_payload(
 
     return payload
 
-
 async def create_taxonomy_terms(
     client: httpx.AsyncClient,
     base_url: str,
@@ -608,7 +593,6 @@ async def create_taxonomy_terms(
                 )
 
     return taxonomy_term_ids, total_created, warnings
-
 
 async def migrate_content_entries(
     base_url: str,
@@ -697,11 +681,9 @@ async def migrate_content_entries(
 
     return stats_list
 
-
 # ---------------------------------------------------------------------------
 # Menu and navigation migration (Requirements 8.1–8.4)
 # ---------------------------------------------------------------------------
-
 
 async def _create_navigation_menu_type(
     client: httpx.AsyncClient,
@@ -775,7 +757,6 @@ async def _create_navigation_menu_type(
             resp.text[:200],
         )
 
-
 def _build_menu_items(
     raw_items: list[dict[str, Any]],
     route_map: dict[str, str],
@@ -806,7 +787,6 @@ def _build_menu_items(
 
         result.append(item)
     return result
-
 
 async def migrate_menus(
     base_url: str,
@@ -872,7 +852,6 @@ async def migrate_menus(
 
     return entries_created, warnings
 
-
 # ---------------------------------------------------------------------------
 # Production migration helpers (Requirement 19)
 # ---------------------------------------------------------------------------
@@ -894,7 +873,6 @@ _STATUS_MAP: dict[str, str] = {
     "private": "draft",
 }
 
-
 def _resolve_type_mapping(
     post_type: str,
     mapping_manifest: MigrationMappingManifest,
@@ -904,7 +882,6 @@ def _resolve_type_mapping(
         if tm.source_post_type == post_type:
             return tm
     return None
-
 
 def _field_mappings_for(
     post_type: str,
@@ -918,7 +895,6 @@ def _field_mappings_for(
         if fm.source_post_type == post_type and fm.target_api_id == target_api_id
     ]
 
-
 def _relation_mappings_for(
     source_collection: str,
     mapping_manifest: MigrationMappingManifest,
@@ -930,7 +906,6 @@ def _relation_mappings_for(
         if rm.source_collection == source_collection
     ]
 
-
 def _template_mapping_for(
     template_name: str,
     mapping_manifest: MigrationMappingManifest,
@@ -941,11 +916,9 @@ def _template_mapping_for(
             return tm
     return None
 
-
 def _map_content_status(wp_status: str) -> str:
     """Map a WordPress post status to a Strapi-compatible status string."""
     return _STATUS_MAP.get(wp_status, "draft")
-
 
 def _build_production_entry_payload(
     item: WordPressContentItem,
@@ -1054,7 +1027,6 @@ def _build_production_entry_payload(
 
     return payload
 
-
 def _make_entry_finding(
     item: WordPressContentItem,
     error: str,
@@ -1067,7 +1039,6 @@ def _make_entry_finding(
         message=f"Failed to migrate '{item.title}' ({item.post_type}): {error}",
         recommended_action="Review entry data and retry migration manually",
     )
-
 
 async def _migrate_production_content_entries(
     base_url: str,
@@ -1171,7 +1142,6 @@ async def _migrate_production_content_entries(
 
     return stats_list, findings
 
-
 async def _migrate_production_taxonomy_terms(
     client: httpx.AsyncClient,
     base_url: str,
@@ -1218,7 +1188,6 @@ async def _migrate_production_taxonomy_terms(
                 warnings.append(f"Failed to create term '{term_slug}' for '{tax_name}'.")
 
     return taxonomy_term_ids, total_created, warnings
-
 
 async def _migrate_plugin_instances(
     base_url: str,
@@ -1275,7 +1244,6 @@ async def _migrate_plugin_instances(
 
     return entries_created, findings
 
-
 async def _migrate_form_metadata(
     base_url: str,
     token: str,
@@ -1317,7 +1285,6 @@ async def _migrate_form_metadata(
 
     return entries_created, findings
 
-
 async def _link_media_relations(
     base_url: str,
     token: str,
@@ -1341,11 +1308,9 @@ async def _link_media_relations(
     # (already handled in _build_production_entry_payload).
     return findings
 
-
 # ---------------------------------------------------------------------------
 # Agent class
 # ---------------------------------------------------------------------------
-
 
 class ContentMigratorAgent(BaseAgent):
     """Populates Strapi with content, media, taxonomies, and menus.
@@ -1354,7 +1319,6 @@ class ContentMigratorAgent(BaseAgent):
     uses the production deterministic migration path.  Otherwise falls
     through to the legacy migration path.
     """
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         # Check for production migration path
         if context.get("migration_mapping_manifest") is not None:

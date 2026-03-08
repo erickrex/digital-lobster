@@ -21,11 +21,9 @@ from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import CapabilityManifest
 from src.models.presentation_manifest import PresentationManifest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for presentation compiler tests."""
@@ -96,7 +94,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(
         capabilities=[],
@@ -108,7 +105,6 @@ def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     )
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _make_page(**overrides: Any) -> PageCompositionEntry:
     """Build a PageCompositionEntry with sensible defaults."""
@@ -126,14 +122,11 @@ def _make_page(**overrides: Any) -> PageCompositionEntry:
     defaults.update(overrides)
     return PageCompositionEntry(**defaults)
 
-
 def _make_agent() -> PresentationCompilerAgent:
     return PresentationCompilerAgent(gradient_client=None)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _execute(
     bundle: BundleManifest,
@@ -147,15 +140,12 @@ def _execute(
     result = _run(agent.execute(context))
     return result.artifacts["presentation_manifest"]
 
-
 # ---------------------------------------------------------------------------
 # Page template → route template mapping — Requirement 15.1
 # ---------------------------------------------------------------------------
 
-
 class TestRouteTemplateMapping:
     """Page composition pages are converted into RouteTemplate objects."""
-
     def test_single_page_produces_route_template(self):
         page = _make_page(
             canonical_url="https://example.com/about/",
@@ -300,15 +290,12 @@ class TestRouteTemplateMapping:
         patterns = [rt.route_pattern for rt in manifest.route_templates]
         assert patterns == sorted(patterns)
 
-
 # ---------------------------------------------------------------------------
 # Widget placement → section component mapping — Requirement 15.6
 # ---------------------------------------------------------------------------
 
-
 class TestWidgetSectionMapping:
     """Widget placements in page_composition become SectionDefinition objects."""
-
     def test_widget_placement_produces_section(self):
         page = _make_page(
             widget_placements=[
@@ -404,16 +391,13 @@ class TestWidgetSectionMapping:
         assert len(widget_sections) == 1
         assert widget_sections[0].name == "calendar"
 
-
 # ---------------------------------------------------------------------------
 # Unsupported fragment → FallbackZone — Requirement 15.5
 # ---------------------------------------------------------------------------
 
-
 class TestFallbackZones:
     """Shortcodes, blocks, and plugin components without adapter support
     produce FallbackZone entries rather than being silently dropped."""
-
     def test_unsupported_shortcode_produces_fallback(self):
         page = _make_page(
             canonical_url="https://example.com/contact/",
@@ -564,15 +548,12 @@ class TestFallbackZones:
         keys = [(fz.page_url, fz.zone_name) for fz in manifest.fallback_zones]
         assert keys == sorted(keys)
 
-
 # ---------------------------------------------------------------------------
 # Layout compilation — Requirement 15.1
 # ---------------------------------------------------------------------------
 
-
 class TestLayoutCompilation:
     """Page templates become LayoutDefinition objects."""
-
     def test_page_template_produces_layout(self):
         bundle = _clean_bundle(
             page_templates={"templates": {"page.php": {}}},
@@ -619,15 +600,12 @@ class TestLayoutCompilation:
         names = [l.name for l in manifest.layouts]
         assert names == sorted(names)
 
-
 # ---------------------------------------------------------------------------
 # Style token compilation
 # ---------------------------------------------------------------------------
 
-
 class TestStyleTokenCompilation:
     """theme_mods, global_styles, css_sources produce style tokens."""
-
     def test_theme_mod_colors_become_tokens(self):
         bundle = _clean_bundle(
             theme_mods={"background_color": "#ffffff", "accent_color": "#ff0000"},
@@ -677,11 +655,9 @@ class TestStyleTokenCompilation:
 
         assert manifest.style_tokens == {}
 
-
 # ---------------------------------------------------------------------------
 # Agent result structure
 # ---------------------------------------------------------------------------
-
 
 class TestAgentResult:
     def test_agent_result_contains_presentation_manifest(self):

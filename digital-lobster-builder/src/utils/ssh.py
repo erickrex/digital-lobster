@@ -8,7 +8,6 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-
 def _ssh_base_args(ssh_private_key_path: str | None) -> list[str]:
     """Return common SSH option flags."""
     args = [
@@ -19,7 +18,6 @@ def _ssh_base_args(ssh_private_key_path: str | None) -> list[str]:
     if ssh_private_key_path:
         args.extend(["-i", ssh_private_key_path])
     return args
-
 
 async def ssh_run(
     ssh_connection_string: str,
@@ -45,7 +43,6 @@ async def ssh_run(
         )
 
     return stdout_text, stderr_text
-
 
 async def scp_project_to_vps(
     ssh_connection_string: str,
@@ -86,18 +83,15 @@ async def scp_project_to_vps(
         )
     return len(project_files)
 
-
 def _pick_local_port() -> int:
     """Return a currently unused localhost port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
 
-
 @dataclass
 class SshTunnel:
     """Represents a running SSH local-port forward."""
-
     process: asyncio.subprocess.Process
     local_port: int
 
@@ -115,7 +109,6 @@ class SshTunnel:
             except asyncio.TimeoutError:
                 self.process.kill()
                 await self.process.wait()
-
 
 async def open_tunnel(
     ssh_connection_string: str,
@@ -163,7 +156,6 @@ async def open_tunnel(
     raise RuntimeError(
         f"Timed out opening SSH tunnel to {remote_host}:{remote_port}"
     )
-
 
 @asynccontextmanager
 async def strapi_base_url_context(

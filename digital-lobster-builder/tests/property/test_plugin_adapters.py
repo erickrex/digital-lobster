@@ -6,26 +6,19 @@ from hypothesis import strategies as st
 from src.adapters.base import PluginAdapter
 from src.adapters.registry import default_adapters
 
-
 # Load the full adapter list once — tests cover whatever the registry contains.
 _ALL_ADAPTERS = default_adapters()
 
-
 # ===========================================================================
 # Property 11: Supported plugin adapter coverage
-# Validates: Requirements 18.3
 # ===========================================================================
-
 
 class TestSupportedPluginAdapterCoverage:
     """Every adapter from default_adapters() implements PluginAdapter correctly."""
-
     # ---- registry-level invariants (deterministic, no Hypothesis needed) ----
 
     def test_all_adapters_are_plugin_adapter_instances(self):
-        """**Validates: Requirements 18.3**
-
-        Every object returned by default_adapters() must be a PluginAdapter.
+        """        Every object returned by default_adapters() must be a PluginAdapter.
         """
         for adapter in _ALL_ADAPTERS:
             assert isinstance(adapter, PluginAdapter), (
@@ -33,9 +26,7 @@ class TestSupportedPluginAdapterCoverage:
             )
 
     def test_adapter_count_at_least_15(self):
-        """**Validates: Requirements 18.3**
-
-        The registry must contain at least 15 adapters covering all
+        """        The registry must contain at least 15 adapters covering all
         Supported_Plugin_Family entries.
         """
         assert len(_ALL_ADAPTERS) >= 15, (
@@ -43,9 +34,7 @@ class TestSupportedPluginAdapterCoverage:
         )
 
     def test_all_plugin_family_values_are_unique(self):
-        """**Validates: Requirements 18.3**
-
-        No two adapters may share the same plugin_family identifier.
+        """        No two adapters may share the same plugin_family identifier.
         """
         families = [a.plugin_family() for a in _ALL_ADAPTERS]
         assert len(families) == len(set(families)), (
@@ -57,9 +46,7 @@ class TestSupportedPluginAdapterCoverage:
     @given(adapter=st.sampled_from(_ALL_ADAPTERS))
     @settings(max_examples=100)
     def test_plugin_family_returns_nonempty_string(self, adapter: PluginAdapter):
-        """**Validates: Requirements 18.3**
-
-        Each adapter must return a non-empty string for plugin_family.
+        """        Each adapter must return a non-empty string for plugin_family.
         """
         family = adapter.plugin_family()
         assert isinstance(family, str)
@@ -68,9 +55,7 @@ class TestSupportedPluginAdapterCoverage:
     @given(adapter=st.sampled_from(_ALL_ADAPTERS))
     @settings(max_examples=100)
     def test_required_artifacts_returns_nonempty_list(self, adapter: PluginAdapter):
-        """**Validates: Requirements 18.3**
-
-        Each adapter must return a non-empty list for required_artifacts.
+        """        Each adapter must return a non-empty list for required_artifacts.
         """
         artifacts = adapter.required_artifacts()
         assert isinstance(artifacts, list)
@@ -81,9 +66,7 @@ class TestSupportedPluginAdapterCoverage:
     @given(adapter=st.sampled_from(_ALL_ADAPTERS))
     @settings(max_examples=100)
     def test_supported_constructs_returns_nonempty_list(self, adapter: PluginAdapter):
-        """**Validates: Requirements 18.3**
-
-        Each adapter must return a non-empty list for supported_constructs.
+        """        Each adapter must return a non-empty list for supported_constructs.
         """
         constructs = adapter.supported_constructs()
         assert isinstance(constructs, list)
@@ -94,9 +77,7 @@ class TestSupportedPluginAdapterCoverage:
     @given(adapter=st.sampled_from(_ALL_ADAPTERS))
     @settings(max_examples=100)
     def test_unsupported_cases_returns_nonempty_list(self, adapter: PluginAdapter):
-        """**Validates: Requirements 18.3**
-
-        Each adapter must return a non-empty list for unsupported_cases.
+        """        Each adapter must return a non-empty list for unsupported_cases.
         """
         cases = adapter.unsupported_cases()
         assert isinstance(cases, list)

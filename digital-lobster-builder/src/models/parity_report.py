@@ -6,15 +6,12 @@ from pydantic import BaseModel, Field, field_validator
 
 from .finding import Finding
 
-
 class SnapshotComparison(BaseModel):
     """Comparison of a generated page against its original snapshot."""
-
     page_url: str
     visual_parity_score: float = Field(ge=0.0, le=1.0)
     content_match: bool
     differences: list[str] = Field(default_factory=list)
-
 
 PARITY_CATEGORIES: set[str] = {
     "route",
@@ -26,10 +23,8 @@ PARITY_CATEGORIES: set[str] = {
     "plugin_behavior",
 }
 
-
 class ParityReport(BaseModel):
     """Machine-readable post-build report scoring migration parity."""
-
     category_scores: dict[str, float]  # 7 categories, each 0.0-1.0
     overall_score: float = Field(ge=0.0, le=1.0)
     findings: list[Finding] = Field(default_factory=list)

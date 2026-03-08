@@ -42,6 +42,8 @@ cp .env.example .env
 uv sync
 ```
 
+The API module auto-loads `.env` from the project root when present.
+
 ## Configuration
 
 Copy `.env.example` to `.env` and provide:

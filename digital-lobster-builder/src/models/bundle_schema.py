@@ -2,29 +2,22 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-
 class ArtifactRequirement(str, Enum):
     """Whether an artifact must be present for a valid CMS migration bundle."""
-
     REQUIRED = "required"
     OPTIONAL = "optional"
 
-
 class ArtifactDefinition(BaseModel):
     """Definition of a single artifact in the Bundle_Schema."""
-
     file_path: str = Field(min_length=1)
     requirement: ArtifactRequirement
     schema_version: str = Field(min_length=1)
     description: str = Field(min_length=1)
 
-
 class BundleSchema(BaseModel):
     """Canonical versioned contract for the export bundle."""
-
     schema_version: str = Field(min_length=1)
     artifacts: list[ArtifactDefinition]
-
 
 # ---------------------------------------------------------------------------
 # BUNDLE_SCHEMA_V1 — the canonical v1 contract

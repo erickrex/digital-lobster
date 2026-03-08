@@ -22,11 +22,9 @@ from src.models.modeling_manifest import (
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
 # Context extraction helpers
 # ---------------------------------------------------------------------------
-
 
 def _extract_inventory(context: dict[str, Any]) -> Inventory:
     raw = context.get("inventory")
@@ -36,7 +34,6 @@ def _extract_inventory(context: dict[str, Any]) -> Inventory:
         return raw
     return Inventory.model_validate(raw)
 
-
 def _extract_modeling_manifest(context: dict[str, Any]) -> ModelingManifest:
     raw = context.get("modeling_manifest")
     if raw is None:
@@ -44,7 +41,6 @@ def _extract_modeling_manifest(context: dict[str, Any]) -> ModelingManifest:
     if isinstance(raw, ModelingManifest):
         return raw
     return ModelingManifest.model_validate(raw)
-
 
 def _extract_theme_layouts(context: dict[str, Any]) -> dict[str, str]:
     """Extract theme layouts from the pipeline context."""
@@ -54,11 +50,9 @@ def _extract_theme_layouts(context: dict[str, Any]) -> dict[str, str]:
         layouts = context.get("theme_layouts", {})
     return layouts
 
-
 # ---------------------------------------------------------------------------
 # File generation helpers
 # ---------------------------------------------------------------------------
-
 
 def generate_astro_config(site_url: str) -> str:
     """Generate ``astro.config.mjs`` with static output and MDX integration.
@@ -74,8 +68,6 @@ export default defineConfig({{
   integrations: [mdx()],
 }});
 """
-
-
 def generate_package_json(site_name: str) -> str:
     """Generate ``package.json`` with Astro 5.x and required integrations."""
     pkg = {
@@ -99,12 +91,10 @@ def generate_package_json(site_name: str) -> str:
     }
     return json.dumps(pkg, indent=2) + "\n"
 
-
 def generate_tsconfig() -> str:
     """Generate ``tsconfig.json`` extending Astro's strict config."""
     cfg = {"extends": "astro/tsconfigs/strict"}
     return json.dumps(cfg, indent=2) + "\n"
-
 
 def generate_route_page(
     collection: ContentCollectionSchema,
@@ -130,8 +120,6 @@ const {{ Content }} = await entry.render();
   <Content />
 </PostLayout>
 """
-
-
 def generate_index_page(
     collection: ContentCollectionSchema,
     layout_import_path: str = "../../layouts/PageLayout.astro",
@@ -156,8 +144,6 @@ const entries = await getCollection('{collection.collection_name}');
   </ul>
 </PageLayout>
 """
-
-
 def generate_home_page(site_name: str, collections: list[ContentCollectionSchema]) -> str:
     """Generate the home ``index.astro`` page."""
     links = "\n    ".join(
@@ -176,8 +162,6 @@ import PageLayout from '../layouts/PageLayout.astro';
   </nav>
 </PageLayout>
 """
-
-
 def generate_component(mapping: ComponentMapping) -> str:
     """Generate an Astro component file from a ComponentMapping."""
     if mapping.fallback:
@@ -185,7 +169,6 @@ def generate_component(mapping: ComponentMapping) -> str:
     if mapping.is_island:
         return _generate_island_component(mapping)
     return _generate_static_component(mapping)
-
 
 def _generate_static_component(mapping: ComponentMapping) -> str:
     """Generate a static (non-island) Astro component."""
@@ -199,8 +182,6 @@ def _generate_static_component(mapping: ComponentMapping) -> str:
   <slot />
 </div>
 """
-
-
 def _generate_island_component(mapping: ComponentMapping) -> str:
     """Generate an island component with a hydration directive comment."""
     directive = mapping.hydration_directive or "client:load"
@@ -215,8 +196,6 @@ def _generate_island_component(mapping: ComponentMapping) -> str:
   <slot />
 </div>
 """
-
-
 def _generate_fallback_component(mapping: ComponentMapping) -> str:
     """Generate a fallback rich-text HTML component."""
     return f"""---
@@ -230,8 +209,6 @@ const {{ html = '' }} = Astro.props;
   <Fragment set:html={{html}} />
 </div>
 """
-
-
 def generate_island_usage(mapping: ComponentMapping) -> str:
     """Return the usage string for an island component with its directive.
 
@@ -239,7 +216,6 @@ def generate_island_usage(mapping: ComponentMapping) -> str:
     """
     directive = mapping.hydration_directive or "client:load"
     return f"<{mapping.astro_component} {directive} />"
-
 
 def generate_base_layout_with_seo(
     site_name: str,
@@ -285,15 +261,12 @@ const resolvedCanonical = canonicalUrl || Astro.url.href;
   </body>
 </html>
 """
-
-
 def _inject_seo_into_layout(layout: str) -> str:
     """Inject SEO meta tags into an existing BaseLayout.astro ``<head>`` section."""
     seo_tags = """    <link rel="canonical" href={canonicalUrl || Astro.url.href} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl || Astro.url.href} />"""
-
     # Add canonicalUrl and ogImage to the Props interface if not present
     frontmatter_addition = ""
     if "canonicalUrl" not in layout:
@@ -314,7 +287,6 @@ def _inject_seo_into_layout(layout: str) -> str:
             layout = parts[0] + "---" + parts[1] + frontmatter_addition + "\n---" + parts[2]
 
     return layout
-
 
 def generate_readme(site_name: str, site_url: str) -> str:
     """Generate ``README.md`` with build and deploy instructions."""
@@ -367,31 +339,25 @@ Build the site and deploy the `dist/` directory to any static hosting provider:
 
 Site URL: {site_url}
 """
-
-
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
-
 
 def _slugify(name: str) -> str:
     """Convert a site name to a package-json-safe slug."""
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug or "astro-site"
 
-
 def _to_kebab(name: str) -> str:
     """Convert PascalCase component name to kebab-case CSS class."""
     s = re.sub(r"([A-Z])", r"-\1", name).lower().lstrip("-")
     return s
-
 
 def _route_prefix(route_pattern: str) -> str:
     """Extract the static prefix from a route pattern like ``/places/[slug]``."""
     # Remove dynamic segments
     prefix = re.sub(r"/\[.*?\]", "", route_pattern)
     return prefix.rstrip("/") or "/"
-
 
 def _route_dir(route_pattern: str) -> str:
     """Derive the ``src/pages/`` subdirectory from a route pattern.
@@ -403,13 +369,11 @@ def _route_dir(route_pattern: str) -> str:
     prefix = _route_prefix(route_pattern)
     return prefix.strip("/")
 
-
 def _layout_import_path(route_dir: str, layout_filename: str) -> str:
     """Build a relative import path from ``src/pages/{route_dir}`` to layouts."""
     depth = 1 + (len(route_dir.split("/")) if route_dir else 0)
     prefix = "../" * depth
     return f"{prefix}layouts/{layout_filename}"
-
 
 def _build_props_interface(mapping: ComponentMapping) -> str:
     """Build a TypeScript Props interface from component mapping props."""
@@ -424,7 +388,6 @@ def _build_props_interface(mapping: ComponentMapping) -> str:
     lines.append("}")
     return "\n".join(lines)
 
-
 def _build_props_destructure(mapping: ComponentMapping) -> str:
     """Build the Astro props destructuring statement."""
     if not mapping.props:
@@ -432,7 +395,6 @@ def _build_props_destructure(mapping: ComponentMapping) -> str:
     names = [p.get("name", "value") for p in mapping.props]
     defaults = ", ".join(f'{n} = ""' for n in names)
     return f"const {{ {defaults} }} = Astro.props;"
-
 
 def _wp_type_to_ts(wp_type: str) -> str:
     """Map a WordPress/modeling field type to a TypeScript type."""
@@ -446,11 +408,9 @@ def _wp_type_to_ts(wp_type: str) -> str:
     }
     return mapping.get(wp_type, "any")
 
-
 # ---------------------------------------------------------------------------
 # ZIP packaging
 # ---------------------------------------------------------------------------
-
 
 def package_as_zip(project: dict[str, str | bytes]) -> bytes:
     """Package a project file dict into a ZIP archive (in-memory bytes)."""
@@ -464,7 +424,6 @@ def package_as_zip(project: dict[str, str | bytes]) -> bytes:
 # CMS mode generation helpers
 # ---------------------------------------------------------------------------
 
-
 def _extract_content_type_map(context: dict[str, Any]) -> "ContentTypeMap":
     """Extract ContentTypeMap from the pipeline context."""
     from src.models.strapi_types import ContentTypeMap
@@ -475,7 +434,6 @@ def _extract_content_type_map(context: dict[str, Any]) -> "ContentTypeMap":
     if isinstance(raw, ContentTypeMap):
         return raw
     return ContentTypeMap.model_validate(raw)
-
 
 def generate_cms_astro_config(site_url: str) -> str:
     """Generate ``astro.config.mjs`` for CMS mode with static output and Strapi env vars."""
@@ -492,8 +450,6 @@ export default defineConfig({{
   }},
 }});
 """
-
-
 def generate_strapi_client() -> str:
     """Generate ``src/lib/strapi.ts`` — a fetch wrapper for the Strapi REST API.
 
@@ -611,8 +567,6 @@ export async function fetchBySlug<T>(
   return response.data.length > 0 ? response.data[0] : null;
 }
 """
-
-
 def generate_strapi_types(content_type_map: "ContentTypeMap") -> str:
     """Generate TypeScript type definitions for each Strapi Content Type.
 
@@ -683,15 +637,12 @@ def generate_strapi_types(content_type_map: "ContentTypeMap") -> str:
 
     return "\n".join(lines)
 
-
 def generate_env_example() -> str:
     """Generate ``.env.example`` with Strapi env var placeholders (not hardcoded)."""
     return """# Strapi CMS connection
 STRAPI_URL=http://localhost:1337
 STRAPI_API_TOKEN=your-strapi-api-token-here
 """
-
-
 def generate_cms_route_page(
     collection_name: str,
     api_id: str,
@@ -730,8 +681,6 @@ const {{ attributes }} = entry;
   </article>
 </PostLayout>
 """
-
-
 def generate_cms_index_page(
     collection_name: str,
     api_id: str,
@@ -761,8 +710,6 @@ const entries = await fetchAllPages<{interface_name}>('{api_id}');
   </ul>
 </PageLayout>
 """
-
-
 def generate_rich_text_renderer() -> str:
     """Generate ``RichTextRenderer.astro`` component.
 
@@ -832,8 +779,6 @@ const html = blocks.map((block) => renderBlock(block)).join('\\n');
   <Fragment set:html={html} />
 </div>
 """
-
-
 def generate_cms_home_page(
     site_name: str,
     collections: list[ContentCollectionSchema],
@@ -855,8 +800,6 @@ import PageLayout from '../layouts/PageLayout.astro';
   </nav>
 </PageLayout>
 """
-
-
 def generate_cms_package_json(site_name: str) -> str:
     """Generate ``package.json`` for CMS mode (no MDX needed, Strapi provides content)."""
     pkg = {
@@ -879,16 +822,12 @@ def generate_cms_package_json(site_name: str) -> str:
     }
     return json.dumps(pkg, indent=2) + "\n"
 
-
-
 # ---------------------------------------------------------------------------
 # ScaffoldAgent
 # ---------------------------------------------------------------------------
 
-
 class ScaffoldAgent(BaseAgent):
     """Generates a complete Astro JS 5 project from migration artifacts."""
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the Scaffold agent.
 
@@ -948,11 +887,9 @@ class ScaffoldAgent(BaseAgent):
             route_dir=_route_dir,
         )
 
-
 # ---------------------------------------------------------------------------
 # Additional helpers used by ScaffoldAgent
 # ---------------------------------------------------------------------------
-
 
 def _default_page_layout(site_name: str) -> str:
     """Fallback PageLayout when theming agent didn't provide one."""
@@ -972,8 +909,6 @@ const {{ title = "{site_name}", description = "" }} = Astro.props;
   </article>
 </BaseLayout>
 """
-
-
 def _default_post_layout(site_name: str) -> str:
     """Fallback PostLayout when theming agent didn't provide one."""
     return f"""---
@@ -999,8 +934,6 @@ const {{ title = "{site_name}", description = "", date = "" }} = Astro.props;
   </article>
 </BaseLayout>
 """
-
-
 def _build_zod_fields(collection: ContentCollectionSchema) -> list[str]:
     """Build Zod schema field lines for a content collection."""
     type_map = {

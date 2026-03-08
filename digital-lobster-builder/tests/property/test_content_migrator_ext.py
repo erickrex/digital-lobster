@@ -20,7 +20,6 @@ from src.models.migration_mapping_manifest import (
     TypeMapping,
 )
 
-
 # ---------------------------------------------------------------------------
 # Shared strategies
 # ---------------------------------------------------------------------------
@@ -40,7 +39,6 @@ _date = st.from_regex(
     r"2024\-(?:0[1-9]|1[0-2])\-(?:0[1-9]|[12][0-9]|3[01])",
     fullmatch=True,
 )
-
 
 @st.composite
 def wordpress_content_items(draw) -> WordPressContentItem:
@@ -76,7 +74,6 @@ def wordpress_content_items(draw) -> WordPressContentItem:
         seo=draw(st.one_of(st.none(), st.fixed_dictionaries({"title": _name}))),
     )
 
-
 def _minimal_mapping_manifest() -> MigrationMappingManifest:
     """Return a minimal MigrationMappingManifest with no mappings."""
     return MigrationMappingManifest(
@@ -94,24 +91,17 @@ def _minimal_mapping_manifest() -> MigrationMappingManifest:
         plugin_instance_mappings=[],
     )
 
-
 def _type_mapping_for(post_type: str) -> TypeMapping:
     return TypeMapping(source_post_type=post_type, target_api_id=f"api.{post_type}")
 
-
 # ---------------------------------------------------------------------------
 # Property 19: Content migrator preserves identity fields
-# Validates: Requirements 19.7
 # ---------------------------------------------------------------------------
 
-
 class TestContentMigratorPreservesIdentityFields:
-    """**Validates: Requirements 19.7**
-
-    For any WordPressContentItem, the production entry payload must preserve
+    """    For any WordPressContentItem, the production entry payload must preserve
     slug, canonical_url, status, and title.
     """
-
     @given(item=wordpress_content_items())
     @settings(max_examples=100)
     def test_slug_always_present_and_matches(self, item: WordPressContentItem):
@@ -201,20 +191,14 @@ class TestContentMigratorPreservesIdentityFields:
         assert "title" in payload
         assert payload["title"] == item.title
 
-
 # ---------------------------------------------------------------------------
 # Property 20: Content migrator error resilience
-# Validates: Requirements 19.8
 # ---------------------------------------------------------------------------
 
-
 class TestContentMigratorErrorResilience:
-    """**Validates: Requirements 19.8**
-
-    _make_entry_finding() must always produce a valid Finding with
+    """    _make_entry_finding() must always produce a valid Finding with
     non-empty severity, stage, construct, message, and recommended_action.
     """
-
     @given(
         item=wordpress_content_items(),
         error=st.text(min_size=1, max_size=200),

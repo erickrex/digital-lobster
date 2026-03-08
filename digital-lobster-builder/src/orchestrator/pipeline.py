@@ -107,7 +107,6 @@ PERSISTED_ARTIFACTS: set[str] = {
     "deployment_report",
 }
 
-
 class PipelineOrchestrator:
     """Executes the migration pipeline in sequential agent order.
 
@@ -119,7 +118,6 @@ class PipelineOrchestrator:
       ``PRODUCTION_CMS_AGENT_ORDER`` with deterministic compilation,
       finding accumulation, and critical-finding abort.
     """
-
     def __init__(
         self,
         gradient_client: Any,
@@ -486,7 +484,6 @@ class PipelineOrchestrator:
                         accumulated.append(item)
 
         context["accumulated_findings"] = accumulated
-
 
 def _build_findings_summary(findings: list[Finding]) -> dict[str, int]:
     """Return a count of findings per severity level."""

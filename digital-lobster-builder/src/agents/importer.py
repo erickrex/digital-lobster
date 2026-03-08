@@ -23,7 +23,6 @@ from src.serialization.mdx import blocks_to_mdx
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
 # Context extraction helpers
 # ---------------------------------------------------------------------------
@@ -37,26 +36,21 @@ def _extract_modeling_manifest(context: dict[str, Any]) -> ModelingManifest:
         return raw
     return ModelingManifest(**raw)
 
-
 def _extract_content_items(context: dict[str, Any]) -> list[dict]:
     """Extract raw content item dicts from pipeline context."""
     return context.get("content_items", [])
-
 
 def _extract_menus(context: dict[str, Any]) -> list[dict]:
     """Extract menu definitions from pipeline context."""
     return context.get("menus", [])
 
-
 def _extract_redirect_rules(context: dict[str, Any]) -> list[dict]:
     """Extract redirect rules from pipeline context."""
     return context.get("redirect_rules", [])
 
-
 def _extract_media_manifest(context: dict[str, Any]) -> list[MediaManifestEntry]:
     """Extract normalized media manifest entries from pipeline context."""
     return shared_extract_media_manifest(context)
-
 
 def _extract_astro_project(context: dict[str, Any]) -> dict[str, str | bytes]:
     """Extract the current Astro project scaffold from context."""
@@ -64,7 +58,6 @@ def _extract_astro_project(context: dict[str, Any]) -> dict[str, str | bytes]:
     if isinstance(raw, dict):
         return dict(raw)
     return {}
-
 
 # ---------------------------------------------------------------------------
 # Schema / collection helpers
@@ -79,11 +72,9 @@ def _find_collection_schema(
             return schema
     return None
 
-
 def _has_component_mappings(manifest: ModelingManifest) -> bool:
     """Return True if the manifest has any non-fallback component mappings."""
     return any(not m.fallback for m in manifest.components)
-
 
 # ---------------------------------------------------------------------------
 # Frontmatter building
@@ -150,7 +141,6 @@ def build_frontmatter(
 
     return fm
 
-
 # ---------------------------------------------------------------------------
 # Media URL scanning and rewriting
 # ---------------------------------------------------------------------------
@@ -159,7 +149,6 @@ _MEDIA_URL_RE = re.compile(
     r'https?://[^\s"\'<>]+\.(?:jpg|jpeg|png|gif|svg|webp|mp4|mp3|pdf|ico)',
     re.IGNORECASE,
 )
-
 
 def scan_media_urls(content_items: list[WordPressContentItem]) -> dict[str, str]:
     """Scan all content items for media URLs and build a media map.
@@ -188,7 +177,6 @@ def scan_media_urls(content_items: list[WordPressContentItem]) -> dict[str, str]
                 media_map[fm_url] = f"/media/{filename}"
     return media_map
 
-
 def build_media_map(
     content_items: list[WordPressContentItem],
     media_manifest: list[MediaManifestEntry],
@@ -204,7 +192,6 @@ def build_media_map(
             media_map[entry.source_url] = entry.public_url
     return media_map
 
-
 def _safe_filename(url: str) -> str:
     """Extract a safe filename from a URL."""
     parsed = urlparse(url)
@@ -215,13 +202,11 @@ def _safe_filename(url: str) -> str:
     name = name.split("?")[0]
     return name
 
-
 def rewrite_media_urls(body: str, media_map: dict[str, str]) -> str:
     """Replace all WordPress media URLs in body with local paths."""
     for wp_url, local_path in media_map.items():
         body = body.replace(wp_url, local_path)
     return body
-
 
 # ---------------------------------------------------------------------------
 # Navigation JSON generation
@@ -251,7 +236,6 @@ def generate_navigation(
         nav["menus"].append(menu_entry)
     return nav
 
-
 def _rewrite_menu_items(items: list[dict], site_url: str) -> list[dict]:
     """Recursively rewrite menu item URLs and process children."""
     result: list[dict] = []
@@ -265,7 +249,6 @@ def _rewrite_menu_items(items: list[dict], site_url: str) -> list[dict]:
             entry["children"] = _rewrite_menu_items(children, site_url)
         result.append(entry)
     return result
-
 
 def _rewrite_url(url: str, site_url: str) -> str:
     """Rewrite a WordPress URL to an Astro route.
@@ -290,7 +273,6 @@ def _rewrite_url(url: str, site_url: str) -> str:
         if parsed.netloc and parsed.netloc != site_parsed.netloc:
             return url
     return parsed.path or "/"
-
 
 # ---------------------------------------------------------------------------
 # Redirect generation
@@ -335,12 +317,10 @@ def generate_redirects(
 
     return redirects
 
-
 def _build_astro_route(schema: ContentCollectionSchema, slug: str) -> str:
     """Build the Astro route path from a collection schema and slug."""
     pattern = schema.route_pattern
     return pattern.replace("[slug]", slug)
-
 
 # ---------------------------------------------------------------------------
 # Content conversion
@@ -401,14 +381,12 @@ def convert_content_item(
         file_extension=ext,
     )
 
-
 # ---------------------------------------------------------------------------
 # ImporterAgent
 # ---------------------------------------------------------------------------
 
 class ImporterAgent(BaseAgent):
     """Agent 5: converts WordPress content to Astro content collection entries."""
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the Importer agent.
 

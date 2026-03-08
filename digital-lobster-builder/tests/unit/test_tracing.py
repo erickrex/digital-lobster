@@ -11,26 +11,21 @@ from src.gradient.tracing import (
     TracingBackend,
 )
 
-
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
 
-
 class RecordingBackend:
     """In-memory backend that captures sent spans for assertions."""
-
     def __init__(self) -> None:
         self.sent: list[TraceSpan] = []
 
     async def send_span(self, span: TraceSpan) -> None:
         self.sent.append(span)
 
-
 # ------------------------------------------------------------------
 # TraceSpan unit tests
 # ------------------------------------------------------------------
-
 
 class TestTraceSpan:
     def test_add_reasoning_step(self):
@@ -98,11 +93,9 @@ class TestTraceSpan:
         d = span.to_dict()
         assert d["status"] is None
 
-
 # ------------------------------------------------------------------
 # Tracer context manager tests
 # ------------------------------------------------------------------
-
 
 class TestTracer:
     @pytest.mark.asyncio
@@ -250,11 +243,9 @@ class TestTracer:
 
         assert backend.sent[0].run_id == "run-42"
 
-
 # ------------------------------------------------------------------
 # LoggingBackend tests
 # ------------------------------------------------------------------
-
 
 class TestLoggingBackend:
     @pytest.mark.asyncio
@@ -284,11 +275,9 @@ class TestLoggingBackend:
 
         assert any("FAILED" in r.message and "oops" in r.message for r in caplog.records)
 
-
 # ------------------------------------------------------------------
 # TracingBackend protocol check
 # ------------------------------------------------------------------
-
 
 class TestTracingBackendProtocol:
     def test_recording_backend_satisfies_protocol(self):

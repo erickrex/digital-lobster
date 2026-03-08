@@ -4,10 +4,8 @@ from pydantic import BaseModel
 
 from src.utils.scrubbing import scrub_credentials
 
-
 class ContentTypeMigrationStats(BaseModel):
     """Migration statistics for a single content type."""
-
     content_type: str
     total: int
     succeeded: int
@@ -15,19 +13,15 @@ class ContentTypeMigrationStats(BaseModel):
     skipped: int
     failed_entries: list[str]  # Titles of failed entries
 
-
 class MediaMigrationStats(BaseModel):
     """Migration statistics for media uploads."""
-
     total: int
     succeeded: int
     failed: int
     failed_urls: list[str]  # Original URLs that failed
 
-
 class MigrationReport(BaseModel):
     """Complete report of the content migration process."""
-
     content_stats: list[ContentTypeMigrationStats]
     media_stats: MediaMigrationStats
     taxonomy_terms_created: int

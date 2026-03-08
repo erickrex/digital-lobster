@@ -20,10 +20,8 @@ MAX_RETRIES = 3
 INITIAL_BACKOFF_SECONDS = 1.0
 BACKOFF_MULTIPLIER = 2.0
 
-
 class GradientClient:
     """Thin wrapper around gradientai-sdk for LLM inference."""
-
     def __init__(
         self,
         api_key: str,

@@ -230,7 +230,6 @@ KNOWN_BLOCK_MAPPINGS: dict[str, dict[str, Any]] = {
     },
 }
 
-
 # ---------------------------------------------------------------------------
 # Post type → collection name / route pattern helpers
 # ---------------------------------------------------------------------------
@@ -241,7 +240,6 @@ _STANDARD_POST_TYPE_ROUTES: dict[str, tuple[str, str]] = {
     "page": ("pages", "/[slug]"),
     "attachment": ("media", "/media/[slug]"),
 }
-
 
 def _post_type_to_collection(post_type: str) -> tuple[str, str]:
     """Derive an Astro collection name and route pattern from a WP post type.
@@ -256,7 +254,6 @@ def _post_type_to_collection(post_type: str) -> tuple[str, str]:
     collection = post_type.replace("-", "_").replace(" ", "_").lower()
     route = f"/{collection}/[slug]"
     return collection, route
-
 
 def _infer_field_type(field_name: str) -> str:
     """Infer a Zod-compatible type from a WordPress custom field name.
@@ -281,7 +278,6 @@ def _infer_field_type(field_name: str) -> str:
 
     return "string"
 
-
 # ---------------------------------------------------------------------------
 # Default frontmatter fields every content collection gets
 # ---------------------------------------------------------------------------
@@ -294,11 +290,9 @@ _BASE_FRONTMATTER: list[dict[str, Any]] = [
     {"name": "excerpt", "type": "string", "required": False, "description": "Short excerpt or summary"},
 ]
 
-
 # ---------------------------------------------------------------------------
 # Pure mapping functions (no LLM needed)
 # ---------------------------------------------------------------------------
-
 
 def build_collection_schemas(
     content_types: list[ContentTypeSummary],
@@ -353,7 +347,6 @@ def build_collection_schemas(
 
     return schemas
 
-
 def build_component_mappings(
     block_types: list[str],
 ) -> list[ComponentMapping]:
@@ -392,7 +385,6 @@ def build_component_mappings(
 
     return mappings
 
-
 def build_taxonomy_definitions(
     taxonomies: list[TaxonomySummary],
 ) -> list[TaxonomyDefinition]:
@@ -428,14 +420,12 @@ def build_taxonomy_definitions(
 
     return definitions
 
-
 def _extract_inventory(context: dict[str, Any]) -> Inventory:
     """Extract an Inventory from the pipeline context."""
     raw = context["inventory"]
     if isinstance(raw, Inventory):
         return raw
     return Inventory.model_validate(raw)
-
 
 def _extract_block_types_from_inventory(inventory: Inventory) -> list[str]:
     """Collect all unique block type names from the inventory's plugin features."""
@@ -446,7 +436,6 @@ def _extract_block_types_from_inventory(inventory: Inventory) -> list[str]:
             if "/" in feature:
                 block_types.add(feature)
     return sorted(block_types)
-
 
 def _extract_block_types_from_kb(kb_results: list[dict]) -> list[str]:
     """Extract block type names from Knowledge Base query results."""
@@ -475,11 +464,9 @@ def _extract_block_types_from_kb(kb_results: list[dict]) -> list[str]:
             block_types.update(pattern.findall(content))
     return sorted(block_types)
 
-
 # ---------------------------------------------------------------------------
 # LLM-assisted enrichment prompt
 # ---------------------------------------------------------------------------
-
 
 def _build_enrichment_system_prompt() -> str:
     """System prompt for LLM-assisted manifest enrichment."""
@@ -493,7 +480,6 @@ def _build_enrichment_system_prompt() -> str:
         "Return ONLY a valid JSON object conforming to the ModelingManifest schema. "
         "Do not add explanatory text outside the JSON."
     )
-
 
 def _build_enrichment_user_prompt(
     manifest_dict: dict[str, Any],
@@ -518,15 +504,12 @@ def _build_enrichment_user_prompt(
     )
     return "\n".join(lines)
 
-
 # ---------------------------------------------------------------------------
 # ModelingAgent
 # ---------------------------------------------------------------------------
 
-
 class ModelingAgent(BaseAgent):
     """Maps WordPress content types, blocks, and taxonomies to Astro equivalents."""
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the Modeling agent.
 

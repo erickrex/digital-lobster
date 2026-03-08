@@ -6,10 +6,8 @@ from pydantic import BaseModel, Field
 
 from src.utils.scrubbing import scrub_credentials
 
-
 class PipelineRunState(BaseModel):
     """Tracks the full state of a pipeline run."""
-
     run_id: str
     status: str = "pending"  # "pending", "running", "completed", "failed"
     bundle_key: str

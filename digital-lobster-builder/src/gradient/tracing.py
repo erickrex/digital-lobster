@@ -10,33 +10,26 @@ from typing import Any, AsyncIterator, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
-
 # ------------------------------------------------------------------
 # Data structures
 # ------------------------------------------------------------------
 
-
 class SpanStatus(str, Enum):
     """Possible terminal states for a trace span."""
-
     OK = "ok"
     ERROR = "error"
-
 
 @dataclass
 class ReasoningStep:
     """A single reasoning step within an agent span."""
-
     step_index: int
     description: str
     timestamp: float = field(default_factory=time.monotonic)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-
 @dataclass
 class TraceSpan:
     """A structured trace span capturing one agent execution."""
-
     span_id: str
     run_id: str
     agent_name: str
@@ -91,22 +84,17 @@ class TraceSpan:
             "metadata": self.metadata,
         }
 
-
 # ------------------------------------------------------------------
 # Backend protocol (pluggable)
 # ------------------------------------------------------------------
 
-
 @runtime_checkable
 class TracingBackend(Protocol):
     """Protocol for pushing trace spans to an observability backend."""
-
     async def send_span(self, span: TraceSpan) -> None: ...
-
 
 class LoggingBackend:
     """Default backend that writes spans to the Python logger."""
-
     async def send_span(self, span: TraceSpan) -> None:
         """Log the completed span at INFO (ok) or ERROR level."""
         data = span.to_dict()
@@ -128,11 +116,9 @@ class LoggingBackend:
                 extra={"trace_span": data},
             )
 
-
 # ------------------------------------------------------------------
 # Tracer — the main entry point
 # ------------------------------------------------------------------
-
 
 class Tracer:
     """Creates and manages trace spans for pipeline runs.
@@ -146,7 +132,6 @@ class Tracer:
             # ... agent work ...
             span.set_ok(artifacts=["inventory", "kb_ref"])
     """
-
     def __init__(
         self,
         run_id: str,

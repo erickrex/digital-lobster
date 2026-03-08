@@ -12,22 +12,18 @@ from src.gradient.knowledge_base import (
     UPLOAD_BACKOFF_SECONDS,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_api_error(message: str = "server error") -> APIError:
     """Build an APIError matching the gradient SDK constructor."""
     request = httpx.Request("POST", "https://api.gradient.ai")
     return APIError(message, request=request, body=None)
 
-
 def _make_timeout_error() -> APITimeoutError:
     request = httpx.Request("POST", "https://api.gradient.ai")
     return APITimeoutError(request=request)
-
 
 def _make_create_response(kb_uuid: str = "kb-123") -> MagicMock:
     """Build a mock KnowledgeBaseCreateResponse."""
@@ -36,7 +32,6 @@ def _make_create_response(kb_uuid: str = "kb-123") -> MagicMock:
     resp = MagicMock()
     resp.knowledge_base = kb
     return resp
-
 
 def _make_presigned_response(num_uploads: int = 1) -> MagicMock:
     """Build a mock DataSourceCreatePresignedURLsResponse."""
@@ -51,7 +46,6 @@ def _make_presigned_response(num_uploads: int = 1) -> MagicMock:
     resp.uploads = uploads
     return resp
 
-
 def _make_query_result(
     text_content: str, metadata: dict | None = None
 ) -> MagicMock:
@@ -60,22 +54,18 @@ def _make_query_result(
     result.metadata = metadata or {}
     return result
 
-
 def _make_query_response(results: list[MagicMock]) -> MagicMock:
     resp = MagicMock()
     resp.results = results
     resp.total_results = len(results)
     return resp
 
-
 # ---------------------------------------------------------------------------
 # Tests — create()
 # ---------------------------------------------------------------------------
 
-
 class TestCreate:
     """Tests for KnowledgeBaseClient.create()."""
-
     async def test_returns_kb_uuid(self):
         client = KnowledgeBaseClient(api_key="test-key")
         client._sdk.knowledge_bases.create = AsyncMock(
@@ -104,15 +94,12 @@ class TestCreate:
         with pytest.raises(APIError):
             await client.create("run-001")
 
-
 # ---------------------------------------------------------------------------
 # Tests — upload_documents()
 # ---------------------------------------------------------------------------
 
-
 class TestUploadDocuments:
     """Tests for KnowledgeBaseClient.upload_documents()."""
-
     async def test_uploads_successfully(self):
         client = KnowledgeBaseClient(api_key="test-key")
         client._sdk.knowledge_bases.data_sources.create_presigned_urls = AsyncMock(
@@ -336,15 +323,12 @@ class TestUploadDocuments:
             == 2
         )
 
-
 # ---------------------------------------------------------------------------
 # Tests — query()
 # ---------------------------------------------------------------------------
 
-
 class TestQuery:
     """Tests for KnowledgeBaseClient.query()."""
-
     async def test_returns_results(self):
         client = KnowledgeBaseClient(api_key="test-key")
         mock_results = [
@@ -402,15 +386,12 @@ class TestQuery:
         with pytest.raises(APIError):
             await client.query("kb-123", "search")
 
-
 # ---------------------------------------------------------------------------
 # Tests — delete()
 # ---------------------------------------------------------------------------
 
-
 class TestDelete:
     """Tests for KnowledgeBaseClient.delete()."""
-
     async def test_deletes_knowledge_base(self):
         client = KnowledgeBaseClient(api_key="test-key")
         client._sdk.knowledge_bases.delete = AsyncMock(return_value=None)

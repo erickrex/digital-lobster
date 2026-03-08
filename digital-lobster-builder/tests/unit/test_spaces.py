@@ -14,7 +14,6 @@ from src.storage.spaces import (
     DEFAULT_PRESIGN_EXPIRES,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -22,7 +21,6 @@ from src.storage.spaces import (
 TEST_ACCESS_KEY = "DO_TEST_ACCESS_KEY"
 TEST_SECRET_KEY = "DO_TEST_SECRET_KEY"
 TEST_REGION = "nyc3"
-
 
 def _make_client(**overrides) -> SpacesClient:
     defaults = {
@@ -32,7 +30,6 @@ def _make_client(**overrides) -> SpacesClient:
     }
     defaults.update(overrides)
     return SpacesClient(**defaults)
-
 
 def _mock_http_response(
     status_code: int = 200, content: bytes = b""
@@ -49,15 +46,12 @@ def _mock_http_response(
         )
     return resp
 
-
 # ---------------------------------------------------------------------------
 # Tests — generate_presigned_upload_url()
 # ---------------------------------------------------------------------------
 
-
 class TestGeneratePresignedUploadUrl:
     """Tests for SpacesClient.generate_presigned_upload_url()."""
-
     def test_returns_url_string(self):
         client = _make_client()
         url = client.generate_presigned_upload_url("bundles/test.zip")
@@ -120,15 +114,12 @@ class TestGeneratePresignedUploadUrl:
         assert "ams3" in url_ams
         assert url_nyc != url_ams
 
-
 # ---------------------------------------------------------------------------
 # Tests — download()
 # ---------------------------------------------------------------------------
 
-
 class TestDownload:
     """Tests for SpacesClient.download()."""
-
     async def test_returns_bytes(self):
         client = _make_client()
         expected = b"zip-file-content"
@@ -201,15 +192,12 @@ class TestDownload:
             with pytest.raises(httpx.HTTPStatusError):
                 await client.download("my-bucket", "missing.zip")
 
-
 # ---------------------------------------------------------------------------
 # Tests — upload()
 # ---------------------------------------------------------------------------
 
-
 class TestUpload:
     """Tests for SpacesClient.upload()."""
-
     async def test_uploads_data(self):
         client = _make_client()
         data = b"some-binary-data"
@@ -301,15 +289,12 @@ class TestUpload:
             with pytest.raises(httpx.HTTPStatusError):
                 await client.upload("my-bucket", "test.zip", b"data")
 
-
 # ---------------------------------------------------------------------------
 # Tests — signing helpers
 # ---------------------------------------------------------------------------
 
-
 class TestSigningHelpers:
     """Tests for S3v4 signing utility functions."""
-
     def test_derive_signing_key_returns_bytes(self):
         key = _derive_signing_key("secret", "20240101", "nyc3", "s3")
         assert isinstance(key, bytes)
@@ -335,15 +320,12 @@ class TestSigningHelpers:
         assert isinstance(result, bytes)
         assert len(result) == 32
 
-
 # ---------------------------------------------------------------------------
 # Tests — _object_url()
 # ---------------------------------------------------------------------------
 
-
 class TestObjectUrl:
     """Tests for SpacesClient._object_url()."""
-
     def test_builds_correct_url(self):
         client = _make_client()
         url = client._object_url("my-bucket", "path/to/file.zip")

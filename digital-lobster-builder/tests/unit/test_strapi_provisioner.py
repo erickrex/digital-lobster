@@ -10,7 +10,6 @@ from src.agents.strapi_provisioner import (
     poll_health,
 )
 
-
 class _Response:
     def __init__(self, status_code: int, payload: dict | None = None, text: str = ""):
         self.status_code = status_code
@@ -19,7 +18,6 @@ class _Response:
 
     def json(self) -> dict:
         return self._payload
-
 
 class TestStrapiProvisionerTunnelUsage:
     @pytest.mark.asyncio

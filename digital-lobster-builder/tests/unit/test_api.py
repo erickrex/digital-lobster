@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.api.app import create_app
-from src.api.routes import _run_states, configure_routes
+from src.api.app import create_app, create_app_from_env
+from src.api.routes import _run_states
 from src.orchestrator.state import PipelineRunState
 from src.utils.scrubbing import REDACTED
 
@@ -253,3 +254,108 @@ class TestUnconfiguredDependencies:
 
             assert body["status"] == "failed"
             assert body["error"] is not None
+
+
+class TestEnvConfiguredFactory:
+    async def test_create_app_from_env_wires_dependencies(
+        self,
+    ) -> None:
+        env = {
+            "GRADIENT_API_KEY": "gradient-key",
+            "DO_SPACES_KEY": "spaces-key",
+            "DO_SPACES_SECRET": "spaces-secret",
+            "DO_SPACES_REGION": "nyc3",
+            "DO_SPACES_INGESTION_BUCKET": "ingestion-bucket",
+            "DO_SPACES_ARTIFACTS_BUCKET": "artifacts-bucket",
+        }
+        mock_spaces = MagicMock()
+        mock_spaces.generate_presigned_upload_url = MagicMock(
+            return_value="https://spaces.example.com/presigned-url"
+        )
+        mock_orchestrator = AsyncMock()
+        captured = {}
+
+        def fake_build_runtime_dependencies(settings):
+            captured["settings"] = settings
+            return (
+                mock_spaces,
+                mock_orchestrator,
+                settings.ingestion_bucket,
+                settings.artifacts_bucket,
+            )
+
+        with patch(
+            "src.api.app._build_runtime_dependencies",
+            side_effect=fake_build_runtime_dependencies,
+        ):
+            app = create_app_from_env(env=env)
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/uploads/presign", json={"filename": "export.zip"}
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["upload_url"] == "https://spaces.example.com/presigned-url"
+        assert captured["settings"].gradient_api_key == "gradient-key"
+        assert captured["settings"].artifacts_bucket == "artifacts-bucket"
+
+    async def test_create_app_from_env_loads_env_file(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        env_file = tmp_path / ".env"
+        env_file.write_text(
+            "\n".join([
+                "GRADIENT_API_KEY=file-gradient-key",
+                "DO_SPACES_KEY=file-spaces-key",
+                "DO_SPACES_SECRET=file-spaces-secret",
+                "DO_SPACES_REGION=ams3",
+                "DO_SPACES_INGESTION_BUCKET=file-ingestion",
+                "DO_SPACES_ARTIFACTS_BUCKET=file-artifacts",
+            ]),
+            encoding="utf-8",
+        )
+        for key in (
+            "GRADIENT_API_KEY",
+            "DO_SPACES_KEY",
+            "DO_SPACES_SECRET",
+            "DO_SPACES_REGION",
+            "DO_SPACES_INGESTION_BUCKET",
+            "DO_SPACES_ARTIFACTS_BUCKET",
+        ):
+            monkeypatch.delenv(key, raising=False)
+
+        mock_spaces = MagicMock()
+        mock_spaces.generate_presigned_upload_url = MagicMock(
+            return_value="https://spaces.example.com/file-presigned-url"
+        )
+        mock_orchestrator = AsyncMock()
+
+        def fake_build_runtime_dependencies(settings):
+            assert settings.spaces_region == "ams3"
+            return (
+                mock_spaces,
+                mock_orchestrator,
+                settings.ingestion_bucket,
+                settings.artifacts_bucket,
+            )
+
+        with patch(
+            "src.api.app._build_runtime_dependencies",
+            side_effect=fake_build_runtime_dependencies,
+        ):
+            app = create_app_from_env(env_file=env_file)
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/uploads/presign", json={"filename": "export.zip"}
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["upload_url"] == "https://spaces.example.com/file-presigned-url"
+
+    def test_module_exports_app(self) -> None:
+        module = importlib.import_module("src.api.app")
+        assert module.app is not None

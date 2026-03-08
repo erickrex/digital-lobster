@@ -12,19 +12,15 @@ warnings.filterwarnings(
     category=UserWarning,
 )
 
-
 class FindingSeverity(str, Enum):
     """Severity levels for pipeline findings."""
-
     CRITICAL = "critical"
     WARNING = "warning"
     INFO = "info"
 
-
 class Finding(BaseModel):
     """A structured diagnostic produced when a pipeline stage encounters
     an unsupported, partially supported, or noteworthy construct."""
-
     severity: FindingSeverity
     stage: str = Field(min_length=1)
     construct: str = Field(min_length=1)

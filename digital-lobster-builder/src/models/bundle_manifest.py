@@ -16,10 +16,8 @@ from .bundle_artifacts import (
     SeoFullArtifact,
 )
 
-
 class BundleManifest(BaseModel):
     """Normalized bundle manifest — single source of truth for all exporter data."""
-
     # Top-level metadata
     schema_version: str
     site_url: str

@@ -7,7 +7,6 @@ from src.serialization.frontmatter import (
     parse_file,
 )
 
-
 class TestSerializeFrontmatter:
     def test_simple_values(self):
         data = {"title": "Hello World", "draft": False, "count": 42}
@@ -92,7 +91,6 @@ class TestSerializeFrontmatter:
         parsed = yaml.safe_load(result)
         assert parsed["title"] == 'Colons: and "quotes" and newlines\nhere'
 
-
 class TestParseFrontmatter:
     def test_simple_yaml(self):
         text = "title: Hello World\ndraft: false\n"
@@ -113,7 +111,6 @@ class TestParseFrontmatter:
         text = "title: Test\nsubtitle: null\n"
         result = parse_frontmatter(text)
         assert result["subtitle"] is None
-
 
 class TestRoundTrip:
     def test_simple_roundtrip(self):
@@ -142,7 +139,6 @@ class TestRoundTrip:
         result = parse_frontmatter(serialize_frontmatter(data))
         assert result == data
 
-
 class TestSerializeFile:
     def test_basic_file(self):
         fm = {"title": "Hello World"}
@@ -160,7 +156,6 @@ class TestSerializeFile:
         result = serialize_file({"title": "Test"}, "")
         assert result.startswith("---\n")
         assert result.endswith("\n---\n")
-
 
 class TestParseFile:
     def test_basic_parse(self):
@@ -194,7 +189,6 @@ class TestParseFile:
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert "closing" in str(e).lower()
-
 
 class TestFileRoundTrip:
     def test_simple_file_roundtrip(self):

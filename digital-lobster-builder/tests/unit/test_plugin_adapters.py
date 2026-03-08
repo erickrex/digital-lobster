@@ -33,7 +33,6 @@ from src.models.bundle_artifacts import (
 )
 from src.models.bundle_manifest import BundleManifest
 
-
 def _empty_bundle(**overrides) -> BundleManifest:
     """Build a minimal BundleManifest with empty artifacts, applying overrides."""
     defaults: dict = dict(
@@ -88,7 +87,6 @@ def _empty_bundle(**overrides) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 # ---------------------------------------------------------------------------
 # Expected plugin_family identifiers for all 15 adapters
 # ---------------------------------------------------------------------------
@@ -101,15 +99,12 @@ EXPECTED_FAMILIES = {
     "redirects", "widget_sidebar",
 }
 
-
 # ===================================================================
 # 1. Each adapter returns correct plugin_family identifier
 # ===================================================================
 
-
 class TestPluginFamilyIdentifiers:
     """Each concrete adapter returns the expected plugin_family string."""
-
     @pytest.mark.parametrize(
         "adapter_cls, expected_family",
         [
@@ -141,15 +136,12 @@ class TestPluginFamilyIdentifiers:
         registry = build_adapter_registry()
         assert set(registry.keys()) == EXPECTED_FAMILIES
 
-
 # ===================================================================
 # 2. ACF adapter maps repeaters to nested components
 # ===================================================================
 
-
 class TestAcfAdapterRepeaterMapping:
     """ACF adapter migration rules include repeater → nested component mapping."""
-
     def test_migration_rules_include_repeater(self):
         adapter = AcfAdapter()
         rules = adapter.migration_rules([])
@@ -180,11 +172,9 @@ class TestAcfAdapterRepeaterMapping:
         assert all(c.source_plugin == "acf" for c in caps)
         assert all(c.classification == "strapi_native" for c in caps)
 
-
 # ===================================================================
 # 3. Form adapters produce capabilities for each form instance
 # ===================================================================
-
 
 _FORM_ADAPTERS = [
     (ContactForm7Adapter, "cf7"),
@@ -193,10 +183,8 @@ _FORM_ADAPTERS = [
     (NinjaFormsAdapter, "ninja_forms"),
 ]
 
-
 class TestFormAdapters:
     """Form adapters classify one capability per form instance in the bundle."""
-
     @pytest.mark.parametrize("adapter_cls, plugin_name", _FORM_ADAPTERS)
     def test_produces_capability_per_form_instance(self, adapter_cls, plugin_name):
         instances = [
@@ -229,15 +217,12 @@ class TestFormAdapters:
         form_rules = [r for r in rules if r.transform == "form_strategy"]
         assert len(form_rules) >= 1
 
-
 # ===================================================================
 # 4. unsupported_cases returns non-empty list for each adapter
 # ===================================================================
 
-
 class TestUnsupportedCases:
     """Every adapter declares at least one unsupported case."""
-
     @pytest.mark.parametrize("adapter", default_adapters(), ids=lambda a: a.plugin_family())
     def test_unsupported_cases_non_empty(self, adapter: PluginAdapter):
         cases = adapter.unsupported_cases()

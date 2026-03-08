@@ -9,10 +9,8 @@ from src.models.migration_report import (
 from src.orchestrator.state import PipelineRunState
 from src.utils.scrubbing import REDACTED, scrub_credentials
 
-
 class TestScrubCredentials:
     """Tests for the scrub_credentials utility function."""
-
     def test_redacts_do_token(self):
         data = {"do_token": "dop_v1_abc123"}
         assert scrub_credentials(data) == {"do_token": REDACTED}
@@ -90,10 +88,8 @@ class TestScrubCredentials:
         assert scrub_credentials({}) == {}
         assert scrub_credentials([]) == []
 
-
 class TestPipelineRunStateSafeDict:
     """Tests for PipelineRunState.to_safe_dict()."""
-
     def test_scrubs_artifacts(self):
         state = PipelineRunState(
             run_id="r1",
@@ -161,10 +157,8 @@ class TestPipelineRunStateSafeDict:
         assert "tok_xyz" not in json_output
         assert "-----BEGIN" not in json_output
 
-
 class TestMigrationReportSafeDict:
     """Tests for MigrationReport.to_safe_dict()."""
-
     def test_safe_dict_scrubs_injected_credentials(self):
         report = MigrationReport(
             content_stats=[
@@ -190,10 +184,8 @@ class TestMigrationReportSafeDict:
         assert safe["taxonomy_terms_created"] == 3
         assert safe["content_stats"][0]["content_type"] == "post"
 
-
 class TestDeploymentReportSafeDict:
     """Tests for DeploymentReport.to_safe_dict()."""
-
     def test_safe_dict_preserves_normal_fields(self):
         report = DeploymentReport(
             live_site_url="https://example.com",

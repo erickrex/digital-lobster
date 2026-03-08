@@ -16,10 +16,8 @@ from src.models.parity_report import ParityReport
 from src.models.presentation_manifest import PresentationManifest
 from src.models.strapi_types import ContentTypeMap
 
-
 class MediaManifestEntry(BaseModel):
     """Normalized media entry extracted from an export bundle."""
-
     source_url: str
     bundle_path: str
     artifact_path: str
@@ -34,17 +32,14 @@ class MediaManifestEntry(BaseModel):
         """Return the public URL inside the generated Astro project."""
         return "/" + self.artifact_path.lstrip("/")
 
-
 class BundleArtifacts(BaseModel):
     """Canonical normalized bundle artifacts passed between agents."""
-
     export_bundle: dict[str, Any] = Field(default_factory=dict)
     content_items: list[WordPressContentItem] = Field(default_factory=list)
     menus: list[dict[str, Any]] = Field(default_factory=list)
     redirect_rules: list[dict[str, Any]] = Field(default_factory=list)
     html_snapshots: dict[str, str] = Field(default_factory=dict)
     media_manifest: list[MediaManifestEntry] = Field(default_factory=list)
-
 
 def extract_inventory(context: dict[str, Any]) -> Inventory:
     """Extract an :class:`Inventory` from pipeline context."""
@@ -55,7 +50,6 @@ def extract_inventory(context: dict[str, Any]) -> Inventory:
         return raw
     return Inventory.model_validate(raw)
 
-
 def extract_modeling_manifest(context: dict[str, Any]) -> ModelingManifest:
     """Extract a :class:`ModelingManifest` from pipeline context."""
     raw = context.get("modeling_manifest")
@@ -65,7 +59,6 @@ def extract_modeling_manifest(context: dict[str, Any]) -> ModelingManifest:
         return raw
     return ModelingManifest.model_validate(raw)
 
-
 def extract_content_type_map(context: dict[str, Any]) -> ContentTypeMap:
     """Extract a :class:`ContentTypeMap` from pipeline context."""
     raw = context.get("content_type_map")
@@ -74,7 +67,6 @@ def extract_content_type_map(context: dict[str, Any]) -> ContentTypeMap:
     if isinstance(raw, ContentTypeMap):
         return raw
     return ContentTypeMap.model_validate(raw)
-
 
 def extract_content_items(context: dict[str, Any]) -> list[WordPressContentItem]:
     """Extract normalized WordPress content items from pipeline context."""
@@ -87,7 +79,6 @@ def extract_content_items(context: dict[str, Any]) -> list[WordPressContentItem]
             items.append(WordPressContentItem.model_validate(raw))
     return items
 
-
 def extract_menus(context: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract normalized menu definitions from pipeline context."""
     raw = context.get("menus", [])
@@ -95,14 +86,12 @@ def extract_menus(context: dict[str, Any]) -> list[dict[str, Any]]:
         return [item for item in raw if isinstance(item, dict)]
     return []
 
-
 def extract_redirect_rules(context: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract normalized redirect rules from pipeline context."""
     raw = context.get("redirect_rules", [])
     if isinstance(raw, list):
         return [item for item in raw if isinstance(item, dict)]
     return []
-
 
 def extract_media_manifest(
     context: dict[str, Any],
@@ -117,7 +106,6 @@ def extract_media_manifest(
             entries.append(MediaManifestEntry.model_validate(raw))
     return entries
 
-
 def extract_bundle_artifacts(context: dict[str, Any]) -> BundleArtifacts:
     """Build a canonical :class:`BundleArtifacts` view over the pipeline context."""
     return BundleArtifacts(
@@ -129,7 +117,6 @@ def extract_bundle_artifacts(context: dict[str, Any]) -> BundleArtifacts:
         media_manifest=extract_media_manifest(context),
     )
 
-
 def extract_bundle_manifest(context: dict[str, Any]) -> BundleManifest:
     """Extract a :class:`BundleManifest` from pipeline context."""
     raw = context.get("bundle_manifest")
@@ -138,7 +125,6 @@ def extract_bundle_manifest(context: dict[str, Any]) -> BundleManifest:
     if isinstance(raw, BundleManifest):
         return raw
     return BundleManifest.model_validate(raw)
-
 
 def extract_capability_manifest(context: dict[str, Any]) -> CapabilityManifest:
     """Extract a :class:`CapabilityManifest` from pipeline context."""
@@ -149,7 +135,6 @@ def extract_capability_manifest(context: dict[str, Any]) -> CapabilityManifest:
         return raw
     return CapabilityManifest.model_validate(raw)
 
-
 def extract_content_model_manifest(context: dict[str, Any]) -> ContentModelManifest:
     """Extract a :class:`ContentModelManifest` from pipeline context."""
     raw = context.get("content_model_manifest")
@@ -158,7 +143,6 @@ def extract_content_model_manifest(context: dict[str, Any]) -> ContentModelManif
     if isinstance(raw, ContentModelManifest):
         return raw
     return ContentModelManifest.model_validate(raw)
-
 
 def extract_presentation_manifest(context: dict[str, Any]) -> PresentationManifest:
     """Extract a :class:`PresentationManifest` from pipeline context."""
@@ -169,7 +153,6 @@ def extract_presentation_manifest(context: dict[str, Any]) -> PresentationManife
         return raw
     return PresentationManifest.model_validate(raw)
 
-
 def extract_behavior_manifest(context: dict[str, Any]) -> BehaviorManifest:
     """Extract a :class:`BehaviorManifest` from pipeline context."""
     raw = context.get("behavior_manifest")
@@ -179,7 +162,6 @@ def extract_behavior_manifest(context: dict[str, Any]) -> BehaviorManifest:
         return raw
     return BehaviorManifest.model_validate(raw)
 
-
 def extract_migration_mapping_manifest(context: dict[str, Any]) -> MigrationMappingManifest:
     """Extract a :class:`MigrationMappingManifest` from pipeline context."""
     raw = context.get("migration_mapping_manifest")
@@ -188,7 +170,6 @@ def extract_migration_mapping_manifest(context: dict[str, Any]) -> MigrationMapp
     if isinstance(raw, MigrationMappingManifest):
         return raw
     return MigrationMappingManifest.model_validate(raw)
-
 
 def extract_parity_report(context: dict[str, Any]) -> ParityReport:
     """Extract a :class:`ParityReport` from pipeline context."""

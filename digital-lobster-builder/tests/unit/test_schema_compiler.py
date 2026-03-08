@@ -24,11 +24,9 @@ from src.models.capability_manifest import Capability, CapabilityManifest
 from src.models.content_model_manifest import ContentModelManifest
 from src.models.finding import Finding
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for schema compiler tests."""
@@ -99,7 +97,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     """Build a minimal CapabilityManifest for schema compiler tests."""
     defaults: dict[str, Any] = dict(
@@ -112,7 +109,6 @@ def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     )
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _make_field_entry(**overrides: Any) -> FieldUsageEntry:
     """Build a FieldUsageEntry with sensible defaults."""
@@ -129,14 +125,11 @@ def _make_field_entry(**overrides: Any) -> FieldUsageEntry:
     defaults.update(overrides)
     return FieldUsageEntry(**defaults)
 
-
 def _make_agent() -> SchemaCompilerAgent:
     return SchemaCompilerAgent(gradient_client=None)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _execute(bundle: BundleManifest, cap_manifest: CapabilityManifest) -> ContentModelManifest:
     """Run the schema compiler and return the ContentModelManifest."""
@@ -148,11 +141,9 @@ def _execute(bundle: BundleManifest, cap_manifest: CapabilityManifest) -> Conten
     result = _run(agent.execute(context))
     return result.artifacts["content_model_manifest"]
 
-
 # ---------------------------------------------------------------------------
 # Collection compilation — Requirement 14.1, 14.2
 # ---------------------------------------------------------------------------
-
 
 class TestCollectionCompilation:
     def test_collections_created_from_field_usage_post_types(self):
@@ -243,11 +234,9 @@ class TestCollectionCompilation:
         manifest = _execute(bundle, _clean_capability_manifest())
         assert manifest.collections == []
 
-
 # ---------------------------------------------------------------------------
 # Repeater → nested component — Requirement 14.3
 # ---------------------------------------------------------------------------
-
 
 class TestRepeaterMapping:
     def test_repeater_field_maps_to_component_type(self):
@@ -312,11 +301,9 @@ class TestRepeaterMapping:
         coll = manifest.collections[0]
         assert "content.slides" in coll.components
 
-
 # ---------------------------------------------------------------------------
 # Flexible content → dynamic zone — Requirement 14.3
 # ---------------------------------------------------------------------------
-
 
 class TestFlexibleContentMapping:
     def test_flexible_content_maps_to_dynamiczone(self):
@@ -358,11 +345,9 @@ class TestFlexibleContentMapping:
         comp = next(c for c in manifest.components if "page-builder" in c.uid)
         assert comp.category == "content"
 
-
 # ---------------------------------------------------------------------------
 # SEO component strategy — Requirement 14.6
 # ---------------------------------------------------------------------------
-
 
 class TestSeoStrategy:
     def test_seo_strategy_created_when_seo_capabilities_exist(self):
@@ -448,11 +433,9 @@ class TestSeoStrategy:
         manifest = _execute(bundle, _clean_capability_manifest())
         assert manifest.seo_strategy is None
 
-
 # ---------------------------------------------------------------------------
 # Validation hints — Requirement 14.7
 # ---------------------------------------------------------------------------
-
 
 class TestValidationHints:
     def test_validation_hints_from_field_usage(self):
@@ -509,11 +492,9 @@ class TestValidationHints:
         hint = manifest.validation_hints[0]
         assert hint.enum_values is None
 
-
 # ---------------------------------------------------------------------------
 # Relation compilation — Requirement 14.5
 # ---------------------------------------------------------------------------
-
 
 class TestRelationCompilation:
     def test_relations_generated_from_content_relationships(self):
@@ -564,11 +545,9 @@ class TestRelationCompilation:
         manifest = _execute(bundle, _clean_capability_manifest())
         assert manifest.relations == []
 
-
 # ---------------------------------------------------------------------------
 # Agent result structure
 # ---------------------------------------------------------------------------
-
 
 class TestAgentResult:
     def test_agent_result_contains_content_model_manifest(self):

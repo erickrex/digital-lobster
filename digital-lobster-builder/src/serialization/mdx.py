@@ -2,13 +2,11 @@ from src.models.content import WordPressBlock
 from src.models.modeling_manifest import ComponentMapping
 from src.serialization.markdown import block_to_markdown
 
-
 def _build_mapping_lookup(
     component_mappings: list[ComponentMapping],
 ) -> dict[str, ComponentMapping]:
     """Build a lookup dict from wp_block_type → ComponentMapping."""
     return {m.wp_block_type: m for m in component_mappings}
-
 
 def _format_props(mapping: ComponentMapping, block: WordPressBlock) -> str:
     """Format component props from the mapping and block attrs.
@@ -31,7 +29,6 @@ def _format_props(mapping: ComponentMapping, block: WordPressBlock) -> str:
         else:
             parts.append(f"{name}={{{value}}}")
     return " ".join(parts)
-
 
 def block_to_mdx(block: WordPressBlock, mapping: ComponentMapping | None) -> str:
     """Convert a single WordPress block to MDX.
@@ -71,7 +68,6 @@ def block_to_mdx(block: WordPressBlock, mapping: ComponentMapping | None) -> str
     parts.append(" />")
 
     return "".join(parts)
-
 
 def blocks_to_mdx(
     blocks: list[WordPressBlock],

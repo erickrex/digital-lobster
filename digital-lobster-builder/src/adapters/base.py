@@ -9,43 +9,33 @@ from src.models.capability_manifest import Capability
 from src.models.content_model_manifest import StrapiCollection, StrapiComponent, StrapiRelation
 from src.models.presentation_manifest import FallbackZone, SectionDefinition
 
-
 class SchemaContribution(BaseModel):
     """Schema contributions from a plugin adapter."""
-
     collections: list[StrapiCollection] = Field(default_factory=list)
     components: list[StrapiComponent] = Field(default_factory=list)
     relations: list[StrapiRelation] = Field(default_factory=list)
 
-
 class RenderingContribution(BaseModel):
     """Rendering contributions from a plugin adapter."""
-
     sections: list[SectionDefinition] = Field(default_factory=list)
     fallback_zones: list[FallbackZone] = Field(default_factory=list)
 
-
 class MigrationRule(BaseModel):
     """A single migration rule for plugin data."""
-
     source_construct: str
     target_type: str  # "collection", "component", "relation", "skip"
     target_identifier: str
     transform: str | None = None
 
-
 class QAAssertion(BaseModel):
     """A parity QA assertion for plugin-specific behavior."""
-
     assertion_id: str
     description: str
     category: str  # one of the 7 parity categories
     check_type: str  # "presence", "count", "content_match", "route_match"
 
-
 class PluginAdapter(ABC):
     """Interface for deterministic plugin family migration adapters."""
-
     @abstractmethod
     def plugin_family(self) -> str:
         """Return the plugin family identifier (e.g., 'acf', 'yoast')."""

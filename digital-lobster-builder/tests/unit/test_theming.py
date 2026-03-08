@@ -25,11 +25,9 @@ from src.models.inventory import (
     MenuSummary,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_inventory(**overrides: Any) -> Inventory:
     defaults: dict[str, Any] = {
@@ -70,12 +68,10 @@ def _make_inventory(**overrides: Any) -> Inventory:
     defaults.update(overrides)
     return Inventory(**defaults)
 
-
 def _make_gradient_client() -> AsyncMock:
     client = AsyncMock()
     client.complete = AsyncMock(return_value="{}")
     return client
-
 
 def _make_theme_json(
     colors: list[dict] | None = None,
@@ -97,11 +93,9 @@ def _make_theme_json(
         settings["custom"] = custom
     return {"settings": settings}
 
-
 # ---------------------------------------------------------------------------
 # extract_design_tokens
 # ---------------------------------------------------------------------------
-
 
 class TestExtractDesignTokens:
     def test_colors(self):
@@ -151,11 +145,9 @@ class TestExtractDesignTokens:
         tokens = extract_design_tokens(tj)
         assert len(tokens) == 0
 
-
 # ---------------------------------------------------------------------------
 # generate_tokens_css
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateTokensCss:
     def test_produces_root_block(self):
@@ -175,11 +167,9 @@ class TestGenerateTokensCss:
         b_pos = css.index("--b")
         assert a_pos < b_pos
 
-
 # ---------------------------------------------------------------------------
 # detect_missing_css_assets
 # ---------------------------------------------------------------------------
-
 
 class TestDetectMissingCssAssets:
     def test_detects_missing_relative_path(self):
@@ -211,11 +201,9 @@ class TestDetectMissingCssAssets:
         assert "a.png" in missing
         assert "b.png" in missing
 
-
 # ---------------------------------------------------------------------------
 # extract_snapshot_sections
 # ---------------------------------------------------------------------------
-
 
 class TestExtractSnapshotSections:
     def test_extracts_header(self):
@@ -251,11 +239,9 @@ class TestExtractSnapshotSections:
         assert sections["nav"] != ""
         assert sections["footer"] != ""
 
-
 # ---------------------------------------------------------------------------
 # css_has_responsive_breakpoints
 # ---------------------------------------------------------------------------
-
 
 class TestCssHasResponsiveBreakpoints:
     def test_detects_media_query(self):
@@ -266,11 +252,9 @@ class TestCssHasResponsiveBreakpoints:
         css = "body { margin: 0; }"
         assert css_has_responsive_breakpoints(css) is False
 
-
 # ---------------------------------------------------------------------------
 # Layout generation
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateBaseLayout:
     def test_contains_viewport_meta(self):
@@ -306,7 +290,6 @@ class TestGenerateBaseLayout:
         assert "<main>" in layout
         assert "<slot />" in layout
 
-
 class TestGeneratePageLayout:
     def test_imports_base_layout(self):
         layout = generate_page_layout("Test")
@@ -315,7 +298,6 @@ class TestGeneratePageLayout:
     def test_contains_page_content_class(self):
         layout = generate_page_layout("Test")
         assert "page-content" in layout
-
 
 class TestGeneratePostLayout:
     def test_imports_base_layout(self):
@@ -330,11 +312,9 @@ class TestGeneratePostLayout:
         layout = generate_post_layout("Test")
         assert "post-body" in layout
 
-
 # ---------------------------------------------------------------------------
 # _extract_inventory
 # ---------------------------------------------------------------------------
-
 
 class TestExtractInventory:
     def test_from_inventory_instance(self):
@@ -351,11 +331,9 @@ class TestExtractInventory:
         with pytest.raises(KeyError):
             _extract_inventory({})
 
-
 # ---------------------------------------------------------------------------
 # ThemingAgent.execute integration tests
 # ---------------------------------------------------------------------------
-
 
 class TestThemingAgentExecute:
     @pytest.mark.asyncio

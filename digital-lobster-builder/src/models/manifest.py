@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
-
 class ExportManifest(BaseModel):
     export_version: str
     site_url: str

@@ -56,22 +56,18 @@ _WP_TO_STRAPI_TYPE: dict[str, str] = {
     "enum": "enumeration",
 }
 
-
 def _slugify(name: str) -> str:
     """Convert a display name to a Strapi-safe slug (lowercase, hyphens)."""
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug or "unnamed"
 
-
 def _api_id(name: str) -> str:
     """Convert a display name to a Strapi api_id (lowercase, hyphens)."""
     return _slugify(name)
 
-
 def _map_field_type(inferred_type: str) -> str:
     """Map a WordPress/field-usage inferred type to a Strapi field type."""
     return _WP_TO_STRAPI_TYPE.get(inferred_type, "string")
-
 
 # ---------------------------------------------------------------------------
 # Standard SEO component fields
@@ -94,7 +90,6 @@ _SEO_FIELDS: list[StrapiFieldDefinition] = [
 
 _SEO_COMPONENT_UID = "shared.seo-metadata"
 
-
 class SchemaCompilerAgent(BaseAgent):
     """Produces the Content_Model_Manifest from capability and bundle data.
 
@@ -106,7 +101,6 @@ class SchemaCompilerAgent(BaseAgent):
     - Validation hints from field_usage_report
     - Plugin-specific schema contributions via adapter schema_strategy
     """
-
     def __init__(
         self,
         gradient_client: Any,
@@ -165,7 +159,6 @@ class SchemaCompilerAgent(BaseAgent):
             agent_name="schema_compiler",
             artifacts={"content_model_manifest": manifest},
         )
-
 
     # ------------------------------------------------------------------
     # Collection compilation
@@ -296,7 +289,6 @@ class SchemaCompilerAgent(BaseAgent):
                 uids.append(f"content.{_slugify(entry.field_name)}")
         return uids
 
-
     # ------------------------------------------------------------------
     # Component compilation
     # ------------------------------------------------------------------
@@ -409,7 +401,6 @@ class SchemaCompilerAgent(BaseAgent):
             "term_to_term": "manyToMany",
         }
         return mapping.get(wp_relation_type, "manyToOne")
-
 
     # ------------------------------------------------------------------
     # SEO component strategy

@@ -10,10 +10,8 @@ from src.adapters.base import (
 from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import Capability
 
-
 class ContactForm7Adapter(PluginAdapter):
     """Adapter for Contact Form 7."""
-
     def plugin_family(self) -> str:
         return "cf7"
 
@@ -70,10 +68,8 @@ class ContactForm7Adapter(PluginAdapter):
             ),
         ]
 
-
 class WpFormsAdapter(PluginAdapter):
     """Adapter for WPForms."""
-
     def plugin_family(self) -> str:
         return "wpforms"
 
@@ -130,10 +126,8 @@ class WpFormsAdapter(PluginAdapter):
             ),
         ]
 
-
 class GravityFormsAdapter(PluginAdapter):
     """Adapter for Gravity Forms."""
-
     def plugin_family(self) -> str:
         return "gravity_forms"
 
@@ -197,10 +191,8 @@ class GravityFormsAdapter(PluginAdapter):
             ),
         ]
 
-
 class NinjaFormsAdapter(PluginAdapter):
     """Adapter for Ninja Forms."""
-
     def plugin_family(self) -> str:
         return "ninja_forms"
 

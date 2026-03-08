@@ -23,11 +23,9 @@ from src.models.migration_mapping_manifest import (
     TypeMapping,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_item(**overrides) -> WordPressContentItem:
     """Build a minimal WordPressContentItem with sensible defaults."""
@@ -50,7 +48,6 @@ def _make_item(**overrides) -> WordPressContentItem:
     defaults.update(overrides)
     return WordPressContentItem(**defaults)
 
-
 def _make_manifest(**overrides) -> MigrationMappingManifest:
     """Build a minimal MigrationMappingManifest."""
     defaults = dict(
@@ -66,7 +63,6 @@ def _make_manifest(**overrides) -> MigrationMappingManifest:
     )
     defaults.update(overrides)
     return MigrationMappingManifest(**defaults)
-
 
 def _build_payload(
     item: WordPressContentItem | None = None,
@@ -95,15 +91,12 @@ def _build_payload(
         entry_id_map=entry_id_map or {},
     )
 
-
 # ---------------------------------------------------------------------------
 # 1. Custom field payload migration (Requirement 19.1)
 # ---------------------------------------------------------------------------
 
-
 class TestCustomFieldPayloadMigration:
     """Validate field mapping transforms: direct, rich_text, component, dynamic_zone."""
-
     def test_direct_transform_copies_value_as_is(self):
         item = _make_item(meta={"subtitle": "Hello World"})
         fm = FieldMapping(
@@ -209,15 +202,12 @@ class TestCustomFieldPayloadMigration:
         payload = _build_payload(item, field_mappings=[fm])
         assert "target" not in payload
 
-
 # ---------------------------------------------------------------------------
 # 2. Relation migration (Requirement 19.2)
 # ---------------------------------------------------------------------------
 
-
 class TestRelationMigration:
     """Validate relation mappings produce correct relation fields."""
-
     def test_matching_entry_id_produces_relation(self):
         rm = RelationMapping(
             source_relationship_id="rel-1",
@@ -313,15 +303,12 @@ class TestRelationMigration:
         )
         assert payload["tags"] == [10, 20]
 
-
 # ---------------------------------------------------------------------------
 # 3. Helper functions for plugin table row migration (Requirement 19.3)
 # ---------------------------------------------------------------------------
 
-
 class TestHelperFunctions:
     """Test pure helper functions that support plugin table row migration."""
-
     def test_resolve_type_mapping_found(self):
         manifest = _make_manifest(
             type_mappings=[
@@ -422,15 +409,12 @@ class TestHelperFunctions:
         manifest = _make_manifest(template_mappings=[])
         assert _template_mapping_for("missing", manifest) is None
 
-
 # ---------------------------------------------------------------------------
 # 4. Per-entry failure (Requirement 19.8)
 # ---------------------------------------------------------------------------
 
-
 class TestPerEntryFailure:
     """Validate _make_entry_finding produces valid Finding with context."""
-
     def test_produces_valid_finding(self):
         item = _make_item(post_type="event", slug="summer-gala", title="Summer Gala")
         finding = _make_entry_finding(item, "Connection timeout")
@@ -463,15 +447,12 @@ class TestPerEntryFailure:
         finding = _make_entry_finding(item, "err")
         assert len(finding.recommended_action) > 0
 
-
 # ---------------------------------------------------------------------------
 # 5. Identity preservation (Requirement 19.7)
 # ---------------------------------------------------------------------------
 
-
 class TestIdentityPreservation:
     """Validate slug, canonical URL, title, and status are preserved."""
-
     def test_slug_preserved(self):
         item = _make_item(slug="my-custom-slug")
         payload = _build_payload(item)
@@ -508,15 +489,12 @@ class TestIdentityPreservation:
         payload = _build_payload(item)
         assert payload["status"] == "scheduled"
 
-
 # ---------------------------------------------------------------------------
 # 6. Template assignment
 # ---------------------------------------------------------------------------
 
-
 class TestTemplateAssignment:
     """Validate template mapping adds page_template and layout to payload."""
-
     def test_template_mapping_adds_fields(self):
         tm = TemplateMapping(
             source_template="sidebar-left",
@@ -532,15 +510,12 @@ class TestTemplateAssignment:
         assert "page_template" not in payload
         assert "layout" not in payload
 
-
 # ---------------------------------------------------------------------------
 # 7. Taxonomy term mapping
 # ---------------------------------------------------------------------------
 
-
 class TestTaxonomyTermMapping:
     """Validate taxonomy terms are mapped using term_mappings from manifest."""
-
     def test_taxonomy_terms_mapped(self):
         item = _make_item(taxonomies={"category": ["news", "tech"]})
         manifest = _make_manifest(

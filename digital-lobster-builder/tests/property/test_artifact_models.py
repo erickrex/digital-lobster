@@ -51,7 +51,6 @@ _authoring_model = st.sampled_from(["single_editor", "two_editor"])
 _small_dict = st.dictionaries(keys=_slug, values=_nonempty, max_size=3)
 _small_dict_list = st.lists(_small_dict, max_size=3)
 
-
 # ---------------------------------------------------------------------------
 # Composite strategies for each artifact model
 # ---------------------------------------------------------------------------
@@ -66,14 +65,12 @@ def content_relationships(draw: st.DrawFn) -> ContentRelationship:
         metadata=draw(_small_dict),
     )
 
-
 @st.composite
 def content_relationships_artifacts(draw: st.DrawFn) -> ContentRelationshipsArtifact:
     return ContentRelationshipsArtifact(
         schema_version=draw(_version),
         relationships=draw(st.lists(content_relationships(), max_size=5)),
     )
-
 
 @st.composite
 def field_usage_entries(draw: st.DrawFn) -> FieldUsageEntry:
@@ -90,14 +87,12 @@ def field_usage_entries(draw: st.DrawFn) -> FieldUsageEntry:
         behaves_as=draw(_behaves_as),
     )
 
-
 @st.composite
 def field_usage_report_artifacts(draw: st.DrawFn) -> FieldUsageReportArtifact:
     return FieldUsageReportArtifact(
         schema_version=draw(_version),
         fields=draw(st.lists(field_usage_entries(), max_size=5)),
     )
-
 
 @st.composite
 def plugin_instances(draw: st.DrawFn) -> PluginInstance:
@@ -109,14 +104,12 @@ def plugin_instances(draw: st.DrawFn) -> PluginInstance:
         references=draw(st.lists(_slug, max_size=3)),
     )
 
-
 @st.composite
 def plugin_instances_artifacts(draw: st.DrawFn) -> PluginInstancesArtifact:
     return PluginInstancesArtifact(
         schema_version=draw(_version),
         instances=draw(st.lists(plugin_instances(), max_size=5)),
     )
-
 
 @st.composite
 def page_composition_entries(draw: st.DrawFn) -> PageCompositionEntry:
@@ -133,14 +126,12 @@ def page_composition_entries(draw: st.DrawFn) -> PageCompositionEntry:
         snapshot_ref=draw(st.one_of(st.none(), _slug)),
     )
 
-
 @st.composite
 def page_composition_artifacts(draw: st.DrawFn) -> PageCompositionArtifact:
     return PageCompositionArtifact(
         schema_version=draw(_version),
         pages=draw(st.lists(page_composition_entries(), max_size=3)),
     )
-
 
 @st.composite
 def seo_page_entries(draw: st.DrawFn) -> SeoPageEntry:
@@ -161,14 +152,12 @@ def seo_page_entries(draw: st.DrawFn) -> SeoPageEntry:
         redirect_ownership=draw(st.one_of(st.none(), _small_dict)),
     )
 
-
 @st.composite
 def seo_full_artifacts(draw: st.DrawFn) -> SeoFullArtifact:
     return SeoFullArtifact(
         schema_version=draw(_version),
         pages=draw(st.lists(seo_page_entries(), max_size=3)),
     )
-
 
 @st.composite
 def editorial_workflows_artifacts(draw: st.DrawFn) -> EditorialWorkflowsArtifact:
@@ -183,7 +172,6 @@ def editorial_workflows_artifacts(draw: st.DrawFn) -> EditorialWorkflowsArtifact
         authoring_model=draw(_authoring_model),
     )
 
-
 @st.composite
 def plugin_table_exports(draw: st.DrawFn) -> PluginTableExport:
     rows: list[dict[str, Any]] = draw(st.lists(_small_dict, max_size=5))
@@ -197,7 +185,6 @@ def plugin_table_exports(draw: st.DrawFn) -> PluginTableExport:
         rows=rows,
     )
 
-
 @st.composite
 def search_config_artifacts(draw: st.DrawFn) -> SearchConfigArtifact:
     return SearchConfigArtifact(
@@ -209,7 +196,6 @@ def search_config_artifacts(draw: st.DrawFn) -> SearchConfigArtifact:
         search_template_hints=draw(_small_dict),
     )
 
-
 @st.composite
 def integration_entries(draw: st.DrawFn) -> IntegrationEntry:
     return IntegrationEntry(
@@ -220,15 +206,12 @@ def integration_entries(draw: st.DrawFn) -> IntegrationEntry:
         business_critical=draw(st.booleans()),
     )
 
-
 @st.composite
 def integration_manifest_artifacts(draw: st.DrawFn) -> IntegrationManifestArtifact:
     return IntegrationManifestArtifact(
         schema_version=draw(_version),
         integrations=draw(st.lists(integration_entries(), max_size=5)),
     )
-
-
 
 # ---------------------------------------------------------------------------
 # A combined strategy that produces one of the 9 top-level artifact models
@@ -253,22 +236,16 @@ _all_artifacts_including_table = st.one_of(
     plugin_table_exports(),
 )
 
-
 # ===========================================================================
 # Property 1: Artifact model contract enforcement
-# Validates: Requirements 1.2, 1.3, 1.4, 25.1, 25.2, 25.3, 25.4
 # ===========================================================================
-
 
 class TestArtifactModelContractEnforcement:
     """Every artifact model enforces the bundle contract rules."""
-
     @given(artifact=_all_artifacts_including_table)
     @settings(max_examples=200)
     def test_schema_version_present_on_all_top_level_artifacts(self, artifact):
-        """**Validates: Requirements 1.2, 1.3, 1.4, 25.1, 25.2, 25.3, 25.4**
-
-        All top-level artifacts must carry a schema_version field.
+        """        All top-level artifacts must carry a schema_version field.
         """
         assert hasattr(artifact, "schema_version")
         assert isinstance(artifact.schema_version, str)
@@ -280,9 +257,7 @@ class TestArtifactModelContractEnforcement:
     ))
     @settings(max_examples=100)
     def test_source_plugin_present_on_plugin_derived_structures(self, artifact):
-        """**Validates: Requirements 1.3, 25.3**
-
-        Plugin-derived structures (PluginInstance, SeoPageEntry, PluginTableExport)
+        """        Plugin-derived structures (PluginInstance, SeoPageEntry, PluginTableExport)
         must include a source_plugin field.
         """
         if isinstance(artifact, PluginInstancesArtifact):
@@ -297,9 +272,7 @@ class TestArtifactModelContractEnforcement:
     @given(export=plugin_table_exports())
     @settings(max_examples=100)
     def test_source_plugin_present_on_plugin_table_export(self, export):
-        """**Validates: Requirements 1.3, 25.3**
-
-        PluginTableExport must include a source_plugin field.
+        """        PluginTableExport must include a source_plugin field.
         """
         assert isinstance(export.source_plugin, str)
         assert len(export.source_plugin) > 0
@@ -310,9 +283,7 @@ class TestArtifactModelContractEnforcement:
     ))
     @settings(max_examples=100)
     def test_canonical_url_present_on_page_level_entities(self, artifact):
-        """**Validates: Requirements 1.4, 25.4**
-
-        Page-level entities (PageCompositionEntry, SeoPageEntry) must include
+        """        Page-level entities (PageCompositionEntry, SeoPageEntry) must include
         a canonical_url field.
         """
         if isinstance(artifact, PageCompositionArtifact):
@@ -327,9 +298,7 @@ class TestArtifactModelContractEnforcement:
     @given(rel=content_relationships())
     @settings(max_examples=100)
     def test_stable_source_identifiers_on_content_relationships(self, rel):
-        """**Validates: Requirements 1.2, 25.2**
-
-        ContentRelationship must have stable source_id and target_id.
+        """        ContentRelationship must have stable source_id and target_id.
         """
         assert isinstance(rel.source_id, str) and len(rel.source_id) > 0
         assert isinstance(rel.target_id, str) and len(rel.target_id) > 0
@@ -337,48 +306,36 @@ class TestArtifactModelContractEnforcement:
     @given(inst=plugin_instances())
     @settings(max_examples=100)
     def test_stable_source_identifier_on_plugin_instance(self, inst):
-        """**Validates: Requirements 1.2, 25.2**
-
-        PluginInstance must have a stable instance_id.
+        """        PluginInstance must have a stable instance_id.
         """
         assert isinstance(inst.instance_id, str) and len(inst.instance_id) > 0
 
     @given(entry=integration_entries())
     @settings(max_examples=100)
     def test_stable_source_identifier_on_integration_entry(self, entry):
-        """**Validates: Requirements 1.2, 25.2**
-
-        IntegrationEntry must have a stable integration_id.
+        """        IntegrationEntry must have a stable integration_id.
         """
         assert isinstance(entry.integration_id, str) and len(entry.integration_id) > 0
 
-
 # ===========================================================================
 # Property 2: Artifact model serialization round-trip
-# Validates: Requirements 1.6, 2.4
 # ===========================================================================
-
 
 class TestArtifactModelSerializationRoundTrip:
     """Serialize to dict via model_dump(), reconstruct via model_validate(),
     and assert equality."""
-
     @given(artifact=_all_artifacts_including_table)
     @settings(max_examples=200)
     def test_round_trip_all_artifacts(self, artifact):
-        """**Validates: Requirements 1.6, 2.4**
-
-        For every artifact model, model_dump() → model_validate() must produce
+        """        For every artifact model, model_dump() → model_validate() must produce
         an equal instance.
         """
         dumped = artifact.model_dump()
         reconstructed = type(artifact).model_validate(dumped)
         assert reconstructed == artifact
 
-
 # ===========================================================================
 # Property 3: Bundle_Schema completeness
-# Validates: Requirements 2.1, 2.2
 # ===========================================================================
 
 # The 23 existing artifact file paths
@@ -428,14 +385,10 @@ _ALL_ARTIFACT_PATHS = _EXISTING_ARTIFACT_PATHS | _NEW_ARTIFACT_PATHS
 # Semver pattern
 _SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-
 class TestBundleSchemaCompleteness:
     """BUNDLE_SCHEMA_V1 must contain all 32 artifacts with correct metadata."""
-
     def test_schema_contains_all_32_artifacts(self):
-        """**Validates: Requirements 2.1, 2.2**
-
-        BUNDLE_SCHEMA_V1 must define exactly 32 artifacts (23 existing + 9 new).
+        """        BUNDLE_SCHEMA_V1 must define exactly 32 artifacts (23 existing + 9 new).
         """
         schema_paths = {a.file_path for a in BUNDLE_SCHEMA_V1.artifacts}
         assert len(BUNDLE_SCHEMA_V1.artifacts) == len(_ALL_ARTIFACT_PATHS)
@@ -444,26 +397,20 @@ class TestBundleSchemaCompleteness:
     @given(artifact=st.sampled_from(BUNDLE_SCHEMA_V1.artifacts))
     @settings(max_examples=50)
     def test_all_required_artifacts_marked_correctly(self, artifact):
-        """**Validates: Requirements 2.1, 2.2**
-
-        Every artifact in the schema has a valid requirement level.
+        """        Every artifact in the schema has a valid requirement level.
         """
         assert artifact.requirement in (ArtifactRequirement.REQUIRED, ArtifactRequirement.OPTIONAL)
 
     @given(artifact=st.sampled_from(BUNDLE_SCHEMA_V1.artifacts))
     @settings(max_examples=50)
     def test_schema_version_follows_semver(self, artifact):
-        """**Validates: Requirements 2.1, 2.2**
-
-        Every artifact definition's schema_version must follow semver format.
+        """        Every artifact definition's schema_version must follow semver format.
         """
         assert _SEMVER_RE.match(artifact.schema_version), (
             f"Artifact {artifact.file_path} has non-semver schema_version: {artifact.schema_version}"
         )
 
     def test_bundle_schema_own_version_is_semver(self):
-        """**Validates: Requirements 2.1, 2.2**
-
-        The BUNDLE_SCHEMA_V1 top-level schema_version must follow semver.
+        """        The BUNDLE_SCHEMA_V1 top-level schema_version must follow semver.
         """
         assert _SEMVER_RE.match(BUNDLE_SCHEMA_V1.schema_version)

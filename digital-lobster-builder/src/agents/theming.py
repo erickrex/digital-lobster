@@ -19,7 +19,6 @@ _CSS_URL_RE = re.compile(r"""url\(\s*['"]?([^'")]+)['"]?\s*\)""")
 # Pure helpers (no I/O, easily testable)
 # ---------------------------------------------------------------------------
 
-
 def _extract_inventory(context: dict[str, Any]) -> Inventory:
     """Pull the Inventory out of the pipeline context."""
     raw = context.get("inventory")
@@ -28,7 +27,6 @@ def _extract_inventory(context: dict[str, Any]) -> Inventory:
     if isinstance(raw, Inventory):
         return raw
     return Inventory.model_validate(raw)
-
 
 def extract_design_tokens(theme_json: dict) -> dict[str, str]:
     """Flatten a WordPress theme.json ``settings`` block into CSS custom properties.
@@ -77,7 +75,6 @@ def extract_design_tokens(theme_json: dict) -> dict[str, str]:
 
     return tokens
 
-
 def _flatten_custom(
     obj: Any, prefix: str, out: dict[str, str]
 ) -> None:
@@ -87,7 +84,6 @@ def _flatten_custom(
             _flatten_custom(val, f"{prefix}-{key}", out)
     elif isinstance(obj, (str, int, float)):
         out[prefix] = str(obj)
-
 
 def generate_tokens_css(tokens: dict[str, str]) -> str:
     """Render a ``tokens.css`` file from a flat token mapping."""
@@ -99,7 +95,6 @@ def generate_tokens_css(tokens: dict[str, str]) -> str:
     lines.append("}")
     lines.append("")
     return "\n".join(lines)
-
 
 def detect_missing_css_assets(
     css_content: str,
@@ -122,13 +117,11 @@ def detect_missing_css_assets(
             missing.append(normalised)
     return missing
 
-
 # ---------------------------------------------------------------------------
 # Layout generation helpers
 # ---------------------------------------------------------------------------
 
 _VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1.0" />'
-
 
 def _build_css_links(css_filenames: list[str]) -> str:
     """Build ``<link>`` tags for each CSS file in ``public/styles/``."""
@@ -136,7 +129,6 @@ def _build_css_links(css_filenames: list[str]) -> str:
     for name in sorted(css_filenames):
         links.append(f'    <link rel="stylesheet" href="/styles/{name}" />')
     return "\n".join(links)
-
 
 def generate_base_layout(
     css_filenames: list[str],
@@ -190,8 +182,6 @@ const {{ title = "{site_name}", description = "" }} = Astro.props;
   </body>
 </html>
 """
-
-
 def generate_page_layout(site_name: str) -> str:
     """Generate ``PageLayout.astro`` wrapping BaseLayout for static pages."""
     return f"""---
@@ -210,8 +200,6 @@ const {{ title = "{site_name}", description = "" }} = Astro.props;
   </article>
 </BaseLayout>
 """
-
-
 def generate_post_layout(site_name: str) -> str:
     """Generate ``PostLayout.astro`` wrapping BaseLayout for blog posts."""
     return f"""---
@@ -239,8 +227,6 @@ const {{ title = "{site_name}", description = "", date = "", author = "" }} = As
   </article>
 </BaseLayout>
 """
-
-
 # ---------------------------------------------------------------------------
 # HTML snapshot helpers
 # ---------------------------------------------------------------------------
@@ -249,7 +235,6 @@ _TAG_RE = re.compile(
     r"<(header|footer|nav)\b[^>]*>(.*?)</\1>",
     re.DOTALL | re.IGNORECASE,
 )
-
 
 def extract_snapshot_sections(html: str) -> dict[str, str]:
     """Extract ``<header>``, ``<footer>``, and ``<nav>`` blocks from an HTML snapshot.
@@ -265,27 +250,22 @@ def extract_snapshot_sections(html: str) -> dict[str, str]:
             sections[tag] = match.group(0)
     return sections
 
-
 # ---------------------------------------------------------------------------
 # CSS breakpoint detection
 # ---------------------------------------------------------------------------
 
 _MEDIA_QUERY_RE = re.compile(r"@media\s*[^{]*\{", re.IGNORECASE)
 
-
 def css_has_responsive_breakpoints(css_content: str) -> bool:
     """Return True if the CSS contains at least one ``@media`` query."""
     return bool(_MEDIA_QUERY_RE.search(css_content))
-
 
 # ---------------------------------------------------------------------------
 # ThemingAgent
 # ---------------------------------------------------------------------------
 
-
 class ThemingAgent(BaseAgent):
     """Preserves WordPress theme CSS and layout structure for Astro."""
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the Theming agent.
 

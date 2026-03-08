@@ -10,10 +10,8 @@ from src.adapters.base import (
 from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import Capability
 
-
 class YoastAdapter(PluginAdapter):
     """Adapter for Yoast SEO."""
-
     def plugin_family(self) -> str:
         return "yoast"
 
@@ -88,10 +86,8 @@ class YoastAdapter(PluginAdapter):
             ),
         ]
 
-
 class RankMathAdapter(PluginAdapter):
     """Adapter for Rank Math SEO."""
-
     def plugin_family(self) -> str:
         return "rank_math"
 
@@ -160,10 +156,8 @@ class RankMathAdapter(PluginAdapter):
             ),
         ]
 
-
 class AioSeoAdapter(PluginAdapter):
     """Adapter for All in One SEO."""
-
     def plugin_family(self) -> str:
         return "aio_seo"
 

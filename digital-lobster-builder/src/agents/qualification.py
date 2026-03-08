@@ -62,7 +62,6 @@ _MEMBERSHIP_SLUGS = frozenset({
     "peepso",
 })
 
-
 class QualificationAgent(BaseAgent):
     """Evaluates site scope before migration.
 
@@ -71,7 +70,6 @@ class QualificationAgent(BaseAgent):
     QualificationError with a ReadinessReport (qualified=False).
     On pass, returns AgentResult with ReadinessReport (qualified=True).
     """
-
     def __init__(
         self,
         gradient_client: Any,

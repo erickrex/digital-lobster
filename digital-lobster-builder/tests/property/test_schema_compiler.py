@@ -31,7 +31,6 @@ from src.models.content_model_manifest import (
 )
 from src.models.strapi_types import StrapiFieldDefinition
 
-
 # ---------------------------------------------------------------------------
 # Helpers — reuse patterns from unit tests
 # ---------------------------------------------------------------------------
@@ -66,7 +65,6 @@ _INFERRED_TYPES = st.sampled_from(_SIMPLE_INFERRED_TYPES)
 _BEHAVES_AS_OPTIONS = st.sampled_from([
     None, "enum", "reference", "repeater", "object", "flexible",
 ])
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for schema compiler tests."""
@@ -137,7 +135,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(
         capabilities=[],
@@ -149,7 +146,6 @@ def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     )
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _make_field_entry(**overrides: Any) -> FieldUsageEntry:
     defaults: dict[str, Any] = dict(
@@ -165,16 +161,13 @@ def _make_field_entry(**overrides: Any) -> FieldUsageEntry:
     defaults.update(overrides)
     return FieldUsageEntry(**defaults)
 
-
 def _make_agent(
     adapters: list[PluginAdapter] | None = None,
 ) -> SchemaCompilerAgent:
     return SchemaCompilerAgent(gradient_client=None, adapters=adapters)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _execute(
     bundle: BundleManifest,
@@ -188,7 +181,6 @@ def _execute(
     }
     result = _run(agent.execute(context))
     return result.artifacts["content_model_manifest"]
-
 
 # ---------------------------------------------------------------------------
 # Hypothesis strategies for field usage entries
@@ -230,7 +222,6 @@ def field_usage_entries(draw) -> FieldUsageEntry:
         behaves_as=behaves_as,
     )
 
-
 @st.composite
 def content_relationships(draw) -> ContentRelationship:
     """Generate a random ContentRelationship."""
@@ -242,12 +233,9 @@ def content_relationships(draw) -> ContentRelationship:
         relation_type=draw(_RELATION_TYPES),
     )
 
-
 # ===========================================================================
 # Property 12: Schema compiler produces valid Content_Model_Manifest
-# Validates: Requirements 14.1, 14.2, 14.3, 14.5, 14.6, 14.7
 # ===========================================================================
-
 
 class TestSchemaCompilerProducesValidManifest:
     """For any set of field usage entries with various inferred types, the
@@ -258,7 +246,6 @@ class TestSchemaCompilerProducesValidManifest:
     - Validation hints are generated for every field
     - When SEO capabilities exist, SEO strategy is applied to all collections
     """
-
     @given(
         field_entries=st.lists(field_usage_entries(), min_size=1, max_size=8),
     )
@@ -266,9 +253,7 @@ class TestSchemaCompilerProducesValidManifest:
     def test_every_post_type_has_collection(
         self, field_entries: list[FieldUsageEntry]
     ):
-        """**Validates: Requirements 14.1**
-
-        Every post type present in the field_usage_report must have a
+        """        Every post type present in the field_usage_report must have a
         corresponding StrapiCollection in the manifest.
         """
         bundle = _clean_bundle(
@@ -294,9 +279,7 @@ class TestSchemaCompilerProducesValidManifest:
     def test_every_field_maps_to_valid_strapi_type(
         self, field_entries: list[FieldUsageEntry]
     ):
-        """**Validates: Requirements 14.2**
-
-        Every field in every collection must have a valid Strapi type.
+        """        Every field in every collection must have a valid Strapi type.
         """
         bundle = _clean_bundle(
             field_usage_report=FieldUsageReportArtifact(
@@ -320,9 +303,7 @@ class TestSchemaCompilerProducesValidManifest:
     def test_repeater_produces_component_reference_and_entry(
         self, post_type: str, repeater_name: str
     ):
-        """**Validates: Requirements 14.3**
-
-        Repeater fields must produce a component-type field reference in the
+        """        Repeater fields must produce a component-type field reference in the
         collection AND a corresponding StrapiComponent entry.
         """
         entry = _make_field_entry(
@@ -374,9 +355,7 @@ class TestSchemaCompilerProducesValidManifest:
     def test_content_relationships_produce_strapi_relations(
         self, relationships: list[ContentRelationship]
     ):
-        """**Validates: Requirements 14.5**
-
-        Every content relationship must produce a corresponding StrapiRelation.
+        """        Every content relationship must produce a corresponding StrapiRelation.
         """
         bundle = _clean_bundle(
             content_relationships=ContentRelationshipsArtifact(
@@ -405,9 +384,7 @@ class TestSchemaCompilerProducesValidManifest:
     def test_seo_strategy_applied_to_all_collections_when_seo_exists(
         self, field_entries: list[FieldUsageEntry]
     ):
-        """**Validates: Requirements 14.6**
-
-        When SEO capabilities exist, the SEO component strategy must be
+        """        When SEO capabilities exist, the SEO component strategy must be
         applied to every collection.
         """
         cap = _clean_capability_manifest(
@@ -440,9 +417,7 @@ class TestSchemaCompilerProducesValidManifest:
     def test_validation_hints_for_every_field(
         self, field_entries: list[FieldUsageEntry]
     ):
-        """**Validates: Requirements 14.7**
-
-        Every field in the field_usage_report must have a corresponding
+        """        Every field in the field_usage_report must have a corresponding
         validation hint in the manifest.
         """
         bundle = _clean_bundle(
@@ -463,26 +438,20 @@ class TestSchemaCompilerProducesValidManifest:
                 f"Invalid cardinality: {hint.cardinality}"
             )
 
-
 # ===========================================================================
 # Property 13: Plugin instance schema mapping
-# Validates: Requirements 14.4
 # ===========================================================================
-
 
 class TestPluginInstanceSchemaMapping:
     """For any plugin instance with a supported adapter family, the adapter's
     schema_strategy is invoked and its contributions are merged into the
     manifest."""
-
     @given(adapter_idx=st.sampled_from(range(len(default_adapters()))))
     @settings(max_examples=100)
     def test_adapter_schema_strategy_invoked_for_plugin_capabilities(
         self, adapter_idx: int
     ):
-        """**Validates: Requirements 14.4**
-
-        When a plugin family has capabilities in the CapabilityManifest's
+        """        When a plugin family has capabilities in the CapabilityManifest's
         plugin_capabilities, the schema compiler must invoke that adapter's
         schema_strategy().
         """
@@ -515,9 +484,7 @@ class TestPluginInstanceSchemaMapping:
     def test_adapter_schema_contributions_merged_into_manifest(
         self, collection_name: str, component_uid: str
     ):
-        """**Validates: Requirements 14.4**
-
-        When an adapter's schema_strategy returns collections or components,
+        """        When an adapter's schema_strategy returns collections or components,
         they must appear in the final ContentModelManifest.
         """
         # Create a mock adapter that returns non-empty schema contributions

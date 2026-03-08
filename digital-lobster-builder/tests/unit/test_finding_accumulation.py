@@ -33,11 +33,9 @@ from src.models.parity_report import ParityReport
 from src.models.presentation_manifest import PresentationManifest
 from src.orchestrator.pipeline import PipelineOrchestrator
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest."""
@@ -108,7 +106,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_cap_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(
         capabilities=[],
@@ -121,10 +118,8 @@ def _clean_cap_manifest(**overrides: Any) -> CapabilityManifest:
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _assert_valid_finding(finding: Finding) -> None:
     """Assert a Finding has all required non-empty fields."""
@@ -134,15 +129,12 @@ def _assert_valid_finding(finding: Finding) -> None:
     assert finding.message and len(finding.message) > 0
     assert finding.recommended_action and len(finding.recommended_action) > 0
 
-
 # ---------------------------------------------------------------------------
 # 1. CapabilityResolutionAgent — Finding production
 # ---------------------------------------------------------------------------
 
-
 class TestCapabilityResolutionFindings:
     """Verify capability_resolution produces Findings for unsupported plugins."""
-
     def test_unsupported_plugin_produces_finding(self):
         bundle = _clean_bundle(
             plugins_fingerprint={
@@ -186,15 +178,12 @@ class TestCapabilityResolutionFindings:
         _assert_valid_finding(critical_findings[0])
         assert critical_findings[0].stage == "capability_resolution"
 
-
 # ---------------------------------------------------------------------------
 # 2. SchemaCompilerAgent — Finding production
 # ---------------------------------------------------------------------------
 
-
 class TestSchemaCompilerFindings:
     """Verify schema_compiler produces Findings for unmapped field types."""
-
     def test_unknown_field_type_produces_finding(self):
         from src.models.bundle_artifacts import FieldUsageEntry
 
@@ -290,15 +279,12 @@ class TestSchemaCompilerFindings:
         assert isinstance(manifest.findings, list)
         assert all(isinstance(f, Finding) for f in manifest.findings)
 
-
 # ---------------------------------------------------------------------------
 # 3. PresentationCompilerAgent — Finding production
 # ---------------------------------------------------------------------------
 
-
 class TestPresentationCompilerFindings:
     """Verify presentation_compiler produces Findings for unsupported constructs."""
-
     def test_unsupported_shortcode_produces_finding(self):
         bundle = _clean_bundle(
             page_composition=PageCompositionArtifact(
@@ -453,15 +439,12 @@ class TestPresentationCompilerFindings:
         assert isinstance(manifest.findings, list)
         assert all(isinstance(f, Finding) for f in manifest.findings)
 
-
 # ---------------------------------------------------------------------------
 # 4. BehaviorCompilerAgent — Finding production
 # ---------------------------------------------------------------------------
 
-
 class TestBehaviorCompilerFindings:
     """Verify behavior_compiler produces Findings for unsupported constructs."""
-
     def _make_context(self, **bundle_overrides: Any) -> dict[str, Any]:
         from src.models.content_model_manifest import ContentModelManifest
 
@@ -563,15 +546,12 @@ class TestBehaviorCompilerFindings:
         assert finding2 in all_findings
         assert len(all_findings) == 2
 
-
 # ---------------------------------------------------------------------------
 # 5. ParityQAAgent — Finding production
 # ---------------------------------------------------------------------------
 
-
 class TestParityQAFindings:
     """Verify parity_qa produces Findings for parity failures."""
-
     def test_low_parity_score_produces_findings(self):
         from src.models.behavior_manifest import BehaviorManifest
 
@@ -602,15 +582,12 @@ class TestParityQAFindings:
             _assert_valid_finding(finding)
             assert finding.stage == "parity_qa"
 
-
 # ---------------------------------------------------------------------------
 # 6. ContentMigratorAgent — Finding production (via _make_entry_finding)
 # ---------------------------------------------------------------------------
 
-
 class TestContentMigratorFindings:
     """Verify content_migrator produces valid Findings for per-entry failures."""
-
     def test_make_entry_finding_has_all_fields(self):
         from src.agents.content_migrator import _make_entry_finding
         from src.models.content import WordPressContentItem
@@ -637,15 +614,12 @@ class TestContentMigratorFindings:
         assert "test-post" in finding.construct
         assert "Test Post" in finding.message
 
-
 # ---------------------------------------------------------------------------
 # 7. Orchestrator _accumulate_findings — collects from all emission patterns
 # ---------------------------------------------------------------------------
 
-
 class TestAccumulateFindings:
     """Verify _accumulate_findings collects findings from all agent patterns."""
-
     def test_collects_from_findings_attribute(self):
         """Manifests with .findings attribute (CapabilityManifest, ContentModelManifest, etc.)."""
         finding = Finding(

@@ -9,7 +9,6 @@ from src.agents.content_type_generator import ContentTypeGeneratorAgent
 from src.models.modeling_manifest import ModelingManifest
 from src.models.strapi_types import StrapiComponentSchema, StrapiContentTypeDefinition
 
-
 def _manifest_dict() -> dict:
     return {
         "collections": [
@@ -42,7 +41,6 @@ def _manifest_dict() -> dict:
             }
         ],
     }
-
 
 class TestContentTypeGeneratorAgent:
     @pytest.mark.asyncio

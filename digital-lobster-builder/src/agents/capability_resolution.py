@@ -13,7 +13,6 @@ from src.pipeline_context import extract_bundle_manifest
 
 logger = logging.getLogger(__name__)
 
-
 class CapabilityResolutionAgent(BaseAgent):
     """Produces the Capability_Manifest from raw bundle data.
 
@@ -24,7 +23,6 @@ class CapabilityResolutionAgent(BaseAgent):
     page composition, custom table manifests, SEO data, editorial workflows,
     search config, integration manifest) to ensure full coverage.
     """
-
     def __init__(
         self,
         gradient_client: Any,

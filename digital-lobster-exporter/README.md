@@ -1,8 +1,8 @@
 # Digital Lobster Exporter
 
-**AI-Powered WordPress to Django/Wagtail Migration Tool**
+**AI-Powered WordPress Site Exporter**
 
-Digital Lobster Exporter is a WordPress plugin that exports comprehensive website data and metadata for AI-powered migration to modern Python architectures like Django and Wagtail. With a single click, collect all the artifacts needed to recreate your WordPress site in a new platform.
+Digital Lobster Exporter is a WordPress plugin that exports comprehensive website data and metadata for AI-powered migration to modern architectures like Astro and Strapi. With a single click, collect all the artifacts needed to recreate your WordPress site in a new platform.
 
 ## Features
 
@@ -10,7 +10,7 @@ Digital Lobster Exporter is a WordPress plugin that exports comprehensive websit
 - **Privacy First**: Automatically excludes PII, credentials, and sensitive data
 - **Sample-Based Export**: Exports representative content samples, not entire databases
 - **Comprehensive Data Collection**: Captures site structure, content, themes, plugins, settings, and more
-- **Asynchronous Processing**: AJAX-driven to handle large sites without timeouts
+- **Guided Export UI**: Runs as a single export request with clear on-page status messaging
 - **Structured Output**: JSON files with consistent schemas for AI parsing
 - **One-Click Download**: Get all artifacts in a single ZIP file
 
@@ -74,7 +74,7 @@ wp plugin install digital-lobster-exporter.zip --activate
 1. After activation, navigate to **🧠 Migrate with AI Agents** in the WordPress admin sidebar
 2. Review the information on the page about what will be exported
 3. Click the **Migrate** button
-4. Wait for the progress bar to complete (typically 1-5 minutes)
+4. Keep the page open while the export request runs (typically 1-5 minutes)
 5. Click **Download Artifacts (.zip)** when the scan completes
 6. Save the ZIP file to your local machine
 
@@ -82,15 +82,16 @@ wp plugin install digital-lobster-exporter.zip --activate
 
 To customize how much sample content is exported:
 
-1. Navigate to **Settings > Digital Lobster Settings**
-2. Adjust the following options:
-   - **Max Posts**: Number of sample posts to export (default: 5)
-   - **Max Pages**: Number of sample pages to export (default: 2)
-   - **Max Per Custom Post Type**: Sample limit for each CPT (default: 10)
+1. Navigate to **🧠 Migrate with AI Agents** in the WordPress admin sidebar
+2. Click the **Settings** toggle to expand the inline settings panel
+3. Adjust the following options:
+   - **Max Posts**: Number of sample posts to export (default: 100)
+   - **Max Pages**: Number of sample pages to export (default: 50)
+   - **Max Per Custom Post Type**: Sample limit for each CPT (default: 50)
    - **Include HTML Snapshots**: Enable/disable rendered HTML exports
    - **Cleanup After Hours**: Auto-delete old exports after X hours (default: 24)
    - **Batch Size**: Items processed per batch (default: 50)
-3. Click **Save Changes**
+4. Click **Save Settings**
 
 ## Exported File Structure
 
@@ -228,7 +229,7 @@ A: Yes. The plugin automatically excludes passwords, API keys, and PII. Exports 
 A: The plugin exports representative samples to keep file sizes manageable and focus on structure rather than bulk data. This is sufficient for AI-powered migration planning.
 
 **Q: Can I export all my content?**  
-A: You can increase sample limits in Settings > Digital Lobster Settings, but exporting thousands of posts may cause timeouts and very large files.
+A: You can increase sample limits in the settings panel on the export page, but exporting thousands of posts may cause timeouts and very large files.
 
 **Q: Are custom post types supported?**  
 A: Yes! The plugin automatically detects and exports samples from all registered custom post types.
@@ -753,7 +754,7 @@ See [TESTING.md](TESTING.md) for detailed testing guide and [tests/INTEGRATION-T
 
 ## Credits
 
-Developed for AI-powered WordPress to Django/Wagtail migrations.
+Developed for AI-powered WordPress to Astro/Strapi migrations.
 
 ### Development Team
 

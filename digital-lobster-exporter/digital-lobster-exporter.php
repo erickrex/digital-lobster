@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Digital Lobster Exporter
  * Plugin URI: https://github.com/yourusername/digital-lobster-exporter
- * Description: Export comprehensive WordPress site data for AI-powered migration to Django Wagtail. One-click solution to collect all artifacts including database schema, content structure, plugin fingerprints, theme information, and assets.
+ * Description: Export comprehensive WordPress site data for AI-powered migration to Astro and Strapi. One-click solution to collect all artifacts including database schema, content structure, plugin fingerprints, theme information, and assets.
  * Version: 1.0.0
  * Author: Your Name
  * Author URI: https://yourwebsite.com

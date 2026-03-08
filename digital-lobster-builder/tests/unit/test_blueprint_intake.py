@@ -17,11 +17,9 @@ from src.agents.blueprint_intake import (
 )
 from src.models.manifest import ExportManifest
 
-
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
-
 
 def _make_zip(files: dict[str, str | bytes]) -> zipfile.ZipFile:
     """Create an in-memory ZipFile from a dict of {path: content}."""
@@ -33,7 +31,6 @@ def _make_zip(files: dict[str, str | bytes]) -> zipfile.ZipFile:
             zf.writestr(path, content)
     buf.seek(0)
     return zipfile.ZipFile(buf, "r")
-
 
 def _minimal_bundle_files() -> dict[str, str]:
     """Return the minimal set of files for a valid export bundle."""
@@ -58,7 +55,6 @@ def _minimal_bundle_files() -> dict[str, str]:
         "content/posts.json": json.dumps([]),
         "menus/primary.json": json.dumps({"name": "Primary", "location": "header", "items": []}),
     }
-
 
 def _exporter_bundle_files() -> dict[str, str]:
     """Return a compatible bundle using the exporter-style root artifacts."""
@@ -122,7 +118,6 @@ def _exporter_bundle_files() -> dict[str, str]:
         ]),
     }
 
-
 def _manifest() -> ExportManifest:
     return ExportManifest(
         export_version="1.0",
@@ -134,11 +129,9 @@ def _manifest() -> ExportManifest:
         files={"content": 1},
     )
 
-
 # ==================================================================
 # validate_bundle_structure
 # ==================================================================
-
 
 class TestValidateBundleStructure:
     def test_valid_bundle_returns_no_errors(self):
@@ -221,11 +214,9 @@ class TestValidateBundleStructure:
         errors = validate_bundle_structure(zf)
         assert errors == []
 
-
 # ==================================================================
 # detect_plugin_family
 # ==================================================================
-
 
 class TestDetectPluginFamily:
     @pytest.mark.parametrize(
@@ -247,11 +238,9 @@ class TestDetectPluginFamily:
     def test_family_detection(self, slug: str, expected: str | None):
         assert detect_plugin_family(slug) == expected
 
-
 # ==================================================================
 # build_inventory
 # ==================================================================
-
 
 class TestBuildInventory:
     def test_minimal_valid_bundle(self):
@@ -382,11 +371,9 @@ class TestBuildInventory:
         build_inventory(zf, _manifest(), {"site_url": "", "site_name": "", "wordpress_version": ""}, warnings)
         assert any("broken.json" in w for w in warnings)
 
-
 # ==================================================================
 # collect_kb_documents
 # ==================================================================
-
 
 class TestCollectKbDocuments:
     def test_includes_site_info(self):
@@ -448,11 +435,9 @@ class TestCollectKbDocuments:
         file_names = [d["metadata"]["file"] for d in docs]
         assert "site_blueprint.json" in file_names
 
-
 # ==================================================================
 # BlueprintIntakeAgent.execute (integration-style with mocks)
 # ==================================================================
-
 
 class TestBlueprintIntakeAgentExecute:
     @pytest.mark.asyncio

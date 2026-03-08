@@ -20,11 +20,9 @@ from src.models.bundle_manifest import BundleManifest
 from src.models.finding import FindingSeverity
 from src.orchestrator.errors import QualificationError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest that passes all qualification checks."""
@@ -80,7 +78,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _inject_active_plugin(
     bundle: BundleManifest, slug: str, family: str = "",
 ) -> BundleManifest:
@@ -92,19 +89,15 @@ def _inject_active_plugin(
     existing.append(entry)
     return bundle.model_copy(update={"plugins_fingerprint": {"plugins": existing}})
 
-
 def _make_agent() -> QualificationAgent:
     return QualificationAgent(gradient_client=None)
-
 
 def _run(coro):
     return asyncio.run(coro)
 
-
 # ---------------------------------------------------------------------------
 # Page builder disqualification — Requirement 21.2
 # ---------------------------------------------------------------------------
-
 
 class TestPageBuilderDisqualification:
     def test_elementor_disqualifies(self):
@@ -135,11 +128,9 @@ class TestPageBuilderDisqualification:
         result = _run(_make_agent().execute({"bundle_manifest": bundle}))
         assert result.artifacts["readiness_report"].qualified is True
 
-
 # ---------------------------------------------------------------------------
 # WooCommerce disqualification — Requirement 21.3
 # ---------------------------------------------------------------------------
-
 
 class TestWooCommerceDisqualification:
     def test_woocommerce_disqualifies(self):
@@ -153,11 +144,9 @@ class TestWooCommerceDisqualification:
         assert len(critical) == 1
         assert critical[0].construct == "woocommerce"
 
-
 # ---------------------------------------------------------------------------
 # Multilingual disqualification — Requirement 21.4
 # ---------------------------------------------------------------------------
-
 
 class TestMultilingualDisqualification:
     def test_wpml_disqualifies(self):
@@ -180,11 +169,9 @@ class TestMultilingualDisqualification:
         critical = [f for f in exc_info.value.findings if f.severity == FindingSeverity.CRITICAL]
         assert any("polylang" in f.message for f in critical)
 
-
 # ---------------------------------------------------------------------------
 # Membership disqualification — Requirement 21.5
 # ---------------------------------------------------------------------------
-
 
 class TestMembershipDisqualification:
     def test_buddypress_disqualifies(self):
@@ -207,11 +194,9 @@ class TestMembershipDisqualification:
         critical = [f for f in exc_info.value.findings if f.severity == FindingSeverity.CRITICAL]
         assert any("memberpress" in f.message for f in critical)
 
-
 # ---------------------------------------------------------------------------
 # Enterprise editorial workflow disqualification — Requirement 21.6
 # ---------------------------------------------------------------------------
-
 
 class TestEnterpriseEditorialDisqualification:
     def test_custom_status_disqualifies(self):
@@ -253,11 +238,9 @@ class TestEnterpriseEditorialDisqualification:
         result = _run(_make_agent().execute({"bundle_manifest": bundle}))
         assert result.artifacts["readiness_report"].qualified is True
 
-
 # ---------------------------------------------------------------------------
 # Combined disqualification — multiple criteria fail
 # ---------------------------------------------------------------------------
-
 
 class TestCombinedDisqualification:
     def test_elementor_plus_woocommerce_produces_multiple_critical_findings(self):
@@ -287,11 +270,9 @@ class TestCombinedDisqualification:
         constructs = {f.construct for f in critical}
         assert constructs == {"page_builder", "multilingual", "membership"}
 
-
 # ---------------------------------------------------------------------------
 # Advisory findings on qualified site — Requirement 21.7, 21.9
 # ---------------------------------------------------------------------------
-
 
 class TestAdvisoryFindings:
     def test_unsupported_active_plugin_produces_warning(self):
@@ -345,11 +326,9 @@ class TestAdvisoryFindings:
         assert report.qualified is True
         assert report.findings == []
 
-
 # ---------------------------------------------------------------------------
 # Clean site passes — Requirement 21.9
 # ---------------------------------------------------------------------------
-
 
 class TestCleanSiteQualifies:
     def test_clean_bundle_qualifies(self):

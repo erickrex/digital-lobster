@@ -44,11 +44,9 @@ from src.models.modeling_manifest import (
     TaxonomyDefinition,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_inventory(**overrides: Any) -> Inventory:
     defaults: dict[str, Any] = {
@@ -89,7 +87,6 @@ def _make_inventory(**overrides: Any) -> Inventory:
     defaults.update(overrides)
     return Inventory(**defaults)
 
-
 def _make_manifest(**overrides: Any) -> ModelingManifest:
     defaults: dict[str, Any] = {
         "collections": [
@@ -125,12 +122,10 @@ def _make_manifest(**overrides: Any) -> ModelingManifest:
     defaults.update(overrides)
     return ModelingManifest(**defaults)
 
-
 def _make_gradient_client() -> AsyncMock:
     client = AsyncMock()
     client.complete = AsyncMock(return_value="{}")
     return client
-
 
 def _make_island_component(**overrides: Any) -> ComponentMapping:
     defaults = {
@@ -144,7 +139,6 @@ def _make_island_component(**overrides: Any) -> ComponentMapping:
     defaults.update(overrides)
     return ComponentMapping(**defaults)
 
-
 def _make_fallback_component(**overrides: Any) -> ComponentMapping:
     defaults = {
         "wp_block_type": "unknown/widget",
@@ -157,11 +151,9 @@ def _make_fallback_component(**overrides: Any) -> ComponentMapping:
     defaults.update(overrides)
     return ComponentMapping(**defaults)
 
-
 # ---------------------------------------------------------------------------
 # Context extraction tests
 # ---------------------------------------------------------------------------
-
 
 class TestExtractInventory:
     def test_from_instance(self):
@@ -178,7 +170,6 @@ class TestExtractInventory:
         with pytest.raises(KeyError):
             _extract_inventory({})
 
-
 class TestExtractModelingManifest:
     def test_from_instance(self):
         m = _make_manifest()
@@ -193,7 +184,6 @@ class TestExtractModelingManifest:
     def test_missing_raises(self):
         with pytest.raises(KeyError):
             _extract_modeling_manifest({})
-
 
 class TestExtractThemeLayouts:
     def test_from_layouts_key(self):
@@ -210,11 +200,9 @@ class TestExtractThemeLayouts:
         result = _extract_theme_layouts({})
         assert result == {}
 
-
 # ---------------------------------------------------------------------------
 # astro.config.mjs generation
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateAstroConfig:
     def test_contains_static_output(self):
@@ -234,11 +222,9 @@ class TestGenerateAstroConfig:
         config = generate_astro_config("https://example.com")
         assert "defineConfig" in config
 
-
 # ---------------------------------------------------------------------------
 # package.json generation
 # ---------------------------------------------------------------------------
-
 
 class TestGeneratePackageJson:
     def test_has_astro_5x_dependency(self):
@@ -267,11 +253,9 @@ class TestGeneratePackageJson:
         pkg_str = generate_package_json("Test")
         json.loads(pkg_str)  # Should not raise
 
-
 # ---------------------------------------------------------------------------
 # tsconfig.json generation
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateTsconfig:
     def test_extends_astro_strict(self):
@@ -279,11 +263,9 @@ class TestGenerateTsconfig:
         cfg = json.loads(ts)
         assert cfg["extends"] == "astro/tsconfigs/strict"
 
-
 # ---------------------------------------------------------------------------
 # Route page generation
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateRoutePage:
     def test_contains_get_static_paths(self):
@@ -301,7 +283,6 @@ class TestGenerateRoutePage:
         page = generate_route_page(coll)
         assert "PostLayout" in page
 
-
 class TestGenerateIndexPage:
     def test_references_collection(self):
         coll = _make_manifest().collections[0]
@@ -318,7 +299,6 @@ class TestGenerateIndexPage:
         page = generate_index_page(coll)
         assert "PageLayout" in page
 
-
 class TestGenerateHomePage:
     def test_contains_site_name(self):
         colls = _make_manifest().collections
@@ -330,11 +310,9 @@ class TestGenerateHomePage:
         page = generate_home_page("My Site", colls)
         assert "/blog" in page
 
-
 # ---------------------------------------------------------------------------
 # Component generation
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateComponent:
     def test_static_component(self):
@@ -367,7 +345,6 @@ class TestGenerateComponent:
         assert "lat" in comp
         assert "lng" in comp
 
-
 class TestGenerateIslandUsage:
     def test_includes_directive(self):
         mapping = _make_island_component()
@@ -380,11 +357,9 @@ class TestGenerateIslandUsage:
         usage = generate_island_usage(mapping)
         assert "client:load" in usage
 
-
 # ---------------------------------------------------------------------------
 # Base layout with SEO
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateBaseLayoutWithSeo:
     def test_fresh_layout_has_og_tags(self):
@@ -425,11 +400,9 @@ const { title = "Site" } = Astro.props;
         layout = generate_base_layout_with_seo("My Cool Site", {})
         assert "My Cool Site" in layout
 
-
 # ---------------------------------------------------------------------------
 # README generation
 # ---------------------------------------------------------------------------
-
 
 class TestGenerateReadme:
     def test_contains_site_name(self):
@@ -454,11 +427,9 @@ class TestGenerateReadme:
         readme = generate_readme("Test", "https://example.com")
         assert "Deployment" in readme or "deploy" in readme.lower()
 
-
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
-
 
 class TestSlugify:
     def test_basic(self):
@@ -473,14 +444,12 @@ class TestSlugify:
     def test_already_slug(self):
         assert _slugify("my-site") == "my-site"
 
-
 class TestToKebab:
     def test_pascal_case(self):
         assert _to_kebab("GeoMap") == "geo-map"
 
     def test_single_word(self):
         assert _to_kebab("Paragraph") == "paragraph"
-
 
 class TestRoutePrefix:
     def test_with_slug(self):
@@ -492,7 +461,6 @@ class TestRoutePrefix:
     def test_nested(self):
         assert _route_prefix("/places/reviews/[slug]") == "/places/reviews"
 
-
 class TestRouteDir:
     def test_blog(self):
         assert _route_dir("/blog/[slug]") == "blog"
@@ -503,11 +471,9 @@ class TestRouteDir:
     def test_nested(self):
         assert _route_dir("/places/reviews/[slug]") == "places/reviews"
 
-
 # ---------------------------------------------------------------------------
 # ZIP packaging
 # ---------------------------------------------------------------------------
-
 
 class TestPackageAsZip:
     def test_produces_valid_zip(self):
@@ -531,11 +497,9 @@ class TestPackageAsZip:
         with zipfile.ZipFile(buf, "r") as zf:
             assert zf.namelist() == []
 
-
 # ---------------------------------------------------------------------------
 # ScaffoldAgent.execute integration tests
 # ---------------------------------------------------------------------------
-
 
 class TestScaffoldAgentExecute:
     @pytest.mark.asyncio

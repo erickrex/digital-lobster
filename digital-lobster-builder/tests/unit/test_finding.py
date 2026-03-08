@@ -3,7 +3,6 @@ from pydantic import ValidationError
 
 from src.models.finding import Finding, FindingSeverity
 
-
 class TestFindingSeverity:
     def test_severity_values(self):
         assert FindingSeverity.CRITICAL == "critical"
@@ -16,7 +15,6 @@ class TestFindingSeverity:
     def test_all_severities(self):
         values = {s.value for s in FindingSeverity}
         assert values == {"critical", "warning", "info"}
-
 
 class TestFinding:
     def test_create_valid_finding(self):

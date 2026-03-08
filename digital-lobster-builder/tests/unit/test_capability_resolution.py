@@ -26,11 +26,9 @@ from src.models.capability_manifest import Capability
 from src.models.finding import Finding, FindingSeverity
 from src.orchestrator.errors import CompilationError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest that passes capability resolution."""
@@ -101,7 +99,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _inject_active_plugin(
     bundle: BundleManifest, slug: str, family: str = ""
 ) -> BundleManifest:
@@ -113,19 +110,15 @@ def _inject_active_plugin(
     existing.append(entry)
     return bundle.model_copy(update={"plugins_fingerprint": {"plugins": existing}})
 
-
 def _make_agent(adapters=None) -> CapabilityResolutionAgent:
     return CapabilityResolutionAgent(gradient_client=None, adapters=adapters)
-
 
 def _run(coro):
     return asyncio.run(coro)
 
-
 # ---------------------------------------------------------------------------
 # ACF adapter delegation — Requirements 13.5, 18.4
 # ---------------------------------------------------------------------------
-
 
 class TestAdapterDelegation:
     def test_acf_plugin_delegates_to_adapter(self):
@@ -179,11 +172,9 @@ class TestAdapterDelegation:
         ]
         assert unsupported == []
 
-
 # ---------------------------------------------------------------------------
 # Unsupported plugin produces Finding — Requirements 13.3, 18.5
 # ---------------------------------------------------------------------------
-
 
 class TestUnsupportedPluginFinding:
     def test_unknown_plugin_produces_warning_finding(self):
@@ -218,11 +209,9 @@ class TestUnsupportedPluginFinding:
         assert "plugin:tablepress" in constructs
         assert "plugin:fancy-slider" in constructs
 
-
 # ---------------------------------------------------------------------------
 # LLM fallback for low-confidence capabilities — Requirement 13.5
 # ---------------------------------------------------------------------------
-
 
 class TestLlmFallback:
     def test_low_confidence_shortcode_triggers_llm_stub(self, caplog):
@@ -260,11 +249,9 @@ class TestLlmFallback:
 
         assert "LLM fallback" not in caplog.text
 
-
 # ---------------------------------------------------------------------------
 # Critical finding aborts stage — Requirement 18.5
 # ---------------------------------------------------------------------------
-
 
 class TestCriticalFindingAbort:
     def test_critical_finding_raises_compilation_error(self):
@@ -310,11 +297,9 @@ class TestCriticalFindingAbort:
         warnings = [f for f in manifest.findings if f.severity == FindingSeverity.WARNING]
         assert len(warnings) >= 1
 
-
 # ---------------------------------------------------------------------------
 # Empty bundle produces baseline capabilities — Requirements 13.1, 13.2
 # ---------------------------------------------------------------------------
-
 
 class TestEmptyBundleBaseline:
     def test_empty_bundle_produces_settings_and_editorial_capabilities(self):
@@ -350,11 +335,9 @@ class TestEmptyBundleBaseline:
         manifest = result.artifacts["capability_manifest"]
         assert manifest.findings == []
 
-
 # ---------------------------------------------------------------------------
 # CapabilityManifest categorisation — Requirement 13.2
 # ---------------------------------------------------------------------------
-
 
 class TestManifestCategorisation:
     def test_content_model_capabilities_categorised(self):

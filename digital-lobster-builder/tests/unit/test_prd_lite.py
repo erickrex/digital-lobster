@@ -24,11 +24,9 @@ from src.models.inventory import (
     ThemeMetadata,
 )
 
-
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
-
 
 def _make_inventory(**overrides: Any) -> Inventory:
     """Build a minimal Inventory with optional overrides."""
@@ -87,7 +85,6 @@ def _make_inventory(**overrides: Any) -> Inventory:
     defaults.update(overrides)
     return Inventory(**defaults)
 
-
 def _good_prd_body() -> str:
     """Return a well-formed PRD body with all required sections."""
     return (
@@ -110,13 +107,11 @@ def _good_prd_body() -> str:
         "Baseline: 30–60 engineer hours. Target: ~2 hours.\n"
     )
 
-
 def _make_gradient_client(response: str = "") -> AsyncMock:
     """Create a mock GradientClient that returns the given response."""
     client = AsyncMock()
     client.complete = AsyncMock(return_value=response)
     return client
-
 
 def _make_kb_client(
     query_results: list[dict] | None = None,
@@ -126,11 +121,9 @@ def _make_kb_client(
     client.query = AsyncMock(return_value=query_results or [])
     return client
 
-
 # ------------------------------------------------------------------
 # Pure function tests
 # ------------------------------------------------------------------
-
 
 class TestCountWords:
     def test_empty_string(self):
@@ -146,7 +139,6 @@ class TestCountWords:
 
     def test_multiline(self):
         assert _count_words("line one\nline two\nline three") == 6
-
 
 class TestValidateSections:
     def test_all_sections_present(self):
@@ -174,7 +166,6 @@ class TestValidateSections:
     def test_empty_string(self):
         missing = _validate_sections("")
         assert len(missing) == len(REQUIRED_SECTIONS)
-
 
 class TestBuildUserPrompt:
     def test_includes_site_info(self):
@@ -242,7 +233,6 @@ class TestBuildUserPrompt:
         prompt = _build_user_prompt(inv, [])
         assert "Menus:" not in prompt
 
-
 class TestBuildSystemPrompt:
     def test_mentions_word_limit(self):
         prompt = _build_system_prompt()
@@ -260,7 +250,6 @@ class TestBuildSystemPrompt:
         assert "30–60" in prompt
         assert "2 hours" in prompt
 
-
 class TestExtractInventory:
     def test_from_inventory_instance(self):
         inv = _make_inventory()
@@ -277,11 +266,9 @@ class TestExtractInventory:
         with pytest.raises(KeyError):
             _extract_inventory({})
 
-
 # ------------------------------------------------------------------
 # Agent execution tests
 # ------------------------------------------------------------------
-
 
 class TestPrdLiteAgentExecute:
     @pytest.mark.asyncio

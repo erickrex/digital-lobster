@@ -2,7 +2,6 @@ from src.models.content import WordPressBlock
 from src.models.modeling_manifest import ComponentMapping
 from src.serialization.mdx import block_to_mdx, blocks_to_mdx
 
-
 def _mapping(
     wp_block_type: str = "core/paragraph",
     astro_component: str = "Paragraph",
@@ -20,10 +19,8 @@ def _mapping(
         fallback=fallback,
     )
 
-
 class TestBlockToMdxMappedComponents:
     """Mapped components generate correct MDX component references."""
-
     def test_simple_mapped_component(self):
         block = WordPressBlock(name="core/paragraph", attrs={}, html="<p>Hello</p>")
         mapping = _mapping()
@@ -82,10 +79,8 @@ class TestBlockToMdxMappedComponents:
         result = block_to_mdx(block, mapping)
         assert result == "<Paragraph />"
 
-
 class TestBlockToMdxIslandComponents:
     """Island components include hydration directives."""
-
     def test_island_with_client_visible(self):
         block = WordPressBlock(name="geodir/map", attrs={}, html="<div>map</div>")
         mapping = _mapping(
@@ -138,10 +133,8 @@ class TestBlockToMdxIslandComponents:
         assert result == "<Widget />"
         assert "client:" not in result
 
-
 class TestBlockToMdxFallbackComponents:
     """Fallback components wrap raw HTML."""
-
     def test_fallback_wraps_html(self):
         raw_html = '<div class="wp-block-custom">Custom content</div>'
         block = WordPressBlock(name="custom/block", attrs={}, html=raw_html)
@@ -167,10 +160,8 @@ class TestBlockToMdxFallbackComponents:
         result = block_to_mdx(block, mapping)
         assert "\\`code\\`" in result
 
-
 class TestBlockToMdxUnmappedBlocks:
     """Unmapped blocks fall back to markdown."""
-
     def test_unmapped_paragraph_uses_markdown(self):
         block = WordPressBlock(name="core/paragraph", attrs={}, html="<p>Hello world</p>")
         result = block_to_mdx(block, None)
@@ -187,10 +178,8 @@ class TestBlockToMdxUnmappedBlocks:
         result = block_to_mdx(block, None)
         assert result == raw
 
-
 class TestBlocksToMdxImports:
     """Import statements are generated for used components."""
-
     def test_imports_generated_for_used_components(self):
         blocks = [
             WordPressBlock(name="kadence/tabs", attrs={}, html="<div>tabs</div>"),
@@ -236,10 +225,8 @@ class TestBlocksToMdxImports:
         result = blocks_to_mdx(blocks, mappings)
         assert result.count("import Paragraph") == 1
 
-
 class TestBlocksToMdxMultipleBlocks:
     """Multiple blocks produce correct output."""
-
     def test_mixed_mapped_and_unmapped(self):
         blocks = [
             WordPressBlock(name="kadence/tabs", attrs={}, html="<div>tabs</div>"),
@@ -270,10 +257,8 @@ class TestBlocksToMdxMultipleBlocks:
         assert "<A />" in result
         assert "<B />" in result
 
-
 class TestBlocksToMdxEdgeCases:
     """Empty blocks handled gracefully."""
-
     def test_empty_block_list(self):
         result = blocks_to_mdx([], [])
         assert result == ""

@@ -34,11 +34,9 @@ from src.models.presentation_manifest import (
 )
 from src.models.strapi_types import StrapiFieldDefinition
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for behavior compiler tests."""
@@ -109,7 +107,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(
         capabilities=[],
@@ -117,7 +114,6 @@ def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     )
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _clean_content_model(**overrides: Any) -> ContentModelManifest:
     defaults: dict[str, Any] = dict(
@@ -130,7 +126,6 @@ def _clean_content_model(**overrides: Any) -> ContentModelManifest:
     defaults.update(overrides)
     return ContentModelManifest(**defaults)
 
-
 def _clean_presentation(**overrides: Any) -> PresentationManifest:
     defaults: dict[str, Any] = dict(
         layouts=[],
@@ -142,14 +137,11 @@ def _clean_presentation(**overrides: Any) -> PresentationManifest:
     defaults.update(overrides)
     return PresentationManifest(**defaults)
 
-
 def _make_agent() -> BehaviorCompilerAgent:
     return BehaviorCompilerAgent(gradient_client=None)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _execute(
     bundle: BundleManifest,
@@ -167,11 +159,9 @@ def _execute(
     result = _run(agent.execute(context))
     return result.artifacts
 
-
 # ---------------------------------------------------------------------------
 # Redirect compilation — Requirement 16.4
 # ---------------------------------------------------------------------------
-
 
 class TestRedirectCompilation:
     def test_redirect_from_rewrite_rules(self):
@@ -249,11 +239,9 @@ class TestRedirectCompilation:
         assert bm.redirects[0].source_url == "/a-page"
         assert bm.redirects[1].source_url == "/z-page"
 
-
 # ---------------------------------------------------------------------------
 # Form strategy — Requirement 16.3
 # ---------------------------------------------------------------------------
-
 
 class TestFormStrategy:
     @pytest.mark.parametrize("provider", ["cf7", "wpforms", "gravity_forms", "ninja_forms"])
@@ -316,11 +304,9 @@ class TestFormStrategy:
         bm: BehaviorManifest = artifacts["behavior_manifest"]
         assert len(bm.forms_strategy) == 0
 
-
 # ---------------------------------------------------------------------------
 # Integration boundary — Requirement 16.6
 # ---------------------------------------------------------------------------
-
 
 class TestIntegrationBoundary:
     def test_form_destination_classified_as_rebuild(self):
@@ -382,11 +368,9 @@ class TestIntegrationBoundary:
         assert bm.integration_boundaries[0].finding is not None
         assert "custom_magic" in bm.integration_boundaries[0].finding.message
 
-
 # ---------------------------------------------------------------------------
 # Search strategy — Requirement 16.5
 # ---------------------------------------------------------------------------
-
 
 class TestSearchStrategy:
     def test_search_strategy_present_when_searchable_types_non_empty(self):
@@ -437,11 +421,9 @@ class TestSearchStrategy:
         bm: BehaviorManifest = artifacts["behavior_manifest"]
         assert bm.search_strategy is None
 
-
 # ---------------------------------------------------------------------------
 # Preview rules
 # ---------------------------------------------------------------------------
-
 
 class TestPreviewRules:
     def test_preview_rules_extracted_from_editorial_workflows(self):
@@ -463,11 +445,9 @@ class TestPreviewRules:
         assert bm.preview_rules["preview_expectations"] == "live_preview"
         assert bm.preview_rules["revision_policy"] == "keep_all"
 
-
 # ---------------------------------------------------------------------------
 # Metadata strategy
 # ---------------------------------------------------------------------------
-
 
 class TestMetadataStrategy:
     def test_metadata_strategy_from_seo_data(self):
@@ -501,11 +481,9 @@ class TestMetadataStrategy:
         assert bm.metadata_strategy["seo_plugin"] is None
         assert bm.metadata_strategy["has_og"] is False
 
-
 # ---------------------------------------------------------------------------
 # Unsupported constructs
 # ---------------------------------------------------------------------------
-
 
 class TestUnsupportedConstructs:
     def test_unsupported_capability_produces_finding(self):
@@ -524,11 +502,9 @@ class TestUnsupportedConstructs:
         assert len(bm.unsupported_constructs) >= 1
         assert any("custom_plugin" in f.construct for f in bm.unsupported_constructs)
 
-
 # ---------------------------------------------------------------------------
 # MigrationMappingManifest — Requirements 17.1, 17.2
 # ---------------------------------------------------------------------------
-
 
 class TestMigrationMappingManifest:
     def test_type_mappings_from_collections(self):

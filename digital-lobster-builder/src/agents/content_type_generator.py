@@ -57,11 +57,9 @@ _STRAPI_RESERVED_WORDS: set[str] = {
     "localizations",
 }
 
-
 # ---------------------------------------------------------------------------
 # Pure helper functions (testable in isolation)
 # ---------------------------------------------------------------------------
-
 
 def map_frontmatter_to_strapi(field: FrontmatterField) -> StrapiFieldDefinition:
     """Map a single ``FrontmatterField`` to a ``StrapiFieldDefinition``.
@@ -74,13 +72,11 @@ def map_frontmatter_to_strapi(field: FrontmatterField) -> StrapiFieldDefinition:
         required=field.required,
     )
 
-
 def _sanitize_field_name(name: str) -> str:
     """Prefix reserved words with ``x_`` so Strapi accepts them."""
     if name.lower() in _STRAPI_RESERVED_WORDS:
         return f"x_{name}"
     return name
-
 
 def _to_singular(name: str) -> str:
     """Naïve singularisation: strip trailing 's' when present."""
@@ -92,7 +88,6 @@ def _to_singular(name: str) -> str:
         return name[:-1]
     return name
 
-
 def _to_plural(name: str) -> str:
     """Naïve pluralisation."""
     if name.endswith("y") and not name.endswith("ey"):
@@ -101,12 +96,10 @@ def _to_plural(name: str) -> str:
         return name + "es"
     return name + "s"
 
-
 def _slugify(name: str) -> str:
     """Convert a collection name to a URL-safe slug."""
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug
-
 
 def detect_seo_fields(
     fields: list[FrontmatterField],
@@ -121,7 +114,6 @@ def detect_seo_fields(
             rest.append(f)
     return seo, rest
 
-
 def build_seo_component(
     seo_fields: list[FrontmatterField],
 ) -> StrapiComponentSchema:
@@ -131,7 +123,6 @@ def build_seo_component(
         category="shared",
         fields=[map_frontmatter_to_strapi(f) for f in seo_fields],
     )
-
 
 def build_content_type_definition(
     schema: ContentCollectionSchema,
@@ -166,7 +157,6 @@ def build_content_type_definition(
         fields=strapi_fields,
         components=components,
     )
-
 
 def build_taxonomy_content_type(
     taxonomy: TaxonomyDefinition,
@@ -230,11 +220,9 @@ def build_taxonomy_content_type(
         warnings,
     )
 
-
 # ---------------------------------------------------------------------------
 # Strapi API interaction helpers
 # ---------------------------------------------------------------------------
-
 
 async def _post_component(
     base_url: str,
@@ -278,7 +266,6 @@ async def _post_component(
     uid = f"{component.category}.{component.name}"
     logger.info("Created component %s", uid)
     return uid
-
 
 async def _post_content_type(
     base_url: str,
@@ -349,11 +336,9 @@ async def _post_content_type(
     logger.info("Created content type %s", ct.api_id)
     return ct.api_id
 
-
 # ---------------------------------------------------------------------------
 # Agent class
 # ---------------------------------------------------------------------------
-
 
 class ContentTypeGeneratorAgent(BaseAgent):
     """Translates a ``ModelingManifest`` into Strapi Content Types.
@@ -362,7 +347,6 @@ class ContentTypeGeneratorAgent(BaseAgent):
     ``strapi_api_token`` from the pipeline context.  Writes
     ``content_type_map`` back into the context.
     """
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the content type generation workflow.
 

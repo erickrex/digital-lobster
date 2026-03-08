@@ -10,10 +10,8 @@ from src.adapters.base import (
 from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import Capability
 
-
 class AcfAdapter(PluginAdapter):
     """Adapter for Advanced Custom Fields / ACF Pro."""
-
     def plugin_family(self) -> str:
         return "acf"
 
@@ -107,11 +105,8 @@ class AcfAdapter(PluginAdapter):
             ),
         ]
 
-
-
 class PodsAdapter(PluginAdapter):
     """Adapter for Pods framework."""
-
     def plugin_family(self) -> str:
         return "pods"
 
@@ -175,10 +170,8 @@ class PodsAdapter(PluginAdapter):
             ),
         ]
 
-
 class MetaBoxAdapter(PluginAdapter):
     """Adapter for Meta Box plugin."""
-
     def plugin_family(self) -> str:
         return "meta_box"
 
@@ -247,10 +240,8 @@ class MetaBoxAdapter(PluginAdapter):
             ),
         ]
 
-
 class CarbonFieldsAdapter(PluginAdapter):
     """Adapter for Carbon Fields plugin."""
-
     def plugin_family(self) -> str:
         return "carbon_fields"
 

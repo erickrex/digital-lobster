@@ -23,7 +23,6 @@ from src.models.content import (
 )
 from src.models.qa_report import PageCheck, QAReport
 
-
 class TestExportManifest:
     def test_create_manifest(self):
         m = ExportManifest(
@@ -52,7 +51,6 @@ class TestExportManifest:
         data = m.model_dump()
         m2 = ExportManifest(**data)
         assert m == m2
-
 
 class TestInventoryModels:
     def test_plugin_feature(self):
@@ -120,7 +118,6 @@ class TestInventoryModels:
         assert len(inv.content_types) == 1
         assert inv.theme.has_theme_json is True
 
-
 class TestModelingManifestModels:
     def test_content_collection_schema(self):
         schema = ContentCollectionSchema(
@@ -175,7 +172,6 @@ class TestModelingManifestModels:
             ],
         )
         assert len(mm.taxonomies) == 1
-
 
 class TestContentModels:
     def test_wordpress_block(self):
@@ -240,7 +236,6 @@ class TestContentModels:
         parsed_fm = yaml.safe_load(parsed_parts[1])
         assert parsed_fm["title"] == 'About: "Our Company"'
         assert parsed_fm["emoji"] == "Hello 🌍"
-
 
 class TestQAReportModels:
     def test_page_check_passed(self):

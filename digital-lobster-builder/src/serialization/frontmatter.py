@@ -1,6 +1,5 @@
 import yaml
 
-
 def serialize_frontmatter(data: dict) -> str:
     """Convert a dict to a YAML frontmatter string (without --- delimiters).
 
@@ -22,7 +21,6 @@ def serialize_frontmatter(data: dict) -> str:
         sort_keys=False,
     ).rstrip("\n")
 
-
 def parse_frontmatter(text: str) -> dict:
     """Parse a YAML frontmatter string back to a dict.
 
@@ -39,7 +37,6 @@ def parse_frontmatter(text: str) -> dict:
         return {}
     return result
 
-
 def serialize_file(frontmatter: dict, body: str) -> str:
     """Produce the full file content: ---\\nfrontmatter\\n---\\nbody.
 
@@ -52,7 +49,6 @@ def serialize_file(frontmatter: dict, body: str) -> str:
     """
     fm_str = serialize_frontmatter(frontmatter)
     return f"---\n{fm_str}\n---\n{body}"
-
 
 def parse_file(content: str) -> tuple[dict, str]:
     """Parse a full file back into (frontmatter_dict, body_string).

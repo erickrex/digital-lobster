@@ -15,7 +15,6 @@ from .scaffold_shared import (
     generate_theme_assets,
 )
 
-
 def build_cms_project(
     context: dict,
     inventory: Inventory,

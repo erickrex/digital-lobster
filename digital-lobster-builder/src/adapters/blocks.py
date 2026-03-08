@@ -10,10 +10,8 @@ from src.adapters.base import (
 from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import Capability
 
-
 class GutenbergCoreAdapter(PluginAdapter):
     """Adapter for Gutenberg core blocks."""
-
     def plugin_family(self) -> str:
         return "gutenberg_core"
 
@@ -94,10 +92,8 @@ class GutenbergCoreAdapter(PluginAdapter):
             ),
         ]
 
-
 class KadenceBlocksAdapter(PluginAdapter):
     """Adapter for Kadence Blocks."""
-
     def plugin_family(self) -> str:
         return "kadence_blocks"
 

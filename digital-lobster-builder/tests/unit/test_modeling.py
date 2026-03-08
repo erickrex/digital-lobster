@@ -32,11 +32,9 @@ from src.models.modeling_manifest import (
     TaxonomyDefinition,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_inventory(**overrides: Any) -> Inventory:
     """Create a minimal Inventory for testing."""
@@ -100,7 +98,6 @@ def _make_inventory(**overrides: Any) -> Inventory:
     defaults.update(overrides)
     return Inventory(**defaults)
 
-
 def _make_gradient_client(response: str = "{}") -> AsyncMock:
     client = AsyncMock()
     client.complete = AsyncMock(return_value=response)
@@ -111,7 +108,6 @@ def _make_gradient_client(response: str = "{}") -> AsyncMock:
     })
     return client
 
-
 def _make_kb_client(
     results: list[dict] | None = None,
 ) -> AsyncMock:
@@ -119,11 +115,9 @@ def _make_kb_client(
     client.query = AsyncMock(return_value=results or [])
     return client
 
-
 # ---------------------------------------------------------------------------
 # Tests: _post_type_to_collection
 # ---------------------------------------------------------------------------
-
 
 class TestPostTypeToCollection:
     def test_standard_post(self):
@@ -151,11 +145,9 @@ class TestPostTypeToCollection:
         assert name == "my_custom_type"
         assert route == "/my_custom_type/[slug]"
 
-
 # ---------------------------------------------------------------------------
 # Tests: _infer_field_type
 # ---------------------------------------------------------------------------
-
 
 class TestInferFieldType:
     def test_date_field(self):
@@ -183,11 +175,9 @@ class TestInferFieldType:
         assert _infer_field_type("subtitle") == "string"
         assert _infer_field_type("description") == "string"
 
-
 # ---------------------------------------------------------------------------
 # Tests: build_collection_schemas
 # ---------------------------------------------------------------------------
-
 
 class TestBuildCollectionSchemas:
     def test_one_per_post_type(self):
@@ -274,11 +264,9 @@ class TestBuildCollectionSchemas:
         schemas = build_collection_schemas([])
         assert schemas == []
 
-
 # ---------------------------------------------------------------------------
 # Tests: build_component_mappings
 # ---------------------------------------------------------------------------
-
 
 class TestBuildComponentMappings:
     def test_known_block_mapped(self):
@@ -331,11 +319,9 @@ class TestBuildComponentMappings:
         mappings = build_component_mappings([])
         assert mappings == []
 
-
 # ---------------------------------------------------------------------------
 # Tests: build_taxonomy_definitions
 # ---------------------------------------------------------------------------
-
 
 class TestBuildTaxonomyDefinitions:
     def test_standard_category(self):
@@ -377,11 +363,9 @@ class TestBuildTaxonomyDefinitions:
         defs = build_taxonomy_definitions([])
         assert defs == []
 
-
 # ---------------------------------------------------------------------------
 # Tests: _extract_inventory
 # ---------------------------------------------------------------------------
-
 
 class TestExtractInventory:
     def test_from_inventory_instance(self):
@@ -398,11 +382,9 @@ class TestExtractInventory:
         with pytest.raises(KeyError):
             _extract_inventory({})
 
-
 # ---------------------------------------------------------------------------
 # Tests: _extract_block_types_from_inventory
 # ---------------------------------------------------------------------------
-
 
 class TestExtractBlockTypesFromInventory:
     def test_extracts_block_features(self):
@@ -429,11 +411,9 @@ class TestExtractBlockTypesFromInventory:
         blocks = _extract_block_types_from_inventory(inv)
         assert blocks == []
 
-
 # ---------------------------------------------------------------------------
 # Tests: _extract_block_types_from_kb
 # ---------------------------------------------------------------------------
-
 
 class TestExtractBlockTypesFromKb:
     def test_json_dict_keys(self):
@@ -464,11 +444,9 @@ class TestExtractBlockTypesFromKb:
         blocks = _extract_block_types_from_kb([])
         assert blocks == []
 
-
 # ---------------------------------------------------------------------------
 # Tests: ModelingAgent.execute
 # ---------------------------------------------------------------------------
-
 
 class TestModelingAgentExecute:
     @pytest.mark.asyncio

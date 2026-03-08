@@ -15,7 +15,6 @@ from src.models.bundle_manifest import BundleManifest
 from src.models.bundle_schema import BUNDLE_SCHEMA_V1, ArtifactRequirement
 from src.orchestrator.errors import BundleValidationError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -77,11 +76,9 @@ _EXISTING_ARTIFACT_DATA: dict[str, Any] = {
     "error_log.json": {"schema_version": "1.0.0"},
 }
 
-
 def _all_artifact_data() -> dict[str, Any]:
     """Return a complete set of artifact data for a valid CMS bundle."""
     return {**_EXISTING_ARTIFACT_DATA, **_NEW_ARTIFACT_DATA}
-
 
 def _make_zip(files: dict[str, Any]) -> zipfile.ZipFile:
     """Build an in-memory ZIP from a mapping of path → JSON-serialisable data."""
@@ -92,18 +89,15 @@ def _make_zip(files: dict[str, Any]) -> zipfile.ZipFile:
     buf.seek(0)
     return zipfile.ZipFile(buf)
 
-
 _SITE_INFO: dict[str, str] = {
     "site_url": "https://example.com",
     "site_name": "Test Site",
     "wordpress_version": "6.5",
 }
 
-
 # ---------------------------------------------------------------------------
 # _is_version_compatible
 # ---------------------------------------------------------------------------
-
 
 class TestIsVersionCompatible:
     def test_same_version(self):
@@ -124,15 +118,12 @@ class TestIsVersionCompatible:
     def test_non_semver(self):
         assert _is_version_compatible("abc", "1.0.0") is False
 
-
 # ---------------------------------------------------------------------------
 # validate_cms_bundle — missing artifacts
 # ---------------------------------------------------------------------------
 
-
 class TestMissingArtifacts:
     """Requirement 3.1, 3.2: detect and report all missing required artifacts."""
-
     def test_empty_bundle_reports_all_missing(self):
         """An empty ZIP should list every required artifact as missing."""
         zf = _make_zip({})
@@ -177,15 +168,12 @@ class TestMissingArtifacts:
         result = validate_cms_bundle(zf, _SITE_INFO, [])
         assert isinstance(result, BundleManifest)
 
-
 # ---------------------------------------------------------------------------
 # validate_cms_bundle — validation failures
 # ---------------------------------------------------------------------------
 
-
 class TestValidationFailures:
     """Requirement 2.3, 3.3: abort with artifact name and field-level details."""
-
     def test_malformed_json_artifact(self):
         files = _all_artifact_data()
         zf_files: dict[str, Any] = {}
@@ -218,15 +206,12 @@ class TestValidationFailures:
         assert failure["artifact"] == "content_relationships.json"
         assert "relationships" in failure["error"]
 
-
 # ---------------------------------------------------------------------------
 # validate_cms_bundle — schema_version compatibility
 # ---------------------------------------------------------------------------
 
-
 class TestSchemaVersionCompatibility:
     """Requirement 3.5: validate schema_version compatibility."""
-
     def test_incompatible_major_version_rejected(self):
         files = _all_artifact_data()
         files["content_relationships.json"] = {
@@ -260,15 +245,12 @@ class TestSchemaVersionCompatibility:
         result = validate_cms_bundle(zf, _SITE_INFO, [])
         assert isinstance(result, BundleManifest)
 
-
 # ---------------------------------------------------------------------------
 # validate_cms_bundle — success path
 # ---------------------------------------------------------------------------
 
-
 class TestSuccessfulValidation:
     """Requirement 3.4: produce BundleManifest on success."""
-
     def test_valid_bundle_produces_bundle_manifest(self):
         files = _all_artifact_data()
         zf = _make_zip(files)

@@ -1,7 +1,6 @@
 from src.orchestrator.state import PipelineRunState
 from src.orchestrator.errors import AgentError, PipelineError
 
-
 class TestPipelineRunStateCreation:
     def test_create_factory(self):
         state = PipelineRunState.create(run_id="run-001", bundle_key="bundles/test.zip")
@@ -16,7 +15,6 @@ class TestPipelineRunStateCreation:
         assert state.started_at != ""
         assert state.completed_at is None
         assert state.agent_durations == {}
-
 
 class TestStatusTransitions:
     def test_pending_to_running_to_completed(self):
@@ -39,7 +37,6 @@ class TestStatusTransitions:
         assert state.status == "failed"
         assert state.completed_at is not None
         assert state.current_agent is None
-
 
 class TestAgentTracking:
     def test_mark_agent_started(self):
@@ -71,7 +68,6 @@ class TestAgentTracking:
         assert state.artifacts == {"inventory": "inv_data", "prd_md": "# PRD"}
         assert state.agent_durations == {"blueprint_intake": 10.0, "prd_lite": 5.0}
 
-
 class TestWarningAccumulation:
     def test_warnings_accumulate(self):
         state = PipelineRunState.create("run-007", "b/test.zip")
@@ -79,7 +75,6 @@ class TestWarningAccumulation:
         state.warnings.append("Unsupported block: custom/widget")
         assert len(state.warnings) == 2
         assert "Missing asset: logo.png" in state.warnings
-
 
 class TestErrorRecording:
     def test_mark_failed_records_error_dict(self):
@@ -102,7 +97,6 @@ class TestErrorRecording:
         state.mark_failed("theming", RuntimeError("CSS parse error"))
         assert state.current_agent is None
 
-
 class TestDurationTracking:
     def test_agent_durations_recorded(self):
         state = PipelineRunState.create("run-010", "b/test.zip")
@@ -123,7 +117,6 @@ class TestDurationTracking:
             "modeling": 15.1,
         }
 
-
 class TestAgentError:
     def test_agent_error_attributes(self):
         original = ValueError("bad input")
@@ -141,7 +134,6 @@ class TestAgentError:
     def test_agent_error_is_exception(self):
         err = AgentError(agent_name="scaffold", message="Missing manifest")
         assert isinstance(err, Exception)
-
 
 class TestPipelineError:
     def test_pipeline_error_attributes(self):

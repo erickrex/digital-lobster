@@ -36,7 +36,6 @@ from src.models.strapi_types import (
     StrapiFieldDefinition,
 )
 
-
 # Primitive helpers
 _slug = st.from_regex(r"[a-z][a-z0-9\-]{1,30}", fullmatch=True)
 _name = st.text(
@@ -72,7 +71,6 @@ _plugin_family = st.sampled_from([
     "geodirectory", "kadence", "forminator", "yoast", None,
 ])
 
-
 # ---------------------------------------------------------------------------
 # Strategy: plugin_fingerprints
 # ---------------------------------------------------------------------------
@@ -89,7 +87,6 @@ def plugin_fingerprints(draw):
         custom_taxonomies=draw(st.lists(_taxonomy, max_size=3)),
         detected_features=draw(st.lists(_slug, max_size=5)),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: inventories
@@ -153,7 +150,6 @@ def inventories(draw):
         has_seo_data=draw(st.booleans()),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: wordpress_content_items
 # ---------------------------------------------------------------------------
@@ -214,7 +210,6 @@ def wordpress_content_items(draw):
         seo=seo,
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: modeling_manifests
 # ---------------------------------------------------------------------------
@@ -271,7 +266,6 @@ def modeling_manifests(draw):
         taxonomies=taxonomies,
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: theme_json_tokens
 # ---------------------------------------------------------------------------
@@ -311,7 +305,6 @@ def theme_json_tokens(draw):
             "spacing": {"spacingSizes": spacing},
         }
     }
-
 
 # ---------------------------------------------------------------------------
 # Strategy: menu_definitions
@@ -358,7 +351,6 @@ def menu_definitions(draw):
         "items": items,
     }
 
-
 # ---------------------------------------------------------------------------
 # Strategy: redirect_rules
 # ---------------------------------------------------------------------------
@@ -377,7 +369,6 @@ def redirect_rules(draw):
         max_size=20,
     ))
     return rules
-
 
 # ---------------------------------------------------------------------------
 # Strategy: qa_check_results
@@ -412,7 +403,6 @@ def qa_check_results(draw):
         warnings=draw(st.lists(st.text(min_size=1, max_size=200), max_size=10)),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: export_bundles
 # ---------------------------------------------------------------------------
@@ -435,7 +425,6 @@ _OPTIONAL_FILES = [
     "snapshots/home.html",
     "snapshots/sample-post.html",
 ]
-
 
 @st.composite
 def export_bundles(draw):
@@ -483,7 +472,6 @@ def export_bundles(draw):
 
     return buf.getvalue(), files_to_include
 
-
 # ---------------------------------------------------------------------------
 # Primitive helpers for CMS strategies
 # ---------------------------------------------------------------------------
@@ -511,7 +499,6 @@ _mime_type = st.sampled_from([
     "application/pdf", "video/mp4",
 ])
 
-
 # ---------------------------------------------------------------------------
 # Strategy: cms_configs
 # ---------------------------------------------------------------------------
@@ -530,7 +517,6 @@ def cms_configs(draw):
         strapi_admin_password=SecretStr(draw(st.text(min_size=8, max_size=30, alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#"))),
         terraform_state_path=draw(st.builds(lambda s: f"./{s}.tfstate", _slug)),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: strapi_field_definitions
@@ -552,7 +538,6 @@ def strapi_field_definitions(draw):
         relation_target=relation_target,
         relation_type=relation_type_val,
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: content_type_maps
@@ -578,7 +563,6 @@ def content_type_maps(draw):
         taxonomy_mappings=taxonomy_mappings,
         component_uids=component_uids,
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: migration_reports
@@ -636,7 +620,6 @@ def migration_reports(draw):
         warnings=draw(st.lists(st.text(min_size=1, max_size=200), max_size=5)),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: deployment_reports
 # ---------------------------------------------------------------------------
@@ -657,7 +640,6 @@ def deployment_reports(draw):
         webhook_registered=draw(st.booleans()),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: wordpress_blocks (standalone for CMS property tests)
 # ---------------------------------------------------------------------------
@@ -677,7 +659,6 @@ def wordpress_blocks(draw):
         ))),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: media_manifests
 # ---------------------------------------------------------------------------
@@ -696,7 +677,6 @@ def media_manifests(draw):
         min_size=1,
         max_size=20,
     ))
-
 
 # ---------------------------------------------------------------------------
 # Production pipeline model imports
@@ -756,7 +736,6 @@ from src.models.migration_mapping_manifest import (
 )
 from src.models.parity_report import ParityReport, SnapshotComparison, PARITY_CATEGORIES
 from src.models.readiness_report import ReadinessReport
-
 
 # ---------------------------------------------------------------------------
 # Primitive helpers for production pipeline strategies
@@ -821,7 +800,6 @@ _migration_strategy = st.sampled_from([
 ])
 _parity_score = st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False)
 
-
 # ---------------------------------------------------------------------------
 # Strategy: findings
 # ---------------------------------------------------------------------------
@@ -836,7 +814,6 @@ def findings(draw):
         message=draw(_name),
         recommended_action=draw(_name),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: capabilities
@@ -853,7 +830,6 @@ def capabilities(draw):
         details=draw(st.fixed_dictionaries({}, optional={"note": _name})),
         findings=draw(st.lists(findings(), max_size=2)),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: capability_manifests
@@ -873,7 +849,6 @@ def capability_manifests(draw):
             keys=_slug, values=st.lists(capabilities(), max_size=2), max_size=2,
         )),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: bundle_manifests
@@ -1048,7 +1023,6 @@ def bundle_manifests(draw):
         integration_manifest=integration,
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: content_model_manifests
 # ---------------------------------------------------------------------------
@@ -1122,7 +1096,6 @@ def content_model_manifests(draw):
         validation_hints=validation_hints,
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: presentation_manifests
 # ---------------------------------------------------------------------------
@@ -1177,7 +1150,6 @@ def presentation_manifests(draw):
         fallback_zones=fallback_zones,
         style_tokens=draw(st.fixed_dictionaries({}, optional={"primary_color": _slug})),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: behavior_manifests
@@ -1235,7 +1207,6 @@ def behavior_manifests(draw):
         integration_boundaries=boundaries,
         unsupported_constructs=draw(st.lists(findings(), max_size=2)),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: migration_mapping_manifests
@@ -1315,7 +1286,6 @@ def migration_mapping_manifests(draw):
         )),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: parity_reports
 # ---------------------------------------------------------------------------
@@ -1341,7 +1311,6 @@ def parity_reports(draw):
         )),
     )
 
-
 # ---------------------------------------------------------------------------
 # Strategy: snapshot_comparisons
 # ---------------------------------------------------------------------------
@@ -1355,7 +1324,6 @@ def snapshot_comparisons(draw):
         content_match=draw(st.booleans()),
         differences=draw(st.lists(_name, max_size=3)),
     )
-
 
 # ---------------------------------------------------------------------------
 # Strategy: readiness_reports

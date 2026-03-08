@@ -19,7 +19,6 @@ from src.orchestrator.pipeline import (
     _build_findings_summary,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -31,7 +30,6 @@ def _run(coro):
         return loop.run_until_complete(coro)
     finally:
         loop.close()
-
 
 def _make_finding(
     severity: FindingSeverity = FindingSeverity.WARNING,
@@ -45,7 +43,6 @@ def _make_finding(
         message="test message",
         recommended_action="test action",
     )
-
 
 def _make_mock_agent(
     name: str,
@@ -63,7 +60,6 @@ def _make_mock_agent(
         )
         agent.execute = AsyncMock(return_value=result)
     return agent
-
 
 def _make_orchestrator(
     agents: list[tuple[str, BaseAgent]],
@@ -85,7 +81,6 @@ def _make_orchestrator(
     orch._build_agents = lambda **_kw: agents  # type: ignore[assignment]
     return orch
 
-
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
 # ---------------------------------------------------------------------------
@@ -103,7 +98,6 @@ _POST_COMPILATION = [
     if s not in _COMPILATION_STAGES and s not in _PRE_COMPILATION
 ]
 
-
 @st.composite
 def finding_lists(draw: st.DrawFn, *, min_size: int = 1, max_size: int = 5) -> list[Finding]:
     """Generate a list of Finding objects with random severities."""
@@ -118,7 +112,6 @@ def finding_lists(draw: st.DrawFn, *, min_size: int = 1, max_size: int = 5) -> l
         )
         for i in range(n)
     ]
-
 
 @st.composite
 def critical_finding_lists(draw: st.DrawFn) -> list[Finding]:
@@ -137,12 +130,9 @@ def critical_finding_lists(draw: st.DrawFn) -> list[Finding]:
     draw(st.randoms()).shuffle(result)
     return result
 
-
 # ---------------------------------------------------------------------------
 # Property 29: Critical Finding aborts compilation
-# Validates: Requirements 22.4
 # ---------------------------------------------------------------------------
-
 
 class TestCriticalFindingAbortsCompilation:
     """Property 29: Critical Finding aborts compilation.
@@ -150,10 +140,7 @@ class TestCriticalFindingAbortsCompilation:
     For any compilation stage that produces a Finding with severity CRITICAL,
     the pipeline SHALL abort and return all accumulated Findings without
     executing subsequent stages.
-
-    **Validates: Requirements 22.4**
     """
-
     @given(
         compilation_stage=st.sampled_from(COMPILATION_STAGE_LIST),
         critical_findings=critical_finding_lists(),
@@ -224,13 +211,9 @@ class TestCriticalFindingAbortsCompilation:
         )
         assert critical_count >= 1, "At least one critical finding must be accumulated"
 
-
-
 # ---------------------------------------------------------------------------
 # Property 28: Finding accumulation and summary
-# Validates: Requirements 24.2, 24.4
 # ---------------------------------------------------------------------------
-
 
 class TestFindingAccumulationAndSummary:
     """Property 28: Finding accumulation and summary.
@@ -238,10 +221,7 @@ class TestFindingAccumulationAndSummary:
     For any pipeline run, the final result SHALL contain all Findings from
     all stages. The summary count per severity level SHALL equal the actual
     count of Findings with that severity in the accumulated list.
-
-    **Validates: Requirements 24.2, 24.4**
     """
-
     @given(
         per_agent_findings=st.lists(
             finding_lists(min_size=0, max_size=4),

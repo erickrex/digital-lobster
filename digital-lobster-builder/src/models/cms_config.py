@@ -1,9 +1,7 @@
 from pydantic import BaseModel, SecretStr
 
-
 class CMSConfig(BaseModel):
     """Configuration for CMS mode pipeline runs."""
-
     domain_name: str
     droplet_region: str = "nyc3"
     droplet_size: str = "s-2vcpu-4gb"

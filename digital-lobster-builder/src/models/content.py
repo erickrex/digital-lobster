@@ -1,12 +1,10 @@
 import yaml
 from pydantic import BaseModel
 
-
 class WordPressBlock(BaseModel):
     name: str
     attrs: dict
     html: str
-
 
 class WordPressContentItem(BaseModel):
     id: int
@@ -23,7 +21,6 @@ class WordPressContentItem(BaseModel):
     featured_media: dict | None
     legacy_permalink: str
     seo: dict | None
-
 
 class SerializedContent(BaseModel):
     collection: str

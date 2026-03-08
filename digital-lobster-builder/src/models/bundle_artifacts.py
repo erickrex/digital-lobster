@@ -4,37 +4,29 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # 1. Content Relationships
 # ---------------------------------------------------------------------------
 
-
 class ContentRelationship(BaseModel):
     """A single relationship between two entities in the source site."""
-
     source_id: str
     target_id: str
     relation_type: str
     source_plugin: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-
 class ContentRelationshipsArtifact(BaseModel):
     """Normalized relation graph across the site."""
-
     schema_version: str
     relationships: list[ContentRelationship]
-
 
 # ---------------------------------------------------------------------------
 # 2. Field Usage Report
 # ---------------------------------------------------------------------------
 
-
 class FieldUsageEntry(BaseModel):
     """Per-field analysis for a single content-type field."""
-
     post_type: str
     field_name: str
     source_plugin: str | None = None
@@ -46,44 +38,34 @@ class FieldUsageEntry(BaseModel):
     sample_values: list[Any]
     behaves_as: str | None = None
 
-
 class FieldUsageReportArtifact(BaseModel):
     """Normalized field analysis per content type and per field."""
-
     schema_version: str
     fields: list[FieldUsageEntry]
-
 
 # ---------------------------------------------------------------------------
 # 3. Plugin Instances
 # ---------------------------------------------------------------------------
 
-
 class PluginInstance(BaseModel):
     """A single plugin construct actually in use on the site."""
-
     instance_id: str
     source_plugin: str
     instance_type: str
     config: dict[str, Any] = Field(default_factory=dict)
     references: list[str] = Field(default_factory=list)
 
-
 class PluginInstancesArtifact(BaseModel):
     """Inventory of actual plugin constructs in use."""
-
     schema_version: str
     instances: list[PluginInstance]
-
 
 # ---------------------------------------------------------------------------
 # 4. Page Composition
 # ---------------------------------------------------------------------------
 
-
 class PageCompositionEntry(BaseModel):
     """Resolved composition map for a single page."""
-
     canonical_url: str
     template: str
     blocks: list[dict[str, Any]]
@@ -95,22 +77,17 @@ class PageCompositionEntry(BaseModel):
     content_sections: list[dict[str, Any]]
     snapshot_ref: str | None = None
 
-
 class PageCompositionArtifact(BaseModel):
     """Per-page resolved composition maps."""
-
     schema_version: str
     pages: list[PageCompositionEntry]
-
 
 # ---------------------------------------------------------------------------
 # 5. SEO Full
 # ---------------------------------------------------------------------------
 
-
 class SeoPageEntry(BaseModel):
     """Normalized SEO metadata for a single page."""
-
     canonical_url: str
     source_plugin: str
     robots: str | None = None
@@ -126,22 +103,17 @@ class SeoPageEntry(BaseModel):
     sitemap_inclusion: bool = True
     redirect_ownership: dict[str, Any] | None = None
 
-
 class SeoFullArtifact(BaseModel):
     """Normalized per-page SEO data."""
-
     schema_version: str
     pages: list[SeoPageEntry]
-
 
 # ---------------------------------------------------------------------------
 # 6. Editorial Workflows
 # ---------------------------------------------------------------------------
 
-
 class EditorialWorkflowsArtifact(BaseModel):
     """Editorial behavior profile for the source site."""
-
     schema_version: str
     statuses_in_use: list[str]
     scheduled_publishing: bool
@@ -151,15 +123,12 @@ class EditorialWorkflowsArtifact(BaseModel):
     comments_enabled: bool
     authoring_model: str
 
-
 # ---------------------------------------------------------------------------
 # 7. Plugin Table Export
 # ---------------------------------------------------------------------------
 
-
 class PluginTableExport(BaseModel):
     """Structured export of a single plugin-owned database table."""
-
     table_name: str
     schema_version: str
     source_plugin: str
@@ -168,15 +137,12 @@ class PluginTableExport(BaseModel):
     foreign_key_candidates: list[str]
     rows: list[dict[str, Any]]
 
-
 # ---------------------------------------------------------------------------
 # 8. Search Config
 # ---------------------------------------------------------------------------
 
-
 class SearchConfigArtifact(BaseModel):
     """Normalized search and filtering configuration."""
-
     schema_version: str
     searchable_types: list[str]
     ranking_hints: list[dict[str, Any]]
@@ -184,24 +150,19 @@ class SearchConfigArtifact(BaseModel):
     archive_behavior: dict[str, Any] = Field(default_factory=dict)
     search_template_hints: dict[str, Any] = Field(default_factory=dict)
 
-
 # ---------------------------------------------------------------------------
 # 9. Integration Manifest
 # ---------------------------------------------------------------------------
 
-
 class IntegrationEntry(BaseModel):
     """A single external integration detected on the source site."""
-
     integration_id: str
     integration_type: str
     target: str
     config: dict[str, Any] = Field(default_factory=dict)
     business_critical: bool = False
 
-
 class IntegrationManifestArtifact(BaseModel):
     """Inventory of external integrations."""
-
     schema_version: str
     integrations: list[IntegrationEntry]

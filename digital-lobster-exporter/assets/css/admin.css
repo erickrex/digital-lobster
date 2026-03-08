@@ -66,6 +66,12 @@
 	width: 0%;
 }
 
+.digital-lobster-progress-fill.is-busy {
+	background: linear-gradient(90deg, #2271b1 0%, #72aee6 50%, #2271b1 100%);
+	background-size: 200% 100%;
+	animation: digital-lobster-progress-shimmer 1.2s linear infinite;
+}
+
 .digital-lobster-progress-stage {
 	text-align: center;
 	font-size: 13px;
@@ -150,4 +156,13 @@
 .digital-lobster-warning-message li,
 .digital-lobster-error-message li {
 	margin: 5px 0;
+}
+
+@keyframes digital-lobster-progress-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
 }

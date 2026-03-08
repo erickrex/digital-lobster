@@ -29,7 +29,6 @@ _orchestrator: PipelineOrchestrator | None = None
 _ingestion_bucket: str = ""
 _artifacts_bucket: str = ""
 
-
 def configure_routes(
     spaces_client: SpacesClient | None,
     orchestrator: PipelineOrchestrator | None,
@@ -43,11 +42,9 @@ def configure_routes(
     _ingestion_bucket = ingestion_bucket
     _artifacts_bucket = artifacts_bucket
 
-
 def get_run_states() -> dict[str, PipelineRunState]:
     """Expose run states dict for testing."""
     return _run_states
-
 
 def _require_spaces_client() -> SpacesClient:
     if _spaces_client is None:
@@ -57,7 +54,6 @@ def _require_spaces_client() -> SpacesClient:
         )
     return _spaces_client
 
-
 def _require_orchestrator() -> PipelineOrchestrator:
     if _orchestrator is None:
         raise HTTPException(
@@ -65,7 +61,6 @@ def _require_orchestrator() -> PipelineOrchestrator:
             detail="Pipeline orchestrator is not configured",
         )
     return _orchestrator
-
 
 async def _run_pipeline(
     run_id: str,
@@ -88,7 +83,6 @@ async def _run_pipeline(
         state.mark_failed("pipeline", exc)
         _run_states[run_id] = state
 
-
 @router.post("/uploads/presign", response_model=PresignResponse)
 async def presign_upload(request: PresignRequest) -> PresignResponse:
     """Generate a presigned URL for bundle upload to Spaces."""
@@ -98,7 +92,6 @@ async def presign_upload(request: PresignRequest) -> PresignResponse:
         key=bundle_key, bucket=_ingestion_bucket
     )
     return PresignResponse(upload_url=upload_url, bundle_key=bundle_key)
-
 
 def _validate_cms_config(config: CMSConfig) -> list[str]:
     """Return names of required CMS credential fields that are missing or empty."""
@@ -119,7 +112,6 @@ def _validate_cms_config(config: CMSConfig) -> list[str]:
         if secret is None or not secret.get_secret_value().strip():
             missing.append(field_name)
     return missing
-
 
 @router.post("/migrations", response_model=MigrationResponse)
 async def trigger_migration(
@@ -153,7 +145,6 @@ async def trigger_migration(
     )
     return MigrationResponse(run_id=run_id, status=state.status)
 
-
 @router.get("/migrations/{run_id}", response_model=MigrationStatus)
 async def get_migration_status(run_id: str) -> MigrationStatus:
     """Get run status and progress."""
@@ -172,7 +163,6 @@ async def get_migration_status(run_id: str) -> MigrationStatus:
         agent_durations=safe["agent_durations"],
     )
 
-
 @router.get("/migrations/{run_id}/artifacts", response_model=ArtifactListResponse)
 async def list_artifacts(run_id: str) -> ArtifactListResponse:
     """List output artifact names from run state."""
@@ -183,7 +173,6 @@ async def list_artifacts(run_id: str) -> ArtifactListResponse:
         run_id=state.run_id,
         artifacts=list(state.artifacts.keys()),
     )
-
 
 @router.get("/migrations/{run_id}/artifacts/{name}")
 async def download_artifact(run_id: str, name: str) -> Response:

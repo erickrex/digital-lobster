@@ -4,10 +4,8 @@ import pytest
 
 from src.agents.base import AgentResult, BaseAgent
 
-
 class ConcreteAgent(BaseAgent):
     """Minimal concrete agent for testing the abstract base."""
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         return AgentResult(
             agent_name="test_agent",
@@ -15,7 +13,6 @@ class ConcreteAgent(BaseAgent):
             warnings=[],
             duration_seconds=1.5,
         )
-
 
 class TestAgentResult:
     def test_required_fields(self):
@@ -38,7 +35,6 @@ class TestAgentResult:
         r1.warnings.append("w")
         assert r2.artifacts == {}
         assert r2.warnings == []
-
 
 class TestBaseAgent:
     def test_cannot_instantiate_abstract(self):

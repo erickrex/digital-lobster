@@ -27,7 +27,6 @@ from src.models.modeling_manifest import (
 )
 from src.pipeline_context import MediaManifestEntry
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -47,7 +46,6 @@ def _make_schema(**overrides: Any) -> ContentCollectionSchema:
     defaults.update(overrides)
     return ContentCollectionSchema(**defaults)
 
-
 def _make_manifest(**overrides: Any) -> ModelingManifest:
     defaults: dict[str, Any] = {
         "collections": [_make_schema()],
@@ -65,7 +63,6 @@ def _make_manifest(**overrides: Any) -> ModelingManifest:
     }
     defaults.update(overrides)
     return ModelingManifest(**defaults)
-
 
 def _make_content_item(**overrides: Any) -> WordPressContentItem:
     defaults: dict[str, Any] = {
@@ -93,10 +90,8 @@ def _make_content_item(**overrides: Any) -> WordPressContentItem:
     defaults.update(overrides)
     return WordPressContentItem(**defaults)
 
-
 def _make_gradient_client() -> AsyncMock:
     return AsyncMock()
-
 
 def _make_context(
     manifest: ModelingManifest | None = None,
@@ -118,7 +113,6 @@ def _make_context(
         "astro_project": astro_project or {},
     }
 
-
 # ---------------------------------------------------------------------------
 # Tests: _extract_modeling_manifest
 # ---------------------------------------------------------------------------
@@ -138,7 +132,6 @@ class TestExtractModelingManifest:
         with pytest.raises(ValueError, match="Missing"):
             _extract_modeling_manifest({})
 
-
 # ---------------------------------------------------------------------------
 # Tests: _find_collection_schema
 # ---------------------------------------------------------------------------
@@ -153,7 +146,6 @@ class TestFindCollectionSchema:
     def test_not_found(self):
         m = _make_manifest()
         assert _find_collection_schema(m, "unknown_type") is None
-
 
 # ---------------------------------------------------------------------------
 # Tests: build_frontmatter
@@ -232,7 +224,6 @@ class TestBuildFrontmatter:
         fm = build_frontmatter(item, schema)
         assert fm["slug"] == "my-custom-slug"
 
-
 # ---------------------------------------------------------------------------
 # Tests: scan_media_urls
 # ---------------------------------------------------------------------------
@@ -284,7 +275,6 @@ class TestScanMediaUrls:
     def test_empty_items(self):
         assert scan_media_urls([]) == {}
 
-
 # ---------------------------------------------------------------------------
 # Tests: rewrite_media_urls
 # ---------------------------------------------------------------------------
@@ -311,7 +301,6 @@ class TestRewriteMediaUrls:
         result = rewrite_media_urls(body, media_map)
         assert "/media/1.jpg" in result
         assert "/media/2.png" in result
-
 
 # ---------------------------------------------------------------------------
 # Tests: build_media_map
@@ -354,7 +343,6 @@ class TestBuildMediaMap:
             featured_media={"url": "https://wp.example.com/uploads/thumb.jpg"}
         )
         assert build_media_map([item], []) == {}
-
 
 # ---------------------------------------------------------------------------
 # Tests: generate_navigation
@@ -420,7 +408,6 @@ class TestGenerateNavigation:
         nav = generate_navigation(menus, site_url="https://example.com")
         assert nav["menus"][0]["items"][0]["url"] == "https://twitter.com/example"
 
-
 # ---------------------------------------------------------------------------
 # Tests: _rewrite_url
 # ---------------------------------------------------------------------------
@@ -440,7 +427,6 @@ class TestRewriteUrl:
 
     def test_empty_url(self):
         assert _rewrite_url("", "https://example.com") == "/"
-
 
 # ---------------------------------------------------------------------------
 # Tests: generate_redirects
@@ -506,7 +492,6 @@ class TestGenerateRedirects:
         redirects = generate_redirects([item], _make_manifest(), [])
         assert len(redirects) == 0
 
-
 # ---------------------------------------------------------------------------
 # Tests: _build_astro_route
 # ---------------------------------------------------------------------------
@@ -519,7 +504,6 @@ class TestBuildAstroRoute:
     def test_nested_route(self):
         schema = _make_schema(route_pattern="/places/[slug]")
         assert _build_astro_route(schema, "paris") == "/places/paris"
-
 
 # ---------------------------------------------------------------------------
 # Tests: _safe_filename
@@ -534,7 +518,6 @@ class TestSafeFilename:
 
     def test_empty_path(self):
         assert _safe_filename("https://example.com/") == "media_file"
-
 
 # ---------------------------------------------------------------------------
 # Tests: convert_content_item
@@ -657,7 +640,6 @@ class TestConvertContentItem:
         result = convert_content_item(item, manifest, media_map, [])
         assert result is not None
         assert result.frontmatter["featured_image"] == "/media/thumb.jpg"
-
 
 # ---------------------------------------------------------------------------
 # Tests: ImporterAgent.execute

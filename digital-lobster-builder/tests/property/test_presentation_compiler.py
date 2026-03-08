@@ -22,7 +22,6 @@ from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import Capability, CapabilityManifest
 from src.models.presentation_manifest import PresentationManifest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -54,7 +53,6 @@ _CANONICAL_URLS = st.sampled_from([
     "https://example.com/services/web-design/",
     "https://example.com/contact/",
 ])
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for presentation compiler tests."""
@@ -125,7 +123,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(
         capabilities=[],
@@ -138,14 +135,11 @@ def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
 
-
 def _make_agent() -> PresentationCompilerAgent:
     return PresentationCompilerAgent(gradient_client=None)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _execute(
     bundle: BundleManifest,
@@ -158,7 +152,6 @@ def _execute(
     }
     result = _run(agent.execute(context))
     return result.artifacts["presentation_manifest"]
-
 
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
@@ -192,12 +185,9 @@ def page_composition_entries(draw) -> PageCompositionEntry:
         content_sections=[],
     )
 
-
 # ===========================================================================
 # Property 14: Presentation compiler completeness
-# Validates: Requirements 15.1, 15.3, 15.5, 15.6
 # ===========================================================================
-
 
 class TestPresentationCompilerCompleteness:
     """For any bundle with page_composition pages, widgets, and unsupported
@@ -207,7 +197,6 @@ class TestPresentationCompilerCompleteness:
     - Widget placements produce section definitions
     - Unsupported shortcodes/blocks produce fallback zones (not silently dropped)
     """
-
     @given(
         pages=st.lists(page_composition_entries(), min_size=1, max_size=5),
     )
@@ -215,9 +204,7 @@ class TestPresentationCompilerCompleteness:
     def test_every_page_template_produces_a_layout(
         self, pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 15.1**
-
-        Every unique page template referenced in page_composition must
+        """        Every unique page template referenced in page_composition must
         produce a corresponding LayoutDefinition in the manifest.
         """
         bundle = _clean_bundle(
@@ -246,9 +233,7 @@ class TestPresentationCompilerCompleteness:
     def test_every_page_produces_a_route_template(
         self, pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 15.3**
-
-        Every page in page_composition must produce a route template.
+        """        Every page in page_composition must produce a route template.
         Deduplication by route_pattern is expected, so we check that every
         unique canonical_url maps to a route_pattern present in the manifest.
         """
@@ -278,9 +263,7 @@ class TestPresentationCompilerCompleteness:
     def test_widget_placements_produce_section_definitions(
         self, pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 15.6**
-
-        Every widget placement across all pages must produce a
+        """        Every widget placement across all pages must produce a
         SectionDefinition in the manifest (deduplicated by name).
         """
         bundle = _clean_bundle(
@@ -315,9 +298,7 @@ class TestPresentationCompilerCompleteness:
     def test_unsupported_shortcodes_produce_fallback_zones(
         self, pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 15.5**
-
-        Shortcodes without adapter support must produce FallbackZone entries
+        """        Shortcodes without adapter support must produce FallbackZone entries
         rather than being silently dropped.
         """
         # Filter to pages that actually have shortcodes
@@ -351,9 +332,7 @@ class TestPresentationCompilerCompleteness:
     def test_unsupported_blocks_produce_fallback_zones(
         self, pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 15.5**
-
-        Non-core blocks without adapter support must produce FallbackZone
+        """        Non-core blocks without adapter support must produce FallbackZone
         entries rather than being silently dropped.
         """
         pages_with_blocks = [
@@ -388,17 +367,13 @@ class TestPresentationCompilerCompleteness:
                     f"Got: {fallback_zone_names}"
                 )
 
-
 # ===========================================================================
 # Property 15: Presentation compiler determinism
-# Validates: Requirements 15.4
 # ===========================================================================
-
 
 class TestPresentationCompilerDeterminism:
     """Running the compiler twice with identical inputs produces identical
     PresentationManifest outputs."""
-
     @given(
         pages=st.lists(page_composition_entries(), min_size=1, max_size=5),
     )
@@ -406,9 +381,7 @@ class TestPresentationCompilerDeterminism:
     def test_identical_inputs_produce_identical_outputs(
         self, pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 15.4**
-
-        For any valid inputs, running the Presentation_Compiler twice must
+        """        For any valid inputs, running the Presentation_Compiler twice must
         produce identical PresentationManifest outputs.
         """
         bundle = _clean_bundle(

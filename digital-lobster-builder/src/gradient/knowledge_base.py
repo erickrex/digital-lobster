@@ -14,10 +14,8 @@ MAX_UPLOAD_RETRIES = 2
 UPLOAD_BACKOFF_SECONDS = 1.0
 UPLOAD_BACKOFF_MULTIPLIER = 2.0
 
-
 class KnowledgeBaseClient:
     """Manages per-run Gradient Knowledge Bases."""
-
     def __init__(
         self,
         api_key: str,

@@ -7,7 +7,6 @@ from src.models.inventory import Inventory
 from src.models.modeling_manifest import ModelingManifest
 from src.pipeline_context import extract_media_manifest
 
-
 def generate_layouts(
     project: dict[str, str | bytes],
     inventory: Inventory,
@@ -36,7 +35,6 @@ def generate_layouts(
             inventory.site_name
         )
 
-
 def generate_components(
     project: dict[str, str | bytes],
     manifest: ModelingManifest,
@@ -47,7 +45,6 @@ def generate_components(
     for mapping in manifest.components:
         filename = f"src/components/{mapping.astro_component}.astro"
         project[filename] = component_generator(mapping)
-
 
 def generate_theme_assets(
     project: dict[str, str | bytes],
@@ -72,7 +69,6 @@ def generate_theme_assets(
     if isinstance(tokens_css, str) and tokens_css.strip():
         project["public/styles/tokens.css"] = tokens_css
 
-
 def generate_media_assets(
     project: dict[str, str | bytes],
     context: dict[str, Any],
@@ -91,7 +87,6 @@ def generate_media_assets(
             )
             continue
         project[f"public/{entry.artifact_path.lstrip('/')}"] = raw
-
 
 def generate_content_config(manifest: ModelingManifest) -> str:
     """Generate ``src/content/config.ts`` with Zod schemas for collections."""
@@ -116,7 +111,6 @@ def generate_content_config(manifest: ModelingManifest) -> str:
     lines.append("};")
     lines.append("")
     return "\n".join(lines)
-
 
 def _build_zod_fields(coll) -> list[str]:
     field_lines: list[str] = []

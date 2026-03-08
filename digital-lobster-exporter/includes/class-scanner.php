@@ -118,38 +118,38 @@ class Digital_Lobster_Exporter_Scanner {
 	 */
 	private function get_scanner_registry() {
 		return array(
-			'site'           => array( 'class' => 'Digital_Lobster_Exporter_Site_Scanner',           'priority' => 10 ),
-			'theme'          => array( 'class' => 'Digital_Lobster_Exporter_Theme_Scanner',          'priority' => 20 ),
-			'plugins'        => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Scanner',         'priority' => 30 ),
-			'content'        => array( 'class' => 'Digital_Lobster_Exporter_Content_Scanner',        'priority' => 40 ),
-			'taxonomies'     => array( 'class' => 'Digital_Lobster_Exporter_Taxonomy_Scanner',       'priority' => 50 ),
-			'media'          => array( 'class' => 'Digital_Lobster_Exporter_Media_Scanner',          'priority' => 60 ),
-			'settings'       => array( 'class' => 'Digital_Lobster_Exporter_Settings_Scanner',       'priority' => 70 ),
-			'menus'          => array( 'class' => 'Digital_Lobster_Exporter_Menu_Scanner',           'priority' => 80 ),
-			'widgets'        => array( 'class' => 'Digital_Lobster_Exporter_Widget_Scanner',         'priority' => 90 ),
-			'user_roles'     => array( 'class' => 'Digital_Lobster_Exporter_User_Roles_Scanner',     'priority' => 100 ),
-			'site_options'   => array( 'class' => 'Digital_Lobster_Exporter_Site_Options_Scanner',   'priority' => 110 ),
-			'acf'            => array( 'class' => 'Digital_Lobster_Exporter_ACF_Scanner',            'priority' => 115 ),
-			'shortcodes'     => array( 'class' => 'Digital_Lobster_Exporter_Shortcode_Scanner',      'priority' => 120 ),
-			'forms'          => array( 'class' => 'Digital_Lobster_Exporter_Forms_Scanner',          'priority' => 125 ),
-			'hooks'          => array( 'class' => 'Digital_Lobster_Exporter_Hooks_Scanner',          'priority' => 130 ),
-			'assets'         => array( 'class' => 'Digital_Lobster_Exporter_Assets_Scanner',         'priority' => 132 ),
-			'page_templates' => array( 'class' => 'Digital_Lobster_Exporter_Page_Templates_Scanner', 'priority' => 135 ),
-			'block_patterns' => array( 'class' => 'Digital_Lobster_Exporter_Block_Patterns_Scanner', 'priority' => 140 ),
-			'rest_api'       => array( 'class' => 'Digital_Lobster_Exporter_REST_API_Scanner',       'priority' => 145 ),
-			'redirects'      => array( 'class' => 'Digital_Lobster_Exporter_Redirects_Scanner',      'priority' => 150 ),
-			'database'       => array( 'class' => 'Digital_Lobster_Exporter_Database_Scanner',       'priority' => 155 ),
-			'translations'   => array( 'class' => 'Digital_Lobster_Exporter_Translation_Scanner',    'priority' => 160 ),
-			'environment'    => array( 'class' => 'Digital_Lobster_Exporter_Environment_Scanner',    'priority' => 165 ),
-			'content_relationships' => array( 'class' => 'Digital_Lobster_Exporter_Content_Relationships_Scanner', 'priority' => 170 ),
-			'field_usage'           => array( 'class' => 'Digital_Lobster_Exporter_Field_Usage_Scanner',           'priority' => 175 ),
-			'plugin_instances'      => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Instances_Scanner',      'priority' => 180 ),
-			'page_composition'      => array( 'class' => 'Digital_Lobster_Exporter_Page_Composition_Scanner',      'priority' => 185 ),
-			'seo_full'              => array( 'class' => 'Digital_Lobster_Exporter_Seo_Full_Scanner',              'priority' => 190 ),
-			'editorial_workflows'   => array( 'class' => 'Digital_Lobster_Exporter_Editorial_Workflows_Scanner',   'priority' => 195 ),
-			'plugin_table_exports'  => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Table_Exports_Scanner',  'priority' => 200 ),
-			'search_config'         => array( 'class' => 'Digital_Lobster_Exporter_Search_Config_Scanner',         'priority' => 205 ),
-			'integration_manifest'  => array( 'class' => 'Digital_Lobster_Exporter_Integration_Manifest_Scanner',  'priority' => 210 ),
+			'site' => array( 'class' => 'Digital_Lobster_Exporter_Site_Scanner', 'file' => 'class-site-scanner.php', 'priority' => 10 ),
+			'theme' => array( 'class' => 'Digital_Lobster_Exporter_Theme_Scanner', 'file' => 'class-theme-scanner.php', 'priority' => 20 ),
+			'plugins' => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Scanner', 'file' => 'class-plugin-scanner.php', 'priority' => 30 ),
+			'content' => array( 'class' => 'Digital_Lobster_Exporter_Content_Scanner', 'file' => 'class-content-scanner.php', 'priority' => 40 ),
+			'taxonomies' => array( 'class' => 'Digital_Lobster_Exporter_Taxonomy_Scanner', 'file' => 'class-taxonomy-scanner.php', 'priority' => 50 ),
+			'media' => array( 'class' => 'Digital_Lobster_Exporter_Media_Scanner', 'file' => 'class-media-scanner.php', 'priority' => 60 ),
+			'settings' => array( 'class' => 'Digital_Lobster_Exporter_Settings_Scanner', 'file' => 'class-settings-scanner.php', 'priority' => 70 ),
+			'menus' => array( 'class' => 'Digital_Lobster_Exporter_Menu_Scanner', 'file' => 'class-menu-scanner.php', 'priority' => 80 ),
+			'widgets' => array( 'class' => 'Digital_Lobster_Exporter_Widget_Scanner', 'file' => 'class-widget-scanner.php', 'priority' => 90 ),
+			'user_roles' => array( 'class' => 'Digital_Lobster_Exporter_User_Roles_Scanner', 'file' => 'class-user-roles-scanner.php', 'priority' => 100 ),
+			'site_options' => array( 'class' => 'Digital_Lobster_Exporter_Site_Options_Scanner', 'file' => 'class-site-options-scanner.php', 'priority' => 110 ),
+			'acf' => array( 'class' => 'Digital_Lobster_Exporter_ACF_Scanner', 'file' => 'class-acf-scanner.php', 'priority' => 115 ),
+			'shortcodes' => array( 'class' => 'Digital_Lobster_Exporter_Shortcode_Scanner', 'file' => 'class-shortcode-scanner.php', 'priority' => 120 ),
+			'forms' => array( 'class' => 'Digital_Lobster_Exporter_Forms_Scanner', 'file' => 'class-forms-scanner.php', 'priority' => 125 ),
+			'hooks' => array( 'class' => 'Digital_Lobster_Exporter_Hooks_Scanner', 'file' => 'class-hooks-scanner.php', 'priority' => 130 ),
+			'assets' => array( 'class' => 'Digital_Lobster_Exporter_Assets_Scanner', 'file' => 'class-assets-scanner.php', 'priority' => 132 ),
+			'page_templates' => array( 'class' => 'Digital_Lobster_Exporter_Page_Templates_Scanner', 'file' => 'class-page-templates-scanner.php', 'priority' => 135 ),
+			'block_patterns' => array( 'class' => 'Digital_Lobster_Exporter_Block_Patterns_Scanner', 'file' => 'class-block-patterns-scanner.php', 'priority' => 140 ),
+			'rest_api' => array( 'class' => 'Digital_Lobster_Exporter_REST_API_Scanner', 'file' => 'class-rest-api-scanner.php', 'priority' => 145 ),
+			'redirects' => array( 'class' => 'Digital_Lobster_Exporter_Redirects_Scanner', 'file' => 'class-redirects-scanner.php', 'priority' => 150 ),
+			'database' => array( 'class' => 'Digital_Lobster_Exporter_Database_Scanner', 'file' => 'class-database-scanner.php', 'priority' => 155 ),
+			'translations' => array( 'class' => 'Digital_Lobster_Exporter_Translation_Scanner', 'file' => 'class-translation-scanner.php', 'priority' => 160 ),
+			'environment' => array( 'class' => 'Digital_Lobster_Exporter_Environment_Scanner', 'file' => 'class-environment-scanner.php', 'priority' => 165 ),
+			'content_relationships' => array( 'class' => 'Digital_Lobster_Exporter_Content_Relationships_Scanner', 'file' => 'class-content-relationships-scanner.php', 'priority' => 170 ),
+			'field_usage' => array( 'class' => 'Digital_Lobster_Exporter_Field_Usage_Scanner', 'file' => 'class-field-usage-scanner.php', 'priority' => 175 ),
+			'plugin_instances' => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Instances_Scanner', 'file' => 'class-plugin-instances-scanner.php', 'priority' => 180 ),
+			'page_composition' => array( 'class' => 'Digital_Lobster_Exporter_Page_Composition_Scanner', 'file' => 'class-page-composition-scanner.php', 'priority' => 185 ),
+			'seo_full' => array( 'class' => 'Digital_Lobster_Exporter_Seo_Full_Scanner', 'file' => 'class-seo-full-scanner.php', 'priority' => 190 ),
+			'editorial_workflows' => array( 'class' => 'Digital_Lobster_Exporter_Editorial_Workflows_Scanner', 'file' => 'class-editorial-workflows-scanner.php', 'priority' => 195 ),
+			'plugin_table_exports' => array( 'class' => 'Digital_Lobster_Exporter_Plugin_Table_Exports_Scanner', 'file' => 'class-plugin-table-exports-scanner.php', 'priority' => 200 ),
+			'search_config' => array( 'class' => 'Digital_Lobster_Exporter_Search_Config_Scanner', 'file' => 'class-search-config-scanner.php', 'priority' => 205 ),
+			'integration_manifest' => array( 'class' => 'Digital_Lobster_Exporter_Integration_Manifest_Scanner', 'file' => 'class-integration-manifest-scanner.php', 'priority' => 210 ),
 		);
 	}
 
@@ -223,40 +223,13 @@ class Digital_Lobster_Exporter_Scanner {
 			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-exporter.php';
 			require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-packager.php';
 
-			$scanner_files = array(
-				'class-site-scanner.php',
-				'class-theme-scanner.php',
-				'class-plugin-scanner.php',
-				'class-content-scanner.php',
-				'class-taxonomy-scanner.php',
-				'class-media-scanner.php',
-				'class-settings-scanner.php',
-				'class-menu-scanner.php',
-				'class-widget-scanner.php',
-				'class-user-roles-scanner.php',
-				'class-site-options-scanner.php',
-				'class-acf-scanner.php',
-				'class-shortcode-scanner.php',
-				'class-forms-scanner.php',
-				'class-hooks-scanner.php',
-				'class-page-templates-scanner.php',
-				'class-block-patterns-scanner.php',
-				'class-rest-api-scanner.php',
-				'class-redirects-scanner.php',
-				'class-database-scanner.php',
-				'class-translation-scanner.php',
-				'class-environment-scanner.php',
-				'class-assets-scanner.php',
-				'class-content-relationships-scanner.php',
-				'class-field-usage-scanner.php',
-				'class-plugin-instances-scanner.php',
-				'class-page-composition-scanner.php',
-				'class-seo-full-scanner.php',
-				'class-editorial-workflows-scanner.php',
-				'class-plugin-table-exports-scanner.php',
-				'class-search-config-scanner.php',
-				'class-integration-manifest-scanner.php',
-			);
+			$scanner_files = array();
+			foreach ( $this->get_scanner_registry() as $scanner_config ) {
+				if ( isset( $scanner_config['file'] ) ) {
+					$scanner_files[] = $scanner_config['file'];
+				}
+			}
+			$scanner_files = array_values( array_unique( $scanner_files ) );
 
 			foreach ( $scanner_files as $file ) {
 				$file_path = DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/scanners/' . $file;

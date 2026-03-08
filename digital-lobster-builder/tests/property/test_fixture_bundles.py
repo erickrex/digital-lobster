@@ -43,22 +43,16 @@ _ARTIFACT_MODEL_MAP: dict[str, type] = {
 
 _SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-
 # ===========================================================================
 # Property 30: Fixture bundle schema conformance
-# Validates: Requirements 23.4
 # ===========================================================================
-
 
 class TestFixtureBundleSchemaConformance:
     """Every fixture bundle conforms to the Bundle_Schema contract."""
-
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_all_required_artifacts_present(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        Every artifact marked as required in BUNDLE_SCHEMA_V1 must exist as
+        """        Every artifact marked as required in BUNDLE_SCHEMA_V1 must exist as
         a file in the fixture bundle directory or be embedded in bundle_manifest.json.
         """
         manifest_path = bundle_path / "bundle_manifest.json"
@@ -83,9 +77,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_bundle_manifest_parses_into_pydantic_model(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        bundle_manifest.json must parse into a valid BundleManifest model.
+        """        bundle_manifest.json must parse into a valid BundleManifest model.
         """
         manifest_path = bundle_path / "bundle_manifest.json"
         data = json.loads(manifest_path.read_text())
@@ -97,9 +89,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_new_cms_artifacts_parse_into_pydantic_models(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        Each of the 9 new CMS artifacts (standalone or embedded) must parse
+        """        Each of the 9 new CMS artifacts (standalone or embedded) must parse
         into its corresponding Pydantic model.
         """
         manifest_data = json.loads((bundle_path / "bundle_manifest.json").read_text())
@@ -116,9 +106,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_plugin_table_exports_parse(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        plugin_table_exports.json must parse as a list of PluginTableExport.
+        """        plugin_table_exports.json must parse as a list of PluginTableExport.
         """
         manifest_data = json.loads((bundle_path / "bundle_manifest.json").read_text())
         standalone = bundle_path / "plugin_table_exports.json"
@@ -134,9 +122,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_all_schema_versions_are_semver(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        Every schema_version field across all artifacts must match semver.
+        """        Every schema_version field across all artifacts must match semver.
         """
         manifest_data = json.loads((bundle_path / "bundle_manifest.json").read_text())
 
@@ -171,9 +157,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_page_composition_pages_have_canonical_url(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        Every page in page_composition must have a non-empty canonical_url.
+        """        Every page in page_composition must have a non-empty canonical_url.
         """
         manifest_data = json.loads((bundle_path / "bundle_manifest.json").read_text())
         standalone = bundle_path / "page_composition.json"
@@ -191,9 +175,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_seo_full_pages_have_canonical_url_and_source_plugin(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        Every page in seo_full must have canonical_url and source_plugin.
+        """        Every page in seo_full must have canonical_url and source_plugin.
         """
         manifest_data = json.loads((bundle_path / "bundle_manifest.json").read_text())
         standalone = bundle_path / "seo_full.json"
@@ -214,9 +196,7 @@ class TestFixtureBundleSchemaConformance:
     @given(bundle_path=st.sampled_from(FIXTURE_BUNDLES))
     @settings(max_examples=100)
     def test_plugin_instances_have_source_plugin(self, bundle_path: Path):
-        """**Validates: Requirements 23.4**
-
-        Every plugin instance must have a non-empty source_plugin.
+        """        Every plugin instance must have a non-empty source_plugin.
         """
         manifest_data = json.loads((bundle_path / "bundle_manifest.json").read_text())
         standalone = bundle_path / "plugin_instances.json"

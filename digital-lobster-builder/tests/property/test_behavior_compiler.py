@@ -41,7 +41,6 @@ from src.models.presentation_manifest import (
 )
 from src.models.strapi_types import StrapiFieldDefinition
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -57,7 +56,6 @@ _INTEGRATION_TYPES_ALL = st.sampled_from(
 _POST_TYPES = st.sampled_from(["post", "page", "event", "testimonial", "service"])
 
 _SEARCHABLE_TYPES = st.sampled_from(["post", "page", "event", "service"])
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for behavior compiler tests."""
@@ -128,7 +126,6 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(
         capabilities=[],
@@ -136,7 +133,6 @@ def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     )
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _clean_content_model(**overrides: Any) -> ContentModelManifest:
     defaults: dict[str, Any] = dict(
@@ -149,7 +145,6 @@ def _clean_content_model(**overrides: Any) -> ContentModelManifest:
     defaults.update(overrides)
     return ContentModelManifest(**defaults)
 
-
 def _clean_presentation(**overrides: Any) -> PresentationManifest:
     defaults: dict[str, Any] = dict(
         layouts=[],
@@ -161,14 +156,11 @@ def _clean_presentation(**overrides: Any) -> PresentationManifest:
     defaults.update(overrides)
     return PresentationManifest(**defaults)
 
-
 def _make_agent() -> BehaviorCompilerAgent:
     return BehaviorCompilerAgent(gradient_client=None)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _execute(
     bundle: BundleManifest,
@@ -189,11 +181,9 @@ def _execute(
         result.artifacts["migration_mapping_manifest"],
     )
 
-
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
 # ---------------------------------------------------------------------------
-
 
 @st.composite
 def form_instances(draw) -> PluginInstance:
@@ -210,7 +200,6 @@ def form_instances(draw) -> PluginInstance:
         },
     )
 
-
 @st.composite
 def redirect_rules_data(draw) -> dict[str, Any]:
     """Generate a redirect entry for rewrite_rules."""
@@ -221,7 +210,6 @@ def redirect_rules_data(draw) -> dict[str, Any]:
         "status_code": draw(st.sampled_from([301, 302])),
         "source_plugin": draw(st.sampled_from([None, "redirection", "yoast"])),
     }
-
 
 @st.composite
 def integration_entries(draw) -> IntegrationEntry:
@@ -235,12 +223,9 @@ def integration_entries(draw) -> IntegrationEntry:
         business_critical=draw(st.booleans()),
     )
 
-
 # ===========================================================================
 # Property 16: Behavior compiler completeness
-# Validates: Requirements 16.1, 16.3, 16.4, 16.5, 16.6
 # ===========================================================================
-
 
 class TestBehaviorCompilerCompleteness:
     """For any valid BundleManifest:
@@ -250,7 +235,6 @@ class TestBehaviorCompilerCompleteness:
     - Search strategy is present when search_config is non-empty
     - All output lists are sorted (determinism)
     """
-
     @given(
         instances=st.lists(form_instances(), min_size=1, max_size=6),
     )
@@ -258,9 +242,7 @@ class TestBehaviorCompilerCompleteness:
     def test_every_supported_form_instance_has_strategy(
         self, instances: list[PluginInstance]
     ):
-        """**Validates: Requirements 16.1, 16.3**
-
-        Every form instance from a supported provider (cf7, wpforms,
+        """        Every form instance from a supported provider (cf7, wpforms,
         gravity_forms, ninja_forms) must produce a FormStrategy entry.
         """
         # Deduplicate by instance_id to match what the compiler sees
@@ -297,9 +279,7 @@ class TestBehaviorCompilerCompleteness:
     def test_every_redirect_rule_produces_redirect_entry(
         self, redirects: list[dict[str, Any]]
     ):
-        """**Validates: Requirements 16.1, 16.4**
-
-        Every redirect in rewrite_rules must produce a RedirectRule in the
+        """        Every redirect in rewrite_rules must produce a RedirectRule in the
         behavior manifest.
         """
         # Deduplicate by (source_url, target_url) to match compiler logic
@@ -330,9 +310,7 @@ class TestBehaviorCompilerCompleteness:
     def test_every_integration_has_boundary(
         self, integrations: list[IntegrationEntry]
     ):
-        """**Validates: Requirements 16.1, 16.6**
-
-        Every integration in the integration_manifest must produce an
+        """        Every integration in the integration_manifest must produce an
         IntegrationBoundary with a valid disposition.
         """
         bundle = _clean_bundle(
@@ -363,9 +341,7 @@ class TestBehaviorCompilerCompleteness:
     def test_search_strategy_present_when_searchable_types_non_empty(
         self, searchable: list[str]
     ):
-        """**Validates: Requirements 16.1, 16.5**
-
-        When search_config has non-empty searchable_types and matching
+        """        When search_config has non-empty searchable_types and matching
         content model collections, search_strategy must be non-None.
         """
         collections = [
@@ -404,9 +380,7 @@ class TestBehaviorCompilerCompleteness:
     def test_output_lists_are_sorted(
         self, instances: list[PluginInstance]
     ):
-        """**Validates: Requirements 16.1**
-
-        All output lists in the behavior manifest must be sorted for
+        """        All output lists in the behavior manifest must be sorted for
         determinism.
         """
         bundle = _clean_bundle(
@@ -419,12 +393,9 @@ class TestBehaviorCompilerCompleteness:
         form_ids = [fs.form_id for fs in behavior.forms_strategy]
         assert form_ids == sorted(form_ids), "forms_strategy must be sorted by form_id"
 
-
 # ===========================================================================
 # Property 17: Behavior classification
-# Validates: Requirements 16.2
 # ===========================================================================
-
 
 class TestBehaviorClassification:
     """For any CapabilityManifest with capabilities classified as
@@ -432,7 +403,6 @@ class TestBehaviorClassification:
     unsupported_constructs. Each Finding must have non-empty severity,
     stage, construct, message, recommended_action.
     """
-
     @given(
         unsupported_count=st.integers(min_value=1, max_value=5),
         cap_type=st.sampled_from([
@@ -447,9 +417,7 @@ class TestBehaviorClassification:
     def test_unsupported_capabilities_produce_findings(
         self, unsupported_count: int, cap_type: str, plugin_name: str
     ):
-        """**Validates: Requirements 16.2**
-
-        Every capability classified as 'unsupported' must produce a Finding
+        """        Every capability classified as 'unsupported' must produce a Finding
         in unsupported_constructs.
         """
         unsupported_caps = [
@@ -489,9 +457,7 @@ class TestBehaviorClassification:
     def test_unsupported_finding_fields_are_valid(
         self, plugin_name: str
     ):
-        """**Validates: Requirements 16.2**
-
-        Each Finding for an unsupported capability must have non-empty
+        """        Each Finding for an unsupported capability must have non-empty
         severity, stage, construct, message, and recommended_action.
         """
         cap = Capability(
@@ -515,12 +481,9 @@ class TestBehaviorClassification:
             assert finding.message, "Finding message must be non-empty"
             assert finding.recommended_action, "Finding recommended_action must be non-empty"
 
-
 # ===========================================================================
 # Property 18: Migration_Mapping_Manifest completeness
-# Validates: Requirements 17.1, 17.2
 # ===========================================================================
-
 
 class TestMigrationMappingManifestCompleteness:
     """For any valid ContentModelManifest, PresentationManifest, and
@@ -530,7 +493,6 @@ class TestMigrationMappingManifestCompleteness:
     - Every route template has a TemplateMapping
     - media_mapping_strategy is always present with relation_aware=True
     """
-
     @given(
         post_types=st.lists(_POST_TYPES, min_size=1, max_size=4, unique=True),
     )
@@ -538,9 +500,7 @@ class TestMigrationMappingManifestCompleteness:
     def test_type_mappings_per_collection(
         self, post_types: list[str]
     ):
-        """**Validates: Requirements 17.1, 17.2**
-
-        Every ContentModelManifest collection with a source_post_type must
+        """        Every ContentModelManifest collection with a source_post_type must
         produce a TypeMapping in the MigrationMappingManifest.
         """
         collections = [
@@ -580,9 +540,7 @@ class TestMigrationMappingManifestCompleteness:
     def test_relation_mappings_per_relation(
         self, relation_count: int
     ):
-        """**Validates: Requirements 17.1, 17.2**
-
-        Every relation in the ContentModelManifest must produce a
+        """        Every relation in the ContentModelManifest must produce a
         RelationMapping in the MigrationMappingManifest.
         """
         relations = [
@@ -613,9 +571,7 @@ class TestMigrationMappingManifestCompleteness:
     def test_template_mappings_per_route_template(
         self, template_count: int
     ):
-        """**Validates: Requirements 17.1, 17.2**
-
-        Every route template in the PresentationManifest must produce a
+        """        Every route template in the PresentationManifest must produce a
         TemplateMapping in the MigrationMappingManifest.
         """
         route_templates = [
@@ -653,9 +609,7 @@ class TestMigrationMappingManifestCompleteness:
     def test_media_mapping_strategy_always_present_and_relation_aware(
         self, post_types: list[str]
     ):
-        """**Validates: Requirements 17.1, 17.2**
-
-        The media_mapping_strategy must always be present with
+        """        The media_mapping_strategy must always be present with
         relation_aware=True.
         """
         collections = [

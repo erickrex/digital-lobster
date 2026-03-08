@@ -32,11 +32,9 @@ from src.models.presentation_manifest import (
 )
 from src.orchestrator.errors import ParityGateError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _clean_bundle(**overrides: Any) -> BundleManifest:
     """Build a minimal BundleManifest for parity QA tests."""
@@ -107,12 +105,10 @@ def _clean_bundle(**overrides: Any) -> BundleManifest:
     defaults.update(overrides)
     return BundleManifest(**defaults)
 
-
 def _clean_capability_manifest(**overrides: Any) -> CapabilityManifest:
     defaults: dict[str, Any] = dict(capabilities=[], findings=[])
     defaults.update(overrides)
     return CapabilityManifest(**defaults)
-
 
 def _clean_presentation(**overrides: Any) -> PresentationManifest:
     defaults: dict[str, Any] = dict(
@@ -120,7 +116,6 @@ def _clean_presentation(**overrides: Any) -> PresentationManifest:
     )
     defaults.update(overrides)
     return PresentationManifest(**defaults)
-
 
 def _clean_behavior(**overrides: Any) -> BehaviorManifest:
     defaults: dict[str, Any] = dict(
@@ -134,14 +129,11 @@ def _clean_behavior(**overrides: Any) -> BehaviorManifest:
     defaults.update(overrides)
     return BehaviorManifest(**defaults)
 
-
 def _make_agent(threshold: float = 0.8) -> ParityQAAgent:
     return ParityQAAgent(gradient_client=None, threshold=threshold)
 
-
 def _run(coro):
     return asyncio.run(coro)
-
 
 def _build_context(
     bundle: BundleManifest,
@@ -159,7 +151,6 @@ def _build_context(
     ctx.update(extra)
     return ctx
 
-
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
 # ---------------------------------------------------------------------------
@@ -167,7 +158,6 @@ def _build_context(
 _TEMPLATES = st.sampled_from(
     ["default", "full-width", "sidebar-left", "landing", "archive", "single"]
 )
-
 
 @st.composite
 def page_composition_entries(draw, with_snapshot: bool = False) -> PageCompositionEntry:
@@ -188,22 +178,17 @@ def page_composition_entries(draw, with_snapshot: bool = False) -> PageCompositi
         snapshot_ref=snapshot,
     )
 
-
 # Adapter families that produce QA assertions
 _ADAPTER_FAMILIES = sorted(a.plugin_family() for a in default_adapters())
 
-
 # ===========================================================================
 # Property 23: Parity report category coverage
-# Validates: Requirements 20.1, 20.3
 # ===========================================================================
-
 
 class TestParityReportCategoryCoverage:
     """For any valid inputs, the ParityReport must contain exactly the 7
     parity categories, each score between 0.0 and 1.0, and overall_score
     must equal the mean of all category scores."""
-
     @given(
         page_count=st.integers(min_value=0, max_value=5),
         template=_TEMPLATES,
@@ -212,9 +197,7 @@ class TestParityReportCategoryCoverage:
     def test_report_contains_all_seven_categories(
         self, page_count: int, template: str
     ):
-        """**Validates: Requirements 20.1, 20.3**
-
-        The ParityReport must contain numeric scores for all 7 parity
+        """        The ParityReport must contain numeric scores for all 7 parity
         categories regardless of input data.
         """
         pages = [
@@ -268,9 +251,7 @@ class TestParityReportCategoryCoverage:
     )
     @settings(max_examples=100)
     def test_overall_score_equals_mean_of_categories(self, page_count: int):
-        """**Validates: Requirements 20.1, 20.3**
-
-        The overall_score must equal the arithmetic mean of all 7 category
+        """        The overall_score must equal the arithmetic mean of all 7 category
         scores within floating-point tolerance.
         """
         pages = [
@@ -309,9 +290,7 @@ class TestParityReportCategoryCoverage:
     )
     @settings(max_examples=100)
     def test_category_scores_are_floats(self, page_count: int):
-        """**Validates: Requirements 20.3**
-
-        Each category score must be a float value.
+        """        Each category score must be a float value.
         """
         pages = [
             PageCompositionEntry(
@@ -342,26 +321,20 @@ class TestParityReportCategoryCoverage:
                 f"Category '{cat}' score is {type(score).__name__}, expected float"
             )
 
-
 # ===========================================================================
 # Property 24: Parity gate enforcement
-# Validates: Requirements 20.4
 # ===========================================================================
-
 
 class TestParityGateEnforcement:
     """When overall_score < threshold, ParityGateError must be raised.
     When overall_score >= threshold, no error is raised and ParityReport
     is returned. The ParityGateError must carry the ParityReport."""
-
     @given(
         page_count=st.integers(min_value=0, max_value=3),
     )
     @settings(max_examples=100)
     def test_high_threshold_triggers_gate_error(self, page_count: int):
-        """**Validates: Requirements 20.4**
-
-        A threshold of 1.1 (impossible to reach) must always trigger
+        """        A threshold of 1.1 (impossible to reach) must always trigger
         ParityGateError.
         """
         pages = [
@@ -399,9 +372,7 @@ class TestParityGateEnforcement:
     )
     @settings(max_examples=100)
     def test_zero_threshold_never_triggers_gate(self, page_count: int):
-        """**Validates: Requirements 20.4**
-
-        A threshold of 0.0 must never trigger ParityGateError since all
+        """        A threshold of 0.0 must never trigger ParityGateError since all
         scores are >= 0.0.
         """
         pages = [
@@ -436,9 +407,7 @@ class TestParityGateEnforcement:
     )
     @settings(max_examples=100)
     def test_gate_error_carries_parity_report_with_scores(self, page_count: int):
-        """**Validates: Requirements 20.4**
-
-        The ParityGateError must carry a ParityReport with valid category
+        """        The ParityGateError must carry a ParityReport with valid category
         scores and an overall_score matching the mean.
         """
         pages = [
@@ -472,19 +441,15 @@ class TestParityGateEnforcement:
         )
         assert abs(report.overall_score - expected_mean) < 1e-9
 
-
 # ===========================================================================
 # Property 25: Snapshot comparison coverage
-# Validates: Requirements 20.2
 # ===========================================================================
-
 
 class TestSnapshotComparisonCoverage:
     """For any BundleManifest with pages that have snapshot_ref, the report
     must contain SnapshotComparison entries for those pages. Each
     SnapshotComparison must have a valid page_url and visual_parity_score
     between 0.0 and 1.0."""
-
     @given(
         snapshot_pages=st.lists(
             page_composition_entries(with_snapshot=True),
@@ -503,9 +468,7 @@ class TestSnapshotComparisonCoverage:
         snapshot_pages: list[PageCompositionEntry],
         non_snapshot_pages: list[PageCompositionEntry],
     ):
-        """**Validates: Requirements 20.2**
-
-        Every page with a snapshot_ref must produce a SnapshotComparison
+        """        Every page with a snapshot_ref must produce a SnapshotComparison
         entry in the report.
         """
         # Deduplicate by canonical_url
@@ -546,9 +509,7 @@ class TestSnapshotComparisonCoverage:
     def test_snapshot_comparisons_have_valid_scores(
         self, snapshot_pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 20.2**
-
-        Each SnapshotComparison must have a visual_parity_score between
+        """        Each SnapshotComparison must have a visual_parity_score between
         0.0 and 1.0 and a non-empty page_url.
         """
         # Deduplicate
@@ -586,9 +547,7 @@ class TestSnapshotComparisonCoverage:
     def test_pages_without_snapshot_ref_produce_no_comparisons(
         self, non_snapshot_pages: list[PageCompositionEntry]
     ):
-        """**Validates: Requirements 20.2**
-
-        Pages without snapshot_ref must not produce SnapshotComparison
+        """        Pages without snapshot_ref must not produce SnapshotComparison
         entries.
         """
         bundle = _clean_bundle(
@@ -605,19 +564,15 @@ class TestSnapshotComparisonCoverage:
             "Pages without snapshot_ref should produce no comparisons"
         )
 
-
 # ===========================================================================
 # Property 26: Plugin parity assertions
-# Validates: Requirements 20.6
 # ===========================================================================
-
 
 class TestPluginParityAssertions:
     """For any CapabilityManifest with plugin_capabilities that have matching
     adapters, plugin_assertions must contain entries for those plugin families.
     Each assertion entry must have assertion_id, description, category,
     check_type."""
-
     @given(
         families=st.lists(
             st.sampled_from(_ADAPTER_FAMILIES),
@@ -630,9 +585,7 @@ class TestPluginParityAssertions:
     def test_adapter_families_produce_plugin_assertions(
         self, families: list[str]
     ):
-        """**Validates: Requirements 20.6**
-
-        For each plugin family with a registered adapter, the ParityReport
+        """        For each plugin family with a registered adapter, the ParityReport
         must include QA assertions from that adapter.
         """
         # Build plugin_capabilities with at least one capability per family
@@ -673,9 +626,7 @@ class TestPluginParityAssertions:
     def test_plugin_assertion_entries_have_required_fields(
         self, family: str
     ):
-        """**Validates: Requirements 20.6**
-
-        Each assertion entry in plugin_assertions must have assertion_id,
+        """        Each assertion entry in plugin_assertions must have assertion_id,
         description, category, and check_type fields.
         """
         caps = [

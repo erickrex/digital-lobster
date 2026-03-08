@@ -1,7 +1,6 @@
 from src.models.content import WordPressBlock
 from src.serialization.markdown import block_to_markdown, blocks_to_markdown
 
-
 class TestParagraph:
     def test_simple_paragraph(self):
         block = WordPressBlock(
@@ -42,7 +41,6 @@ class TestParagraph:
             html="<p>Use <code>print()</code> to output</p>",
         )
         assert block_to_markdown(block) == "Use `print()` to output"
-
 
 class TestHeading:
     def test_h1(self):
@@ -94,7 +92,6 @@ class TestHeading:
         )
         assert block_to_markdown(block) == "### Detected"
 
-
 class TestList:
     def test_unordered_list(self):
         block = WordPressBlock(
@@ -133,7 +130,6 @@ class TestList:
         result = block_to_markdown(block)
         assert result == "- **Bold** item\n- *Italic* item"
 
-
 class TestCode:
     def test_simple_code_block(self):
         block = WordPressBlock(
@@ -162,7 +158,6 @@ class TestCode:
         result = block_to_markdown(block)
         assert result == "```\n<div>hello</div>\n```"
 
-
 class TestImage:
     def test_image_from_attrs(self):
         block = WordPressBlock(
@@ -188,7 +183,6 @@ class TestImage:
         )
         assert block_to_markdown(block) == "![](https://example.com/img.jpg)"
 
-
 class TestQuote:
     def test_simple_quote(self):
         block = WordPressBlock(
@@ -208,7 +202,6 @@ class TestQuote:
         # After stripping, the two paragraphs become text separated by space
         assert result.startswith(">")
 
-
 class TestSeparator:
     def test_separator(self):
         block = WordPressBlock(
@@ -226,7 +219,6 @@ class TestSeparator:
         )
         assert block_to_markdown(block) == "---"
 
-
 class TestPreformatted:
     def test_preformatted(self):
         block = WordPressBlock(
@@ -235,7 +227,6 @@ class TestPreformatted:
             html="<pre>Some preformatted text</pre>",
         )
         assert block_to_markdown(block) == "```\nSome preformatted text\n```"
-
 
 class TestHtml:
     def test_raw_html_passthrough(self):
@@ -246,7 +237,6 @@ class TestHtml:
             html=raw,
         )
         assert block_to_markdown(block) == raw
-
 
 class TestTable:
     def test_simple_table(self):
@@ -266,7 +256,6 @@ class TestTable:
         assert lines[2] == "| Alice | 30 |"
         assert lines[3] == "| Bob | 25 |"
 
-
 class TestEmbed:
     def test_embed_with_url(self):
         block = WordPressBlock(
@@ -285,7 +274,6 @@ class TestEmbed:
         )
         assert block_to_markdown(block) == raw
 
-
 class TestUnknownBlock:
     def test_unknown_block_returns_raw_html(self):
         raw = '<div class="wp-block-custom">Custom block</div>'
@@ -295,7 +283,6 @@ class TestUnknownBlock:
             html=raw,
         )
         assert block_to_markdown(block) == raw
-
 
 class TestEmptyBlocks:
     def test_empty_paragraph(self):
@@ -309,7 +296,6 @@ class TestEmptyBlocks:
     def test_empty_unknown(self):
         block = WordPressBlock(name="unknown/block", attrs={}, html="")
         assert block_to_markdown(block) == ""
-
 
 class TestBlocksToMarkdown:
     def test_multiple_blocks(self):

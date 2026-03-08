@@ -9,7 +9,6 @@ from src.agents.content_migrator import ContentMigratorAgent
 from src.models.migration_report import ContentTypeMigrationStats, MediaMigrationStats
 from src.pipeline_context import MediaManifestEntry
 
-
 def _content_item_dict() -> dict:
     return {
         "id": 1,
@@ -29,7 +28,6 @@ def _content_item_dict() -> dict:
         "legacy_permalink": "/hello-cms/",
         "seo": None,
     }
-
 
 def _modeling_manifest_dict() -> dict:
     return {
@@ -57,7 +55,6 @@ def _modeling_manifest_dict() -> dict:
             }
         ],
     }
-
 
 class TestContentMigratorAgent:
     @pytest.mark.asyncio

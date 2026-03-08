@@ -169,7 +169,7 @@ curl http://localhost:8000/migrations/<run_id>
 
 ### Exporter settings
 
-Configurable via **Settings → Digital Lobster Settings** in WordPress admin:
+Configurable via the inline settings panel on the **🧠 Migrate with AI Agents** page in WordPress admin:
 - Max posts/pages/CPT samples
 - HTML snapshot toggle
 - Auto-cleanup interval

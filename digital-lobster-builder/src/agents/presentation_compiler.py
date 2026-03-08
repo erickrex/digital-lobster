@@ -22,7 +22,6 @@ from src.pipeline_context import extract_bundle_manifest, extract_capability_man
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -32,14 +31,12 @@ def _slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug or "unnamed"
 
-
 def _template_to_layout_name(template: str) -> str:
     """Derive a layout name from a WordPress template identifier."""
     # Strip file extensions and path prefixes
     name = template.rsplit("/", 1)[-1]
     name = name.rsplit(".", 1)[0]
     return _slugify(name)
-
 
 # ---------------------------------------------------------------------------
 # Supported source types for sections
@@ -49,7 +46,6 @@ _SUPPORTED_SECTION_SOURCE_TYPES = {"widget", "sidebar", "block", "plugin_compone
 
 # Block types that have known Astro component mappings via adapters
 _ADAPTER_SUPPORTED_BLOCK_TYPES: set[str] = set()
-
 
 class PresentationCompilerAgent(BaseAgent):
     """Produces the Presentation_Manifest from capability and bundle data.
@@ -62,7 +58,6 @@ class PresentationCompilerAgent(BaseAgent):
     - Style tokens from theme_mods, global_styles, css_sources
     - Plugin rendering contributions via adapter rendering_strategy
     """
-
     def __init__(
         self,
         gradient_client: Any,

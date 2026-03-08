@@ -9,11 +9,9 @@ from src.agents.base import AgentResult, BaseAgent
 from src.gradient.tracing import Tracer
 from src.orchestrator.pipeline import PipelineOrchestrator
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_mock_agent(
     name: str,
@@ -37,7 +35,6 @@ def _make_mock_agent(
         agent.execute = AsyncMock(return_value=result)
 
     return agent
-
 
 def _make_orchestrator(
     agents: list[tuple[str, BaseAgent]],
@@ -64,15 +61,12 @@ def _make_orchestrator(
     orch._build_agents = lambda **_kw: agents  # type: ignore[assignment]
     return orch
 
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
-
 class TestSequentialExecution:
     """Agents are called in the correct fixed order."""
-
     async def test_agents_called_in_order(self) -> None:
         call_order: list[str] = []
         names = [
@@ -100,10 +94,8 @@ class TestSequentialExecution:
         assert call_order == names
         assert state.status == "completed"
 
-
 class TestAgentConstruction:
     """Real agent construction receives required dependencies."""
-
     def test_blueprint_agent_receives_spaces_and_ingestion_bucket(self) -> None:
         gradient = MagicMock()
         kb = MagicMock()
@@ -126,10 +118,8 @@ class TestAgentConstruction:
         assert getattr(blueprint, "spaces_client") is spaces
         assert getattr(blueprint, "ingestion_bucket") == "ingestion"
 
-
 class TestKbCleanup:
     """Knowledge Bases are cleaned up after pipeline runs."""
-
     async def test_kb_deleted_when_kb_ref_exists(self) -> None:
         a0 = _make_mock_agent("a0", artifacts={"kb_ref": "kb-123"})
         orch = _make_orchestrator([("a0", a0)])
@@ -140,7 +130,6 @@ class TestKbCleanup:
         assert state.status == "completed"
         orch._kb_client.delete.assert_awaited_once_with("kb-123")
 
-
 class _RecordingBackend:
     def __init__(self) -> None:
         self.sent = []
@@ -148,10 +137,8 @@ class _RecordingBackend:
     async def send_span(self, span) -> None:
         self.sent.append(span)
 
-
 class TestTracingRunIdentity:
     """Spans should use the pipeline run_id, not constructor seed IDs."""
-
     async def test_span_run_id_matches_current_pipeline_run(self) -> None:
         backend = _RecordingBackend()
         seed_tracer = Tracer(run_id="seed-run", backend=backend)
@@ -163,10 +150,8 @@ class TestTracingRunIdentity:
         assert len(backend.sent) == 1
         assert backend.sent[0].run_id == "run-actual"
 
-
 class TestArtifactPersistenceFiltering:
     """Transient context artifacts should not be persisted or uploaded."""
-
     async def test_non_persisted_artifacts_are_filtered(self) -> None:
         spaces = AsyncMock()
         spaces.upload = AsyncMock()
@@ -214,10 +199,8 @@ class TestArtifactPersistenceFiltering:
         keys = [call.args[1] for call in spaces.upload.call_args_list]
         assert keys == ["run-sensitive/inventory"]
 
-
 class TestArtifactAccumulation:
     """Each agent receives accumulated artifacts from all prior agents."""
-
     async def test_context_accumulates_across_agents(self) -> None:
         received_contexts: list[dict] = []
 
@@ -255,10 +238,8 @@ class TestArtifactAccumulation:
         assert received_contexts[2]["inv"] == "inventory_data"
         assert received_contexts[2]["prd"] == "prd_data"
 
-
 class TestPipelineHaltOnFailure:
     """Pipeline halts immediately when an agent fails."""
-
     async def test_halts_on_agent_failure(self) -> None:
         call_order: list[str] = []
 
@@ -302,10 +283,8 @@ class TestPipelineHaltOnFailure:
         assert "bad data" in state.error["message"]
         assert state.error["traceback"] is not None
 
-
 class TestWarningsAccumulation:
     """Warnings from all agents are accumulated in the final state."""
-
     async def test_warnings_accumulated(self) -> None:
         a0 = _make_mock_agent("a0", warnings=["warn1", "warn2"])
         a1 = _make_mock_agent("a1", warnings=["warn3"])
@@ -318,10 +297,8 @@ class TestWarningsAccumulation:
         assert state.warnings == ["warn1", "warn2", "warn3"]
         assert state.status == "completed"
 
-
 class TestPerAgentDurations:
     """Per-agent durations are recorded in the state."""
-
     async def test_durations_recorded(self) -> None:
         a0 = _make_mock_agent("a0", duration=1.5)
         a1 = _make_mock_agent("a1", duration=2.3)
@@ -335,10 +312,8 @@ class TestPerAgentDurations:
         assert state.agent_durations["a0"] == 1.5
         assert state.agent_durations["a1"] == 2.3
 
-
 class TestArtifactStorage:
     """Artifacts are stored to Spaces on completion with run_id prefix."""
-
     async def test_artifacts_stored_with_run_id_prefix(self) -> None:
         spaces = AsyncMock()
         spaces.upload = AsyncMock()
@@ -375,10 +350,8 @@ class TestArtifactStorage:
         assert state.status == "failed"
         spaces.upload.assert_not_called()
 
-
 class TestStateTransitions:
     """Run state transitions correctly through the pipeline lifecycle."""
-
     async def test_successful_run_transitions(self) -> None:
         a0 = _make_mock_agent("a0")
         agents = [("a0", a0)]

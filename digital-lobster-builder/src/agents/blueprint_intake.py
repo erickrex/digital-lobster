@@ -56,11 +56,9 @@ PLUGIN_FAMILY_INDICATORS: dict[str, str] = {
     "wordpress-seo": "yoast",
 }
 
-
 class BlueprintIntakeAgent(BaseAgent):
     """Validates an Export_Bundle ZIP, builds an Inventory, and populates
     a Gradient Knowledge Base for downstream agents."""
-
     def __init__(
         self,
         gradient_client: Any,
@@ -195,12 +193,9 @@ class BlueprintIntakeAgent(BaseAgent):
             await self.kb_client.upload_documents(kb_id, documents)
         return kb_id
 
-
-
 # ======================================================================
 # Pure functions — no I/O, fully testable in isolation
 # ======================================================================
-
 
 def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
     """Check that all required files and directories exist in the ZIP.
@@ -239,7 +234,6 @@ def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
                 errors.append({"path": req_file, "error": f"malformed JSON: {exc}"})
 
     return errors
-
 
 # ---------------------------------------------------------------------------
 # CMS bundle validation — used when cms_mode=True
@@ -298,7 +292,6 @@ _ARTIFACT_FIELD_MAP: dict[str, str] = {
     "integration_manifest.json": "integration_manifest",
 }
 
-
 def _is_version_compatible(actual: str, expected: str) -> bool:
     """Check semver major-version compatibility.
 
@@ -315,7 +308,6 @@ def _is_version_compatible(actual: str, expected: str) -> bool:
     if len(actual_parts) < 1 or len(expected_parts) < 1:
         return False
     return actual_parts[0] == expected_parts[0]
-
 
 def validate_cms_bundle(
     zf: zipfile.ZipFile,
@@ -502,7 +494,6 @@ def validate_cms_bundle(
 
     return manifest
 
-
 def build_inventory(
     zf: zipfile.ZipFile,
     manifest: ExportManifest,
@@ -543,7 +534,6 @@ def build_inventory(
         ),
     )
 
-
 def detect_plugin_family(slug: str) -> str | None:
     """Return the plugin family label for a known slug, or None."""
     slug_lower = slug.lower()
@@ -551,7 +541,6 @@ def detect_plugin_family(slug: str) -> str | None:
         if indicator in slug_lower:
             return family
     return None
-
 
 def collect_kb_documents(zf: zipfile.ZipFile) -> list[dict]:
     """Select documents from the ZIP to upload to the Knowledge Base.
@@ -590,7 +579,6 @@ def collect_kb_documents(zf: zipfile.ZipFile) -> list[dict]:
 
     return documents
 
-
 def extract_export_bundle(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> dict[str, str | bytes]:
@@ -609,7 +597,6 @@ def extract_export_bundle(
         else:
             bundle[name] = raw
     return bundle
-
 
 def extract_content_items(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -644,7 +631,6 @@ def extract_content_items(
             content_items.append(validated.model_dump())
 
     return content_items
-
 
 def extract_menu_definitions(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -684,7 +670,6 @@ def extract_menu_definitions(
 
     return menu_defs
 
-
 def extract_redirect_rules(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> list[dict[str, Any]]:
@@ -707,7 +692,6 @@ def extract_redirect_rules(
         if isinstance(rules, list):
             return [rule for rule in rules if isinstance(rule, dict)]
     return [] 
-
 
 def extract_media_manifest(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -771,7 +755,6 @@ def extract_media_manifest(
         )
     return entries
 
-
 def extract_html_snapshots(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> dict[str, str]:
@@ -787,7 +770,6 @@ def extract_html_snapshots(
             continue
         snapshots[_snapshot_path_to_url(name)] = html
     return snapshots
-
 
 def _normalize_content_item(
     raw: dict[str, Any], index: int, source_file: str
@@ -855,7 +837,6 @@ def _normalize_content_item(
         "seo": seo,
     }
 
-
 def _normalize_blocks(raw_blocks: Any, raw_html: str) -> list[dict[str, Any]]:
     """Normalize block array to ``WordPressBlock``-compatible dicts."""
     blocks: list[dict[str, Any]] = []
@@ -896,7 +877,6 @@ def _normalize_blocks(raw_blocks: Any, raw_html: str) -> list[dict[str, Any]]:
 
     return blocks
 
-
 def _extract_raw_html(raw: dict[str, Any]) -> str:
     """Extract rendered/raw HTML body from common WordPress export shapes."""
     value = raw.get("raw_html")
@@ -908,7 +888,6 @@ def _extract_raw_html(raw: dict[str, Any]) -> str:
     if isinstance(content, dict):
         return _coerce_text(content.get("rendered"))
     return ""
-
 
 def _normalize_taxonomies(raw_taxonomies: Any) -> dict[str, list]:
     """Normalize taxonomy values to dict[str, list]."""
@@ -923,7 +902,6 @@ def _normalize_taxonomies(raw_taxonomies: Any) -> dict[str, list]:
         else:
             normalized[str(key)] = [value]
     return normalized
-
 
 def _normalize_menu_items(items: Any) -> list[dict[str, Any]]:
     """Normalize menu items recursively to importer-compatible structure."""
@@ -944,7 +922,6 @@ def _normalize_menu_items(items: Any) -> list[dict[str, Any]]:
         normalized.append(entry)
     return normalized
 
-
 def _snapshot_path_to_url(path: str) -> str:
     """Map snapshot file path (under snapshots/) to a URL path."""
     rel = PurePosixPath(path).relative_to("snapshots")
@@ -955,7 +932,6 @@ def _snapshot_path_to_url(path: str) -> str:
     if not parts or parts == ["home"]:
         return "/"
     return "/" + "/".join(parts)
-
 
 def _coerce_text(value: Any) -> str:
     """Convert mixed WP values to text."""
@@ -968,7 +944,6 @@ def _coerce_text(value: Any) -> str:
         if isinstance(rendered, str):
             return rendered
     return str(value)
-
 
 def _is_text_like_path(path: str) -> bool:
     """Heuristic for file extensions that should be decoded as UTF-8 text."""
@@ -988,11 +963,9 @@ def _is_text_like_path(path: str) -> bool:
     )
     return path.lower().endswith(text_exts)
 
-
 # ======================================================================
 # Internal extraction helpers
 # ======================================================================
-
 
 def _load_json(zf: zipfile.ZipFile, path: str) -> dict:
     """Read and parse a JSON file from the ZIP, returning {} on failure."""
@@ -1000,7 +973,6 @@ def _load_json(zf: zipfile.ZipFile, path: str) -> dict:
         return json.loads(zf.read(path))
     except (KeyError, json.JSONDecodeError, UnicodeDecodeError):
         return {}
-
 
 def _parse_manifest(zf: zipfile.ZipFile) -> ExportManifest:
     """Parse MANIFEST.json into an ExportManifest model."""
@@ -1030,7 +1002,6 @@ def _parse_manifest(zf: zipfile.ZipFile) -> ExportManifest:
         total_size_bytes=data.get("total_size_bytes", 0),
         files=data.get("files", {}),
     )
-
 
 def _load_site_info(zf: zipfile.ZipFile) -> dict[str, Any]:
     """Load site metadata from either builder or exporter bundle formats."""
@@ -1064,7 +1035,6 @@ def _load_site_info(zf: zipfile.ZipFile) -> dict[str, Any]:
             raw_site_info.get("version", export_metadata.get("wordpress_version", "")),
         ),
     }
-
 
 def _extract_content_types(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -1117,7 +1087,6 @@ def _extract_content_types(
                 s.sample_slugs.append(slug)
 
     return list(summaries.values())
-
 
 def _extract_plugins(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -1204,7 +1173,6 @@ def _extract_plugins(
 
     return plugins
 
-
 def _extract_taxonomies(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> list[TaxonomySummary]:
@@ -1258,7 +1226,6 @@ def _extract_taxonomies(
 
     return list(taxonomies.values())
 
-
 def _extract_menus(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> list[MenuSummary]:
@@ -1289,7 +1256,6 @@ def _extract_menus(
 
     return menus
 
-
 def _menu_from_dict(data: dict, source_file: str) -> MenuSummary:
     """Build a MenuSummary from a menu dict."""
     items = data.get("items", [])
@@ -1298,7 +1264,6 @@ def _menu_from_dict(data: dict, source_file: str) -> MenuSummary:
         location=data.get("location", ""),
         item_count=len(items) if isinstance(items, list) else 0,
     )
-
 
 def _extract_theme_metadata(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -1349,7 +1314,6 @@ def _extract_theme_metadata(
         design_tokens=design_tokens,
     )
 
-
 def _make_kb_doc(zf: zipfile.ZipFile, path: str) -> dict:
     """Create a Knowledge Base document dict from a ZIP entry."""
     try:
@@ -1360,7 +1324,6 @@ def _make_kb_doc(zf: zipfile.ZipFile, path: str) -> dict:
         "content": content,
         "metadata": {"file": path},
     }
-
 
 def _resolve_media_bundle_path(raw: dict[str, Any], names: set[str]) -> str:
     """Resolve a media entry to a concrete bundle path."""

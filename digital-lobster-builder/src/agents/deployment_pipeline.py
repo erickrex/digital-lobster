@@ -27,7 +27,6 @@ STRAPI_BUILD_URL = "http://localhost:1337"
 REBUILD_ENDPOINT = "http://localhost:4000/rebuild"
 WEBHOOK_EVENTS = ["entry.create", "entry.update", "entry.delete"]
 
-
 # ---------------------------------------------------------------------------
 # Build & deploy helpers
 # ---------------------------------------------------------------------------
@@ -69,7 +68,6 @@ async def build_astro_on_vps(
     duration = time.monotonic() - start
     return duration, stdout
 
-
 async def deploy_built_files(
     ssh_connection_string: str,
     ssh_private_key_path: str | None,
@@ -98,7 +96,6 @@ async def deploy_built_files(
     except ValueError:
         return 0
 
-
 async def reload_nginx(
     ssh_connection_string: str,
     ssh_private_key_path: str | None,
@@ -114,7 +111,6 @@ async def reload_nginx(
         "nginx -t && systemctl reload nginx",
     )
 
-
 async def _check_strapi_status(
     ssh_connection_string: str,
     ssh_private_key_path: str | None,
@@ -129,7 +125,6 @@ async def _check_strapi_status(
         return f"HTTP {stdout.strip()}"
     except RuntimeError:
         return "unreachable"
-
 
 # ---------------------------------------------------------------------------
 # Site verification (sub-task 8.2)
@@ -165,7 +160,6 @@ async def verify_site(
                 sample_page_status = 0
 
     return homepage_status, sample_page_status
-
 
 # ---------------------------------------------------------------------------
 # Webhook registration (sub-task 8.2)
@@ -220,7 +214,6 @@ async def register_strapi_webhook(
                 logger.warning("Webhook registration failed: %s", exc)
                 return False
 
-
 # ---------------------------------------------------------------------------
 # Agent class
 # ---------------------------------------------------------------------------
@@ -233,7 +226,6 @@ class DeploymentPipelineAgent(BaseAgent):
     from the pipeline context.  Writes ``deployment_report`` back into
     the context.
     """
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the full deployment workflow.
 

@@ -23,7 +23,6 @@ REQUIRED_SECTIONS = (
     "acceptance metrics",
 )
 
-
 def _build_system_prompt() -> str:
     """Return the system prompt that instructs the LLM on PRD format."""
     return (
@@ -48,7 +47,6 @@ def _build_system_prompt() -> str:
         "- Use markdown formatting. Be specific and actionable.\n"
         "- Do NOT include a title heading — the caller adds that.\n"
     )
-
 
 def _build_user_prompt(
     inventory: Inventory,
@@ -124,11 +122,9 @@ def _build_user_prompt(
 
     return "\n".join(lines)
 
-
 def _count_words(text: str) -> int:
     """Count words in a text string."""
     return len(text.split())
-
 
 def _validate_sections(prd_md: str) -> list[str]:
     """Check that all required sections are present in the PRD.
@@ -143,7 +139,6 @@ def _validate_sections(prd_md: str) -> list[str]:
             missing.append(section)
     return missing
 
-
 def _extract_inventory(context: dict[str, Any]) -> Inventory:
     """Extract an Inventory from the pipeline context.
 
@@ -155,10 +150,8 @@ def _extract_inventory(context: dict[str, Any]) -> Inventory:
         return raw
     return Inventory.model_validate(raw)
 
-
 class PrdLiteAgent(BaseAgent):
     """Generates a concise PRD.md from the Inventory and Knowledge Base."""
-
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the PRD-Lite agent.
 

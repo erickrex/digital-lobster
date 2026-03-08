@@ -16,17 +16,14 @@ _SENSITIVE_KEY_PATTERNS: set[str] = {
 
 _SSH_PRIVATE_KEY_MARKER = "-----BEGIN"
 
-
 def _is_sensitive_key(key: str) -> bool:
     """Check if a dict key matches any sensitive pattern (case-insensitive)."""
     lower = key.lower()
     return any(pattern in lower for pattern in _SENSITIVE_KEY_PATTERNS)
 
-
 def _contains_ssh_key(value: str) -> bool:
     """Check if a string value looks like an SSH private key."""
     return _SSH_PRIVATE_KEY_MARKER in value
-
 
 def scrub_credentials(data: Any) -> Any:
     """Recursively scrub sensitive credentials from data structures.

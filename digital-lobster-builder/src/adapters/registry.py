@@ -17,7 +17,6 @@ from src.adapters.forms import (
 from src.adapters.seo import AioSeoAdapter, RankMathAdapter, YoastAdapter
 from src.adapters.utilities import RedirectAdapter, WidgetSidebarAdapter
 
-
 def default_adapters() -> list[PluginAdapter]:
     """Return all built-in plugin adapters."""
     return [
@@ -37,7 +36,6 @@ def default_adapters() -> list[PluginAdapter]:
         RedirectAdapter(),
         WidgetSidebarAdapter(),
     ]
-
 
 def build_adapter_registry(
     adapters: list[PluginAdapter] | None = None,

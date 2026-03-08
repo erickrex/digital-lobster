@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 # Default parity threshold — deployment is blocked below this score.
 _DEFAULT_PARITY_THRESHOLD = 0.8
 
-
 class ParityQAAgent(BaseAgent):
     """Scores migration parity across 7 categories and gates deployment.
 
@@ -38,7 +37,6 @@ class ParityQAAgent(BaseAgent):
     score falls below the configurable threshold (default 0.8) a
     ``ParityGateError`` is raised to block deployment.
     """
-
     def __init__(
         self,
         gradient_client: Any,

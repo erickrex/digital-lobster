@@ -3,7 +3,6 @@ import re
 
 from src.models.content import WordPressBlock
 
-
 def blocks_to_markdown(blocks: list[WordPressBlock]) -> str:
     """Convert a list of WordPress blocks to Markdown.
 
@@ -22,7 +21,6 @@ def blocks_to_markdown(blocks: list[WordPressBlock]) -> str:
         if md:
             parts.append(md)
     return "\n\n".join(parts)
-
 
 def block_to_markdown(block: WordPressBlock) -> str:
     """Convert a single WordPress block to Markdown.
@@ -59,7 +57,6 @@ def block_to_markdown(block: WordPressBlock) -> str:
     # Unknown block type: raw HTML passthrough
     return block.html
 
-
 # ---------------------------------------------------------------------------
 # Inline HTML helpers
 # ---------------------------------------------------------------------------
@@ -86,13 +83,11 @@ def _strip_html(text: str) -> str:
     s = html.unescape(s)
     return s.strip()
 
-
 def _extract_inner_html(tag: str, text: str) -> str:
     """Extract inner HTML from the first occurrence of a given tag."""
     pattern = rf"<{tag}[^>]*>(.*?)</{tag}>"
     m = re.search(pattern, text, re.DOTALL)
     return m.group(1) if m else text
-
 
 # ---------------------------------------------------------------------------
 # Block converters
@@ -101,7 +96,6 @@ def _extract_inner_html(tag: str, text: str) -> str:
 def _convert_paragraph(block: WordPressBlock) -> str:
     inner = _extract_inner_html("p", block.html)
     return _strip_html(inner)
-
 
 def _convert_heading(block: WordPressBlock) -> str:
     level = block.attrs.get("level", 2)
@@ -115,7 +109,6 @@ def _convert_heading(block: WordPressBlock) -> str:
     # Fallback: use attrs level and strip all tags
     inner = re.sub(r"<[^>]+>", "", block.html)
     return "#" * int(level) + " " + html.unescape(inner).strip()
-
 
 def _convert_list(block: WordPressBlock) -> str:
     ordered = block.attrs.get("ordered", False)
@@ -132,7 +125,6 @@ def _convert_list(block: WordPressBlock) -> str:
             lines.append(f"- {text}")
     return "\n".join(lines)
 
-
 def _convert_code(block: WordPressBlock) -> str:
     # Extract content from <code> inside <pre>, or just <code>
     m = re.search(r"<code[^>]*>(.*?)</code>", block.html, re.DOTALL)
@@ -144,7 +136,6 @@ def _convert_code(block: WordPressBlock) -> str:
     code = html.unescape(re.sub(r"<[^>]+>", "", code))
     lang = block.attrs.get("language", "")
     return f"```{lang}\n{code}\n```"
-
 
 def _convert_image(block: WordPressBlock) -> str:
     # Try attrs first
@@ -159,7 +150,6 @@ def _convert_image(block: WordPressBlock) -> str:
         alt = m.group(1) if m else ""
     return f"![{alt}]({src})"
 
-
 def _convert_quote(block: WordPressBlock) -> str:
     # Extract content inside <blockquote>
     inner = _extract_inner_html("blockquote", block.html)
@@ -167,10 +157,8 @@ def _convert_quote(block: WordPressBlock) -> str:
     lines = text.split("\n")
     return "\n".join(f"> {line}" for line in lines)
 
-
 def _convert_separator(_block: WordPressBlock) -> str:
     return "---"
-
 
 def _convert_preformatted(block: WordPressBlock) -> str:
     m = re.search(r"<pre[^>]*>(.*?)</pre>", block.html, re.DOTALL)
@@ -178,10 +166,8 @@ def _convert_preformatted(block: WordPressBlock) -> str:
     content = html.unescape(re.sub(r"<[^>]+>", "", content))
     return f"```\n{content}\n```"
 
-
 def _convert_html(block: WordPressBlock) -> str:
     return block.html
-
 
 def _convert_table(block: WordPressBlock) -> str:
     """Convert an HTML table to a Markdown table."""
@@ -213,7 +199,6 @@ def _convert_table(block: WordPressBlock) -> str:
         lines.append("| " + " | ".join(row) + " |")
 
     return "\n".join(lines)
-
 
 def _convert_embed(block: WordPressBlock) -> str:
     url = block.attrs.get("url", "")

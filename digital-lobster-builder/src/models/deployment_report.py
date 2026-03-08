@@ -4,10 +4,8 @@ from pydantic import BaseModel
 
 from src.utils.scrubbing import scrub_credentials
 
-
 class DeploymentReport(BaseModel):
     """Report from the deployment pipeline."""
-
     live_site_url: str
     strapi_admin_url: str
     droplet_ip: str

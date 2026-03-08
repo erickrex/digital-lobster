@@ -25,10 +25,8 @@ NEW_CMS_ARTIFACTS = {
     "integration_manifest.json",
 }
 
-
 class TestBundleSchemaV1Completeness:
     """BUNDLE_SCHEMA_V1 contains exactly 34 artifacts (25 existing + 9 new)."""
-
     def test_total_artifact_count(self):
         assert len(BUNDLE_SCHEMA_V1.artifacts) == 34
 
@@ -43,10 +41,8 @@ class TestBundleSchemaV1Completeness:
                     f"{artifact.file_path} should be REQUIRED"
                 )
 
-
 class TestOptionalArtifacts:
     """hooks_registry and error_log are the only OPTIONAL artifacts."""
-
     def test_hooks_registry_optional(self):
         by_path = {a.file_path: a for a in BUNDLE_SCHEMA_V1.artifacts}
         assert by_path["hooks_registry.json"].requirement == ArtifactRequirement.OPTIONAL
@@ -55,10 +51,8 @@ class TestOptionalArtifacts:
         by_path = {a.file_path: a for a in BUNDLE_SCHEMA_V1.artifacts}
         assert by_path["error_log.json"].requirement == ArtifactRequirement.OPTIONAL
 
-
 class TestArtifactDefinitionSemver:
     """ArtifactDefinition schema_version follows semver format (X.Y.Z)."""
-
     def test_all_artifact_schema_versions_are_semver(self):
         for artifact in BUNDLE_SCHEMA_V1.artifacts:
             assert SEMVER_RE.match(artifact.schema_version), (
@@ -68,10 +62,8 @@ class TestArtifactDefinitionSemver:
     def test_bundle_schema_version_is_semver(self):
         assert SEMVER_RE.match(BUNDLE_SCHEMA_V1.schema_version)
 
-
 class TestArtifactFilePaths:
     """All artifact file_paths end with .json and are unique."""
-
     def test_all_file_paths_end_with_json(self):
         for artifact in BUNDLE_SCHEMA_V1.artifacts:
             assert artifact.file_path.endswith(".json"), (

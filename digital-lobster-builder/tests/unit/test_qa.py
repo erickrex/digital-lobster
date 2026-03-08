@@ -22,15 +22,12 @@ from src.models.modeling_manifest import (
     TaxonomyDefinition,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _make_gradient_client() -> AsyncMock:
     return AsyncMock()
-
 
 def _make_manifest(**overrides: Any) -> ModelingManifest:
     defaults: dict[str, Any] = {
@@ -67,7 +64,6 @@ def _make_manifest(**overrides: Any) -> ModelingManifest:
     defaults.update(overrides)
     return ModelingManifest(**defaults)
 
-
 def _good_html() -> str:
     """HTML that passes all accessibility checks."""
     return textwrap.dedent("""\
@@ -85,7 +81,6 @@ def _good_html() -> str:
         </html>
     """)
 
-
 def _bad_html() -> str:
     """HTML that fails multiple accessibility checks."""
     return textwrap.dedent("""\
@@ -99,11 +94,9 @@ def _bad_html() -> str:
         </html>
     """)
 
-
 # ---------------------------------------------------------------------------
 # check_accessibility
 # ---------------------------------------------------------------------------
-
 
 class TestCheckAccessibility:
     def test_good_html_no_issues(self):
@@ -148,11 +141,9 @@ class TestCheckAccessibility:
         issues = check_accessibility(html)
         assert not any("skip-navigation" in i.lower() for i in issues)
 
-
 # ---------------------------------------------------------------------------
 # compute_visual_parity
 # ---------------------------------------------------------------------------
-
 
 class TestComputeVisualParity:
     def test_identical_html_returns_1(self):
@@ -180,11 +171,9 @@ class TestComputeVisualParity:
         score = compute_visual_parity(a, b)
         assert 0.0 <= score <= 1.0
 
-
 # ---------------------------------------------------------------------------
 # derive_key_pages
 # ---------------------------------------------------------------------------
-
 
 class TestDeriveKeyPages:
     def test_always_includes_home_and_404(self):
@@ -226,11 +215,9 @@ class TestDeriveKeyPages:
         pages = derive_key_pages({"some_key": "value"})
         assert pages == ["/", "/404"]
 
-
 # ---------------------------------------------------------------------------
 # QAAgent — build failure
 # ---------------------------------------------------------------------------
-
 
 class TestQAAgentBuildFailure:
     @pytest.mark.asyncio
@@ -267,11 +254,9 @@ class TestQAAgentBuildFailure:
         report = result.artifacts["qa_report"]
         assert "npm install failed" in report["build_errors"][0]
 
-
 # ---------------------------------------------------------------------------
 # QAAgent — build success with page checks
 # ---------------------------------------------------------------------------
-
 
 class TestQAAgentBuildSuccess:
     def _make_context(self) -> dict[str, Any]:
@@ -438,11 +423,9 @@ class TestQAAgentBuildSuccess:
 
         assert any("Visual parity below 90%" in w for w in result.warnings)
 
-
 # ---------------------------------------------------------------------------
 # QAAgent — collect_project_files
 # ---------------------------------------------------------------------------
-
 
 class TestCollectProjectFiles:
     def test_merges_scaffold_and_content(self):
@@ -463,11 +446,9 @@ class TestCollectProjectFiles:
         files = QAAgent._collect_project_files(context)
         assert files == {"a.txt": "hello"}
 
-
 # ---------------------------------------------------------------------------
 # QAAgent — _write_project and _check_pages integration
 # ---------------------------------------------------------------------------
-
 
 class TestWriteProjectAndCheckPages:
     @pytest.mark.asyncio
@@ -503,11 +484,9 @@ class TestWriteProjectAndCheckPages:
         finally:
             agent._cleanup(project_dir)
 
-
 # ---------------------------------------------------------------------------
 # QAAgent — _read_generated_page
 # ---------------------------------------------------------------------------
-
 
 class TestReadGeneratedPage:
     def test_reads_index_html(self):
@@ -543,11 +522,9 @@ class TestReadGeneratedPage:
         finally:
             agent._cleanup(project_dir)
 
-
 # ---------------------------------------------------------------------------
 # QA report structure validation
 # ---------------------------------------------------------------------------
-
 
 class TestQAReportStructure:
     @pytest.mark.asyncio

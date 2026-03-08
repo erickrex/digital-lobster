@@ -10,10 +10,8 @@ from src.adapters.base import (
 from src.models.bundle_manifest import BundleManifest
 from src.models.capability_manifest import Capability
 
-
 class RedirectAdapter(PluginAdapter):
     """Adapter for common redirect plugins (Redirection, Safe Redirect Manager, etc.)."""
-
     def plugin_family(self) -> str:
         return "redirects"
 
@@ -71,10 +69,8 @@ class RedirectAdapter(PluginAdapter):
             ),
         ]
 
-
 class WidgetSidebarAdapter(PluginAdapter):
     """Adapter for common widget and sidebar patterns."""
-
     def plugin_family(self) -> str:
         return "widget_sidebar"
 

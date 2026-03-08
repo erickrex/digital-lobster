@@ -17,11 +17,9 @@ from src.orchestrator.pipeline import (
     _build_findings_summary,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def _make_finding(
     severity: FindingSeverity = FindingSeverity.WARNING,
@@ -35,7 +33,6 @@ def _make_finding(
         message="test message",
         recommended_action="test action",
     )
-
 
 def _make_mock_agent(
     name: str,
@@ -52,7 +49,6 @@ def _make_mock_agent(
         )
         agent.execute = AsyncMock(return_value=result)
     return agent
-
 
 def _make_orchestrator(
     agents: list[tuple[str, BaseAgent]],
@@ -73,18 +69,15 @@ def _make_orchestrator(
     orch._build_agents = lambda **_kw: agents  # type: ignore[assignment]
     return orch
 
-
 # ---------------------------------------------------------------------------
 # Agent order constants
 # ---------------------------------------------------------------------------
-
 
 class TestProductionCmsAgentOrder:
     """PRODUCTION_CMS_AGENT_ORDER has the correct 13-agent sequence.
 
     Validates: Requirement 22.1
     """
-
     def test_has_exactly_13_agents(self) -> None:
         assert len(PRODUCTION_CMS_AGENT_ORDER) == 13
 
@@ -109,13 +102,11 @@ class TestProductionCmsAgentOrder:
     def test_compilation_stages_are_subset_of_production_order(self) -> None:
         assert _COMPILATION_STAGES <= set(PRODUCTION_CMS_AGENT_ORDER)
 
-
 class TestOriginalAgentOrderUnchanged:
     """cms_mode=False uses original AGENT_ORDER unchanged.
 
     Validates: Requirement 22.2
     """
-
     def test_agent_order_has_7_agents(self) -> None:
         assert len(AGENT_ORDER) == 7
 
@@ -150,10 +141,8 @@ class TestOriginalAgentOrderUnchanged:
         ]
         assert CMS_AGENT_ORDER == expected
 
-
 class TestBuildAgentsMode:
     """_build_agents returns the correct agent list for each mode."""
-
     def test_non_cms_mode_returns_agent_order(self) -> None:
         gradient = MagicMock()
         kb = MagicMock()
@@ -205,18 +194,15 @@ class TestBuildAgentsMode:
         names = [name for name, _ in agents]
         assert names == PRODUCTION_CMS_AGENT_ORDER
 
-
 # ---------------------------------------------------------------------------
 # Finding accumulation
 # ---------------------------------------------------------------------------
-
 
 class TestFindingAccumulation:
     """Findings from multiple agents are accumulated in state artifacts.
 
     Validates: Requirement 22.4
     """
-
     async def test_findings_accumulated_across_agents(self) -> None:
         """Findings from manifests with .findings attr are collected."""
         warning_finding = _make_finding(FindingSeverity.WARNING, stage="qualification")
@@ -280,18 +266,15 @@ class TestFindingAccumulation:
         summary = state.artifacts["findings_summary"]
         assert summary == {"warning": 2, "info": 1}
 
-
 # ---------------------------------------------------------------------------
 # Critical finding abort
 # ---------------------------------------------------------------------------
-
 
 class TestCriticalFindingAbort:
     """Critical Finding from a compilation stage aborts the pipeline.
 
     Validates: Requirement 22.4
     """
-
     async def test_critical_finding_aborts_pipeline(self) -> None:
         """Pipeline aborts when a compilation stage emits a critical finding."""
         critical = _make_finding(FindingSeverity.CRITICAL, stage="schema_compiler")
@@ -396,15 +379,12 @@ class TestCriticalFindingAbort:
         # schema_compiler should NOT have executed (abort after capability_resolution)
         assert "schema_compiler" not in executed
 
-
 # ---------------------------------------------------------------------------
 # _build_findings_summary
 # ---------------------------------------------------------------------------
 
-
 class TestBuildFindingsSummary:
     """_build_findings_summary returns correct severity counts."""
-
     def test_empty_list(self) -> None:
         assert _build_findings_summary([]) == {}
 

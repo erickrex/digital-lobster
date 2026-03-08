@@ -55,7 +55,6 @@ _REBUILD_INTEGRATION_TYPES = frozenset({"form_destination"})
 # Behavior classification buckets
 _BEHAVIOR_CLASSIFICATIONS = frozenset({"strapi", "astro", "api_glue", "unsupported"})
 
-
 class BehaviorCompilerAgent(BaseAgent):
     """Produces BehaviorManifest and MigrationMappingManifest from pipeline data.
 
@@ -69,7 +68,6 @@ class BehaviorCompilerAgent(BaseAgent):
     - Unsupported construct findings
     - Complete MigrationMappingManifest for content migration
     """
-
     def __init__(
         self,
         gradient_client: Any,
