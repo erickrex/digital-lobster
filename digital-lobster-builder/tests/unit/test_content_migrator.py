@@ -166,7 +166,7 @@ class TestContentMigratorAgent:
                     "taxonomy_mappings": {"category": "api::category.category"},
                     "component_uids": [],
                 },
-                "strapi_base_url": "http://203.0.113.10:1337",
+                "strapi_base_url": "http://203.0.113.10",
                 "strapi_api_token": "tok-secret",
                 "content_items": [_content_item_dict()],
                 "modeling_manifest": _modeling_manifest_dict(),
@@ -195,7 +195,7 @@ class TestContentMigratorAgent:
         )
 
         assert seen == {
-            "requested_base_url": "http://203.0.113.10:1337",
+            "requested_base_url": "http://203.0.113.10",
             "ssh_connection_string": "root@203.0.113.10",
             "ssh_private_key_path": "/tmp/test-key",
         }

@@ -17,6 +17,7 @@ class MigrationRequest(BaseModel):
     """Request body for triggering a new migration run."""
     bundle_key: str
     cms_mode: bool = False
+    production_mode: bool = False
     cms_config: CMSConfig | None = None
 
 class MigrationResponse(BaseModel):

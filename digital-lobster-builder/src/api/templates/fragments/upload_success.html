@@ -1,0 +1,9 @@
+<div class="success-message">
+  <p>Uploaded <strong>{{ filename }}</strong> successfully.</p>
+</div>
+<form hx-post="/ui/migrate"
+      hx-target="#progress-panel"
+      hx-swap="innerHTML">
+  <input type="hidden" name="bundle_key" value="{{ bundle_key }}">
+  <button type="submit" class="btn">Start Migration</button>
+</form>

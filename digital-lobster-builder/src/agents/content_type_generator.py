@@ -22,6 +22,12 @@ from src.models.strapi_types import (
 )
 from src.pipeline_context import extract_modeling_manifest
 from src.utils.ssh import strapi_base_url_context
+from src.utils.strapi import (
+    content_type_builder_payload,
+    post_builder_component,
+    post_builder_content_type,
+    rest_endpoint_for_plural_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -233,9 +239,6 @@ async def _post_component(
 
     Returns the component UID (e.g. ``shared.seo-metadata``).
     """
-    url = f"{base_url}/content-type-builder/components"
-    headers = {"Authorization": f"Bearer {token}"}
-
     attributes: dict[str, Any] = {}
     for f in component.fields:
         attributes[f.name] = {"type": f.strapi_type, "required": f.required}
@@ -249,7 +252,7 @@ async def _post_component(
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+        resp = await post_builder_component(client, base_url, token, payload)
 
     if resp.status_code in (401, 403):
         raise RuntimeError(
@@ -279,30 +282,10 @@ async def _post_content_type(
 
     Returns the Strapi API identifier.
     """
-    url = f"{base_url}/content-type-builder/content-types"
-    headers = {"Authorization": f"Bearer {token}"}
-
-    def _build_payload(definition: StrapiContentTypeDefinition) -> dict[str, Any]:
-        attributes: dict[str, Any] = {}
-        for f in definition.fields:
-            attr: dict[str, Any] = {"type": f.strapi_type, "required": f.required}
-            if f.relation_target:
-                attr["target"] = f.relation_target
-                attr["relation"] = f.relation_type or "oneToMany"
-            attributes[f.name] = attr
-        return {
-            "contentType": {
-                "displayName": definition.display_name,
-                "singularName": definition.singularName,
-                "pluralName": definition.pluralName,
-                "attributes": attributes,
-            },
-        }
-
-    payload = _build_payload(ct)
+    payload = content_type_builder_payload(ct)
 
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+        resp = await post_builder_content_type(client, base_url, token, payload)
 
         # Auth errors → abort immediately
         if resp.status_code in (401, 403):
@@ -324,8 +307,10 @@ async def _post_content_type(
                 adjusted.name = _sanitize_field_name(f.name)
                 adjusted_fields.append(adjusted)
             adjusted_ct = ct.model_copy(update={"fields": adjusted_fields})
-            payload = _build_payload(adjusted_ct)
-            resp = await client.post(url, json=payload, headers=headers)
+            payload = content_type_builder_payload(adjusted_ct)
+            resp = await post_builder_content_type(
+                client, base_url, token, payload
+            )
 
         if resp.status_code not in (200, 201):
             raise RuntimeError(
@@ -378,6 +363,8 @@ class ContentTypeGeneratorAgent(BaseAgent):
         mappings: dict[str, str] = {}
         taxonomy_mappings: dict[str, str] = {}
         component_uids: list[str] = []
+        rest_endpoints: dict[str, str] = {}
+        taxonomy_rest_endpoints: dict[str, str] = {}
 
         # ------------------------------------------------------------------
         # Phase 1: Detect if any collection has SEO fields → create component
@@ -416,6 +403,9 @@ class ContentTypeGeneratorAgent(BaseAgent):
                     resolved_base_url, api_token, ct_def
                 )
                 mappings[schema.collection_name] = api_id
+                rest_endpoints[schema.collection_name] = (
+                    rest_endpoint_for_plural_name(ct_def.pluralName)
+                )
 
             # ------------------------------------------------------------------
             # Phase 3: Create taxonomy Content Types with relations
@@ -427,6 +417,9 @@ class ContentTypeGeneratorAgent(BaseAgent):
                     resolved_base_url, api_token, tax_def
                 )
                 taxonomy_mappings[tax.taxonomy] = api_id
+                taxonomy_rest_endpoints[tax.taxonomy] = (
+                    rest_endpoint_for_plural_name(tax_def.pluralName)
+                )
 
         # ------------------------------------------------------------------
         # Build result
@@ -435,6 +428,8 @@ class ContentTypeGeneratorAgent(BaseAgent):
             mappings=mappings,
             taxonomy_mappings=taxonomy_mappings,
             component_uids=component_uids,
+            rest_endpoints=rest_endpoints,
+            taxonomy_rest_endpoints=taxonomy_rest_endpoints,
         )
 
         duration = time.monotonic() - start

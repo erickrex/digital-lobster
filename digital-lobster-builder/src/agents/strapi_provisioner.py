@@ -15,6 +15,11 @@ import httpx
 from src.agents.base import AgentResult, BaseAgent
 from src.models.cms_config import CMSConfig
 from src.utils.ssh import strapi_base_url_context
+from src.utils.strapi import (
+    HEALTH_PROBE_PATHS,
+    bearer_headers,
+    is_healthy_probe,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +29,6 @@ TERRAFORM_DIR = Path(__file__).resolve().parent.parent.parent / "terraform"
 # Health-check polling defaults.
 DEFAULT_HEALTH_TIMEOUT = 600  # seconds
 HEALTH_POLL_INTERVAL = 10  # seconds
-
 class StrapiProvisionerAgent(BaseAgent):
     """Provisions a DigitalOcean Droplet running Strapi via Terraform,
     polls the health endpoint, creates an admin user, and generates an
@@ -46,7 +50,7 @@ class StrapiProvisionerAgent(BaseAgent):
         1. Write Terraform variable values to ``terraform.tfvars.json``
         2. Run ``terraform init`` + ``terraform apply -auto-approve``
         3. Parse outputs (droplet_ip, domain, strapi_admin_url, ssh_string)
-        4. Poll ``GET http://{droplet_ip}:1337/_health`` until 200
+        4. Poll the Strapi health/admin endpoints until one responds
         5. ``POST /admin/register-admin`` to create initial admin user
         6. Generate API token via admin API
         7. Store Terraform state file to configured location
@@ -103,7 +107,7 @@ class StrapiProvisionerAgent(BaseAgent):
             # 7. Store Terraform state
             store_terraform_state(work_dir, cms_config.terraform_state_path)
 
-            strapi_base_url = f"http://{droplet_ip}:1337"
+            strapi_base_url = _strapi_base_url(droplet_ip)
 
             duration = time.monotonic() - start
             return AgentResult(
@@ -221,13 +225,13 @@ async def poll_health(
     timeout: int = DEFAULT_HEALTH_TIMEOUT,
     poll_interval: int = HEALTH_POLL_INTERVAL,
 ) -> None:
-    """Poll ``GET http://{droplet_ip}:1337/_health`` until a 200 response.
+    """Poll Strapi health/admin endpoints until one responds successfully.
 
     Raises:
         RuntimeError: If the health check does not succeed within *timeout*
             seconds, with the droplet IP and log file reference.
     """
-    url = f"http://{droplet_ip}:1337"
+    url = _strapi_base_url(droplet_ip)
     deadline = time.monotonic() + timeout
 
     async with strapi_base_url_context(
@@ -235,16 +239,18 @@ async def poll_health(
     ) as resolved_base_url:
         async with httpx.AsyncClient(timeout=10) as client:
             while time.monotonic() < deadline:
-                try:
-                    resp = await client.get(f"{resolved_base_url}/_health")
-                    if resp.status_code == 200:
-                        logger.info(
-                            "Strapi health check passed at %s/_health",
-                            resolved_base_url,
-                        )
-                        return
-                except httpx.HTTPError:
-                    pass
+                for path in HEALTH_PROBE_PATHS:
+                    try:
+                        resp = await client.get(f"{resolved_base_url}{path}")
+                        if is_healthy_probe(path, resp.status_code):
+                            logger.info(
+                                "Strapi readiness probe passed at %s%s",
+                                resolved_base_url,
+                                path,
+                            )
+                            return
+                    except httpx.HTTPError:
+                        continue
 
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
@@ -252,7 +258,7 @@ async def poll_health(
                 await asyncio.sleep(min(poll_interval, remaining))
 
     raise RuntimeError(
-        f"Strapi health check timed out after {timeout}s. "
+        f"Strapi readiness check timed out after {timeout}s. "
         f"Droplet IP: {droplet_ip}. "
         f"Check /var/log/cloud-init-output.log on the droplet for details."
     )
@@ -279,7 +285,7 @@ async def create_admin_user(
     }
 
     async with strapi_base_url_context(
-        f"http://{droplet_ip}:1337",
+        _strapi_base_url(droplet_ip),
         ssh_connection_string,
         ssh_private_key_path,
     ) as resolved_base_url:
@@ -320,10 +326,10 @@ async def generate_api_token(
         "description": "Auto-generated token for the Digital Lobster migration pipeline",
         "type": "full-access",
     }
-    headers = {"Authorization": f"Bearer {admin_jwt}"}
+    headers = bearer_headers(admin_jwt)
 
     async with strapi_base_url_context(
-        f"http://{droplet_ip}:1337",
+        _strapi_base_url(droplet_ip),
         ssh_connection_string,
         ssh_private_key_path,
     ) as resolved_base_url:
@@ -361,3 +367,8 @@ def store_terraform_state(terraform_dir: Path, destination: str) -> Path:
     shutil.copy2(str(state_src), str(dest_path))
     logger.info("Terraform state stored at %s", dest_path)
     return dest_path
+
+
+def _strapi_base_url(droplet_ip: str) -> str:
+    """Return the public HTTP base URL for a provisioned droplet."""
+    return f"http://{droplet_ip}"

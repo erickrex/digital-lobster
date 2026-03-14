@@ -18,12 +18,18 @@ class KnowledgeBaseClient:
     """Manages per-run Gradient Knowledge Bases."""
     def __init__(
         self,
-        api_key: str,
+        access_token: str | None = None,
+        *,
+        api_key: str | None = None,
         max_upload_retries: int = MAX_UPLOAD_RETRIES,
         upload_backoff: float = UPLOAD_BACKOFF_SECONDS,
     ) -> None:
+        resolved_access_token = (access_token or api_key or "").strip()
+        if not resolved_access_token:
+            raise ValueError("A DigitalOcean access token is required")
+
         self._sdk = AsyncGradient(
-            model_access_key=api_key,
+            access_token=resolved_access_token,
             max_retries=0,  # We handle retries ourselves
         )
         self._max_upload_retries = max_upload_retries

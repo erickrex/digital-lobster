@@ -15,22 +15,28 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "anthropic-claude-4.6-sonnet"
 MAX_RETRIES = 3
 INITIAL_BACKOFF_SECONDS = 1.0
 BACKOFF_MULTIPLIER = 2.0
 
 class GradientClient:
-    """Thin wrapper around gradientai-sdk for LLM inference."""
+    """Thin wrapper around the Gradient SDK for model inference."""
     def __init__(
         self,
-        api_key: str,
+        model_access_key: str | None = None,
+        *,
+        api_key: str | None = None,
         model: str = DEFAULT_MODEL,
         max_retries: int = MAX_RETRIES,
         initial_backoff: float = INITIAL_BACKOFF_SECONDS,
     ) -> None:
+        resolved_model_access_key = (model_access_key or api_key or "").strip()
+        if not resolved_model_access_key:
+            raise ValueError("A Gradient model access key is required")
+
         self._sdk = AsyncGradient(
-            model_access_key=api_key,
+            model_access_key=resolved_model_access_key,
             max_retries=0,  # We handle retries ourselves
         )
         self._default_model = model

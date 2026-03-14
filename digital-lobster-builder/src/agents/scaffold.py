@@ -335,7 +335,7 @@ Build the site and deploy the `dist/` directory to any static hosting provider:
 
 - **Netlify**: Connect your repo or drag-and-drop the `dist/` folder
 - **Vercel**: Import the project and set the build command to `npm run build`
-- **DigitalOcean App Platform**: Deploy as a static site with build command `npm run build` and output directory `dist`
+- **DigitalOcean App Platform**: Manual static-site deployment target with build command `npm run build` and output directory `dist`
 
 Site URL: {site_url}
 """
@@ -645,10 +645,10 @@ STRAPI_API_TOKEN=your-strapi-api-token-here
 """
 def generate_cms_route_page(
     collection_name: str,
-    api_id: str,
+    collection_endpoint: str,
     route_pattern: str,
 ) -> str:
-    """Generate a detail page using ``getStaticPaths`` that fetches from Strapi API.
+    """Generate a detail page using ``getStaticPaths`` and a Strapi REST endpoint.
 
     Fetches a single entry by slug with ``populate`` depth of 2.
     """
@@ -660,7 +660,7 @@ import RichTextRenderer from '../../components/RichTextRenderer.astro';
 import PostLayout from '../../layouts/PostLayout.astro';
 
 export async function getStaticPaths() {{
-  const entries = await fetchAllPages<{interface_name}>('{api_id}');
+  const entries = await fetchAllPages<{interface_name}>('{collection_endpoint}');
   return entries.map((entry) => ({{
     params: {{ slug: entry.attributes.slug }},
     props: {{ entry }},
@@ -683,10 +683,10 @@ const {{ attributes }} = entry;
 """
 def generate_cms_index_page(
     collection_name: str,
-    api_id: str,
+    collection_endpoint: str,
     route_pattern: str,
 ) -> str:
-    """Generate an index page that fetches paginated entries from Strapi API."""
+    """Generate an index page that fetches paginated entries from Strapi."""
     interface_name = collection_name.replace("_", " ").title().replace(" ", "")
     title = collection_name.replace("_", " ").title()
     prefix = _route_prefix(route_pattern)
@@ -695,7 +695,7 @@ import {{ fetchAllPages }} from '../../lib/strapi';
 import type {{ {interface_name} }} from '../../types/strapi';
 import PageLayout from '../../layouts/PageLayout.astro';
 
-const entries = await fetchAllPages<{interface_name}>('{api_id}');
+const entries = await fetchAllPages<{interface_name}>('{collection_endpoint}');
 ---
 <PageLayout title="{title}">
   <h1>{title}</h1>

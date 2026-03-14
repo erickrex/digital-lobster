@@ -66,7 +66,7 @@ class TestStrapiProvisionerTunnelUsage:
         )
 
         assert seen == {
-            "requested_base_url": "http://203.0.113.10:1337",
+            "requested_base_url": "http://203.0.113.10",
             "ssh_connection_string": "root@203.0.113.10",
             "ssh_private_key_path": "/tmp/test-key",
             "health_url": "http://127.0.0.1:49999/_health",
@@ -84,7 +84,7 @@ class TestStrapiProvisionerTunnelUsage:
             ssh_connection_string: str | None,
             ssh_private_key_path: str | None,
         ):
-            assert base_url == "http://203.0.113.10:1337"
+            assert base_url == "http://203.0.113.10"
             assert ssh_connection_string == "root@203.0.113.10"
             assert ssh_private_key_path == "/tmp/test-key"
             yield "http://127.0.0.1:49999"

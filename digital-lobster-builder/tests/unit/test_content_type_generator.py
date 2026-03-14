@@ -99,7 +99,7 @@ class TestContentTypeGeneratorAgent:
         result = await agent.execute(
             {
                 "modeling_manifest": _manifest_dict(),
-                "strapi_base_url": "http://203.0.113.10:1337",
+                "strapi_base_url": "http://203.0.113.10",
                 "strapi_api_token": "tok-secret",
                 "ssh_connection_string": "root@203.0.113.10",
                 "cms_config": SimpleNamespace(ssh_private_key_path="/tmp/test-key"),
@@ -107,13 +107,18 @@ class TestContentTypeGeneratorAgent:
         )
 
         assert seen == {
-            "requested_base_url": "http://203.0.113.10:1337",
+            "requested_base_url": "http://203.0.113.10",
             "ssh_connection_string": "root@203.0.113.10",
             "ssh_private_key_path": "/tmp/test-key",
         }
         assert isinstance(result.artifacts["content_type_map"].mappings, dict)
         assert result.artifacts["content_type_map"].mappings["posts"] == "api::post.post"
         assert result.artifacts["content_type_map"].taxonomy_mappings["category"] == "api::category.category"
+        assert result.artifacts["content_type_map"].rest_endpoints["posts"] == "/api/posts"
+        assert (
+            result.artifacts["content_type_map"].taxonomy_rest_endpoints["category"]
+            == "/api/categories"
+        )
         assert result.artifacts["content_type_map"].component_uids == ["shared.seo-metadata"]
         assert [ct.singularName for ct in created_types] == ["post", "category"]
         assert ModelingManifest.model_validate(_manifest_dict()).collections[0].collection_name == "posts"

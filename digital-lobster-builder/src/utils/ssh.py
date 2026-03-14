@@ -7,6 +7,7 @@ import tarfile
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 def _ssh_base_args(ssh_private_key_path: str | None) -> list[str]:
     """Return common SSH option flags."""
@@ -164,12 +165,19 @@ async def strapi_base_url_context(
     ssh_private_key_path: str | None,
 ):
     """Yield a base URL that reaches Strapi through SSH when available."""
-    if ssh_connection_string:
+    parsed = urlparse(base_url)
+
+    if (
+        ssh_connection_string
+        and parsed.scheme == "http"
+        and parsed.hostname is not None
+    ):
+        remote_port = parsed.port or 80
         tunnel = await open_tunnel(
             ssh_connection_string,
             ssh_private_key_path,
             remote_host="127.0.0.1",
-            remote_port=1337,
+            remote_port=remote_port,
         )
         try:
             yield tunnel.base_url

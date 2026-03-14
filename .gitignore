@@ -57,7 +57,7 @@ composer.lock
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
+!.terraform.lock.hcl
 crash.log
 override.tf
 override.tf.json
@@ -70,6 +70,7 @@ override.tf.json
 # Project-specific
 # =========================
 tasks_completed_reports/
+uploads/
 
 # =========================
 # Archives & Packages

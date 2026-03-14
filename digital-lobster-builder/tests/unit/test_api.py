@@ -61,6 +61,17 @@ class TestHealthCheck:
         assert resp.json() == {"status": "ok"}
 
 
+class TestUiAssets:
+    async def test_vendored_htmx_asset_is_a_working_local_shim(
+        self, client: AsyncClient
+    ) -> None:
+        resp = await client.get("/static/htmx.min.js")
+        assert resp.status_code == 200
+        body = resp.text
+        assert "window.htmx" in body
+        assert "placeholder loaded" not in body
+
+
 class TestPresignEndpoint:
     async def test_presign_returns_url_and_key(
         self, client: AsyncClient, mock_spaces: MagicMock
@@ -89,6 +100,42 @@ class TestMigrationTrigger:
         assert "run_id" in body
         assert body["status"] == "pending"
         assert len(body["run_id"]) > 0
+
+    async def test_trigger_passes_production_mode_to_orchestrator(
+        self,
+        client: AsyncClient,
+        mock_orchestrator: AsyncMock,
+    ) -> None:
+        mock_orchestrator.run.return_value = PipelineRunState.create(
+            run_id="ignored", bundle_key="uploads/abc/export.zip"
+        )
+
+        resp = await client.post(
+            "/migrations",
+            json={
+                "bundle_key": "uploads/abc/export.zip",
+                "cms_mode": True,
+                "production_mode": True,
+                "cms_config": {
+                    "domain_name": "example.com",
+                    "ssh_public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest",
+                    "ssh_private_key_path": "/tmp/test-key",
+                    "strapi_admin_email": "admin@example.com",
+                    "do_token": "do-token",
+                    "strapi_admin_password": "admin-password",
+                },
+            },
+        )
+
+        assert resp.status_code == 200
+        assert mock_orchestrator.run.await_count == 1
+        await_args = mock_orchestrator.run.await_args
+        assert await_args.args[:2] == (
+            "uploads/abc/export.zip",
+            resp.json()["run_id"],
+        )
+        assert await_args.kwargs["cms_mode"] is True
+        assert await_args.kwargs["production_mode"] is True
 
 
 class TestMigrationStatus:
@@ -261,7 +308,8 @@ class TestEnvConfiguredFactory:
         self,
     ) -> None:
         env = {
-            "GRADIENT_API_KEY": "gradient-key",
+            "GRADIENT_MODEL_ACCESS_KEY": "model-key",
+            "DIGITALOCEAN_ACCESS_TOKEN": "do-token",
             "DO_SPACES_KEY": "spaces-key",
             "DO_SPACES_SECRET": "spaces-secret",
             "DO_SPACES_REGION": "nyc3",
@@ -298,7 +346,8 @@ class TestEnvConfiguredFactory:
 
         assert resp.status_code == 200
         assert resp.json()["upload_url"] == "https://spaces.example.com/presigned-url"
-        assert captured["settings"].gradient_api_key == "gradient-key"
+        assert captured["settings"].gradient_model_access_key == "model-key"
+        assert captured["settings"].do_access_token == "do-token"
         assert captured["settings"].artifacts_bucket == "artifacts-bucket"
 
     async def test_create_app_from_env_loads_env_file(
@@ -307,7 +356,9 @@ class TestEnvConfiguredFactory:
         env_file = tmp_path / ".env"
         env_file.write_text(
             "\n".join([
-                "GRADIENT_API_KEY=file-gradient-key",
+                "GRADIENT_MODEL_ACCESS_KEY=file-model-key",
+                "DIGITALOCEAN_ACCESS_TOKEN=file-do-token",
+                "GRADIENT_MODEL_ID=anthropic-claude-4.6-sonnet",
                 "DO_SPACES_KEY=file-spaces-key",
                 "DO_SPACES_SECRET=file-spaces-secret",
                 "DO_SPACES_REGION=ams3",
@@ -317,7 +368,9 @@ class TestEnvConfiguredFactory:
             encoding="utf-8",
         )
         for key in (
-            "GRADIENT_API_KEY",
+            "GRADIENT_MODEL_ACCESS_KEY",
+            "DIGITALOCEAN_ACCESS_TOKEN",
+            "GRADIENT_MODEL_ID",
             "DO_SPACES_KEY",
             "DO_SPACES_SECRET",
             "DO_SPACES_REGION",
@@ -334,6 +387,7 @@ class TestEnvConfiguredFactory:
 
         def fake_build_runtime_dependencies(settings):
             assert settings.spaces_region == "ams3"
+            assert settings.gradient_model_id == "anthropic-claude-4.6-sonnet"
             return (
                 mock_spaces,
                 mock_orchestrator,

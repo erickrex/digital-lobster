@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 import logging
 import math
 import re
@@ -40,6 +41,12 @@ from src.pipeline_context import (
     extract_modeling_manifest,
 )
 from src.utils.ssh import strapi_base_url_context
+from src.utils.strapi import (
+    bearer_headers,
+    fallback_rest_endpoint,
+    post_builder_component,
+    post_builder_content_type,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +58,20 @@ DEFAULT_MEDIA_CONCURRENCY = 5
 DEFAULT_BATCH_SIZE = 50
 MAX_RETRIES = 3
 INITIAL_BACKOFF_SECONDS = 2.0
+
+
+@dataclass
+class _MigrationExecutionContext:
+    base_url: str
+    api_token: str
+    content_items: list[WordPressContentItem]
+    menus: list[dict[str, Any]]
+    media_manifest_entries: list[MediaManifestEntry]
+    export_bundle: dict[str, Any]
+    ssh_connection_string: str | None
+    ssh_private_key_path: str | None
+    batch_size: int
+    media_concurrency: int
 
 # ---------------------------------------------------------------------------
 # Block HTML → Strapi Rich Text conversion (Requirement 6.3)
@@ -395,6 +416,83 @@ async def upload_media_files(
     )
     return media_url_map, stats
 
+
+def _build_migration_execution_context(
+    context: dict[str, Any],
+) -> _MigrationExecutionContext:
+    """Extract the migration inputs shared by both execution paths."""
+    cms_config = context.get("cms_config")
+    return _MigrationExecutionContext(
+        base_url=context["strapi_base_url"],
+        api_token=context["strapi_api_token"],
+        content_items=extract_content_items(context),
+        menus=extract_menus(context),
+        media_manifest_entries=extract_media_manifest(context),
+        export_bundle=context.get("export_bundle", {}),
+        ssh_connection_string=context.get("ssh_connection_string"),
+        ssh_private_key_path=(
+            getattr(cms_config, "ssh_private_key_path", None)
+            if cms_config is not None
+            else None
+        ),
+        batch_size=context.get("batch_size", DEFAULT_BATCH_SIZE),
+        media_concurrency=context.get(
+            "media_concurrency", DEFAULT_MEDIA_CONCURRENCY,
+        ),
+    )
+
+
+async def _run_media_upload_phase(
+    base_url: str,
+    api_token: str,
+    media_manifest_entries: list[MediaManifestEntry],
+    export_bundle: dict[str, Any],
+    media_concurrency: int,
+    warnings: list[str],
+) -> tuple[dict[str, str], MediaMigrationStats]:
+    """Upload media and append any failures to ``warnings``."""
+    if not media_manifest_entries:
+        return {}, MediaMigrationStats(
+            total=0, succeeded=0, failed=0, failed_urls=[],
+        )
+
+    media_url_map, media_stats = await upload_media_files(
+        base_url,
+        api_token,
+        media_manifest_entries,
+        export_bundle,
+        media_concurrency,
+    )
+    for url in media_stats.failed_urls:
+        warnings.append(f"Media upload failed: {url}")
+    return media_url_map, media_stats
+
+
+async def _run_menu_migration_phase(
+    resolved_base_url: str,
+    api_token: str,
+    menus: list[dict[str, Any]],
+    content_items: list[WordPressContentItem],
+    context: dict[str, Any],
+    warnings: list[str],
+) -> int:
+    """Migrate menus when a modeling manifest is available."""
+    if not menus:
+        return 0
+
+    try:
+        manifest = extract_modeling_manifest(context)
+    except KeyError:
+        logger.warning("No modeling_manifest for menu migration, skipping menus")
+        return 0
+
+    migrated_slugs: set[str] = {item.slug for item in content_items}
+    menu_entries_created, menu_warnings = await migrate_menus(
+        resolved_base_url, api_token, menus, manifest, migrated_slugs,
+    )
+    warnings.extend(menu_warnings)
+    return menu_entries_created
+
 # ---------------------------------------------------------------------------
 # Content entry creation with batching and retry (Requirement 6.5, 6.6, 6.7)
 # ---------------------------------------------------------------------------
@@ -405,6 +503,7 @@ async def _create_entry_with_retry(
     token: str,
     api_id: str,
     payload: dict[str, Any],
+    rest_endpoint: str | None = None,
     max_retries: int = MAX_RETRIES,
     initial_backoff: float = INITIAL_BACKOFF_SECONDS,
 ) -> dict[str, Any] | None:
@@ -412,21 +511,9 @@ async def _create_entry_with_retry(
 
     Returns the created entry data on success, or ``None`` on permanent failure.
     """
-    # Derive the plural API name from api_id (e.g. "api::post.post" → "posts")
-    singular = api_id.split("::")[-1].split(".")[-1] if "::" in api_id else api_id
-    # Naïve pluralisation
-    if singular.endswith("y") and not singular.endswith("ey"):
-        plural = singular[:-1] + "ies"
-    elif singular.endswith("s") or singular.endswith("sh") or singular.endswith("ch"):
-        plural = singular + "es"
-    else:
-        plural = singular + "s"
-
-    url = f"{base_url}/api/{plural}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
+    endpoint = rest_endpoint or fallback_rest_endpoint(api_id)
+    url = f"{base_url.rstrip('/')}{endpoint}"
+    headers = bearer_headers(token, include_json_content_type=True)
 
     backoff = initial_backoff
     for attempt in range(max_retries + 1):
@@ -570,6 +657,10 @@ async def create_taxonomy_terms(
             continue
 
         api_id = content_type_map.taxonomy_mappings[tax_name]
+        rest_endpoint = content_type_map.taxonomy_rest_endpoints.get(
+            tax_name,
+            fallback_rest_endpoint(api_id),
+        )
         taxonomy_term_ids[tax_name] = {}
 
         for term_slug in terms:
@@ -579,6 +670,7 @@ async def create_taxonomy_terms(
                 token,
                 api_id,
                 {"name": term_slug, "slug": term_slug},
+                rest_endpoint=rest_endpoint,
             )
             if result:
                 # Extract the ID from the Strapi response
@@ -620,9 +712,14 @@ async def migrate_content_entries(
         for post_type, items in items_by_type.items():
             # Find the Strapi API ID for this post type
             api_id: str | None = None
+            rest_endpoint: str | None = None
             for collection_name, mapped_id in content_type_map.mappings.items():
                 if collection_name == post_type or post_type in collection_name:
                     api_id = mapped_id
+                    rest_endpoint = content_type_map.rest_endpoints.get(
+                        collection_name,
+                        fallback_rest_endpoint(mapped_id),
+                    )
                     break
 
             if api_id is None:
@@ -655,7 +752,12 @@ async def migrate_content_entries(
                         item, content_type_map, media_url_map, taxonomy_term_ids
                     )
                     result = await _create_entry_with_retry(
-                        client, base_url, token, api_id, payload
+                        client,
+                        base_url,
+                        token,
+                        api_id,
+                        payload,
+                        rest_endpoint=rest_endpoint,
                     )
                     if result:
                         succeeded += 1
@@ -696,8 +798,6 @@ async def _create_navigation_menu_type(
     Menu item component fields: label, url, target, css_classes, and a
     self-referencing child relation.
     """
-    headers = {"Authorization": f"Bearer {token}"}
-
     # First create the menu-item component
     component_payload: dict[str, Any] = {
         "component": {
@@ -712,11 +812,8 @@ async def _create_navigation_menu_type(
         },
     }
 
-    resp = await client.post(
-        f"{base_url}/content-type-builder/components",
-        json=component_payload,
-        headers=headers,
-        timeout=30,
+    resp = await post_builder_component(
+        client, base_url, token, component_payload
     )
     if resp.status_code not in (200, 201):
         logger.warning(
@@ -743,11 +840,8 @@ async def _create_navigation_menu_type(
         },
     }
 
-    resp = await client.post(
-        f"{base_url}/content-type-builder/content-types",
-        json=ct_payload,
-        headers=headers,
-        timeout=30,
+    resp = await post_builder_content_type(
+        client, base_url, token, ct_payload
     )
     if resp.status_code not in (200, 201):
         logger.warning(
@@ -812,7 +906,7 @@ async def migrate_menus(
         await _create_navigation_menu_type(client, base_url, token)
 
         headers = {
-            "Authorization": f"Bearer {token}",
+            **bearer_headers(token),
             "Content-Type": "application/json",
         }
 
@@ -1337,96 +1431,89 @@ class ContentMigratorAgent(BaseAgent):
 
         mapping_manifest = extract_migration_mapping_manifest(context)
         bundle_manifest = extract_bundle_manifest(context)
-        base_url: str = context["strapi_base_url"]
-        api_token: str = context["strapi_api_token"]
-        content_items = extract_content_items(context)
-        menus = extract_menus(context)
-        media_manifest_entries = extract_media_manifest(context)
-        export_bundle: dict[str, Any] = context.get("export_bundle", {})
-        ssh_connection_string = context.get("ssh_connection_string")
-        cms_config = context.get("cms_config")
-        ssh_private_key_path = (
-            getattr(cms_config, "ssh_private_key_path", None)
-            if cms_config is not None
-            else None
-        )
-
-        batch_size: int = context.get("batch_size", DEFAULT_BATCH_SIZE)
-        media_concurrency: int = context.get(
-            "media_concurrency", DEFAULT_MEDIA_CONCURRENCY,
-        )
+        migration_context = _build_migration_execution_context(context)
 
         # Track source entity ID → Strapi entry ID for relation linking
         entry_id_map: dict[str, int] = {}
 
         async with strapi_base_url_context(
-            base_url, ssh_connection_string, ssh_private_key_path,
+            migration_context.base_url,
+            migration_context.ssh_connection_string,
+            migration_context.ssh_private_key_path,
         ) as resolved_base_url:
             # Phase 1: Upload media (reuses existing infrastructure)
-            media_url_map: dict[str, str] = {}
-            if media_manifest_entries:
-                media_url_map, media_stats = await upload_media_files(
-                    resolved_base_url, api_token, media_manifest_entries,
-                    export_bundle, media_concurrency,
-                )
-                if media_stats.failed_urls:
-                    for url in media_stats.failed_urls:
-                        all_warnings.append(f"Media upload failed: {url}")
-            else:
-                media_stats = MediaMigrationStats(
-                    total=0, succeeded=0, failed=0, failed_urls=[],
-                )
+            media_url_map, media_stats = await _run_media_upload_phase(
+                resolved_base_url,
+                migration_context.api_token,
+                migration_context.media_manifest_entries,
+                migration_context.export_bundle,
+                migration_context.media_concurrency,
+                all_warnings,
+            )
 
             # Phase 2: Create taxonomy terms using TermMappings
             async with httpx.AsyncClient() as client:
                 taxonomy_term_ids, taxonomy_count, tax_warnings = (
                     await _migrate_production_taxonomy_terms(
-                        client, resolved_base_url, api_token,
-                        content_items, mapping_manifest,
+                        client,
+                        resolved_base_url,
+                        migration_context.api_token,
+                        migration_context.content_items,
+                        mapping_manifest,
                     )
                 )
             all_warnings.extend(tax_warnings)
 
             # Phase 3: Migrate content entries with field/relation mappings
             content_stats, entry_findings = await _migrate_production_content_entries(
-                resolved_base_url, api_token, content_items,
-                mapping_manifest, media_url_map, taxonomy_term_ids,
-                entry_id_map, batch_size,
+                resolved_base_url,
+                migration_context.api_token,
+                migration_context.content_items,
+                mapping_manifest,
+                media_url_map,
+                taxonomy_term_ids,
+                entry_id_map,
+                migration_context.batch_size,
             )
             all_findings.extend(entry_findings)
 
             # Phase 4: Migrate plugin-owned entity rows
             plugin_entries, plugin_findings = await _migrate_plugin_instances(
-                resolved_base_url, api_token, bundle_manifest, mapping_manifest,
+                resolved_base_url,
+                migration_context.api_token,
+                bundle_manifest,
+                mapping_manifest,
             )
             all_findings.extend(plugin_findings)
 
             # Phase 5: Migrate form metadata
             form_entries, form_findings = await _migrate_form_metadata(
-                resolved_base_url, api_token, bundle_manifest,
+                resolved_base_url,
+                migration_context.api_token,
+                bundle_manifest,
             )
             all_findings.extend(form_findings)
 
             # Phase 6: Link media relations
             media_findings = await _link_media_relations(
-                resolved_base_url, api_token, content_items,
-                media_url_map, entry_id_map, mapping_manifest,
+                resolved_base_url,
+                migration_context.api_token,
+                migration_context.content_items,
+                media_url_map,
+                entry_id_map,
+                mapping_manifest,
             )
             all_findings.extend(media_findings)
 
             # Phase 7: Migrate navigation menus (reuses existing infrastructure)
-            menu_entries_created = 0
-            if menus:
-                # Use modeling_manifest if available for menu migration
-                try:
-                    manifest = extract_modeling_manifest(context)
-                    migrated_slugs: set[str] = {item.slug for item in content_items}
-                    menu_entries_created, menu_warnings = await migrate_menus(
-                        resolved_base_url, api_token, menus, manifest, migrated_slugs,
-                    )
-                    all_warnings.extend(menu_warnings)
-                except KeyError:
-                    logger.warning("No modeling_manifest for menu migration, skipping menus")
+            menu_entries_created = await _run_menu_migration_phase(
+                resolved_base_url,
+                migration_context.api_token,
+                migration_context.menus,
+                migration_context.content_items,
+                context,
+                all_warnings,
+            )
 
         # Build migration report
         total_succeeded = sum(s.succeeded for s in content_stats)
@@ -1475,48 +1562,22 @@ class ContentMigratorAgent(BaseAgent):
         all_warnings: list[str] = []
 
         content_type_map = extract_content_type_map(context)
-        base_url: str = context["strapi_base_url"]
-        api_token: str = context["strapi_api_token"]
-        content_items = extract_content_items(context)
-        manifest = extract_modeling_manifest(context)
-        menus = extract_menus(context)
-        media_manifest_entries = extract_media_manifest(context)
-        export_bundle: dict[str, Any] = context.get("export_bundle", {})
-        ssh_connection_string = context.get("ssh_connection_string")
-        cms_config = context.get("cms_config")
-        ssh_private_key_path = (
-            getattr(cms_config, "ssh_private_key_path", None)
-            if cms_config is not None
-            else None
-        )
-
-        batch_size: int = context.get("batch_size", DEFAULT_BATCH_SIZE)
-        media_concurrency: int = context.get(
-            "media_concurrency", DEFAULT_MEDIA_CONCURRENCY
-        )
+        migration_context = _build_migration_execution_context(context)
 
         async with strapi_base_url_context(
-            base_url, ssh_connection_string, ssh_private_key_path
+            migration_context.base_url,
+            migration_context.ssh_connection_string,
+            migration_context.ssh_private_key_path,
         ) as resolved_base_url:
             # Phase 1: Upload media files
-            media_url_map: dict[str, str] = {}
-            media_stats: MediaMigrationStats
-
-            if media_manifest_entries:
-                media_url_map, media_stats = await upload_media_files(
-                    resolved_base_url,
-                    api_token,
-                    media_manifest_entries,
-                    export_bundle,
-                    media_concurrency,
-                )
-                if media_stats.failed_urls:
-                    for url in media_stats.failed_urls:
-                        all_warnings.append(f"Media upload failed: {url}")
-            else:
-                media_stats = MediaMigrationStats(
-                    total=0, succeeded=0, failed=0, failed_urls=[]
-                )
+            media_url_map, media_stats = await _run_media_upload_phase(
+                resolved_base_url,
+                migration_context.api_token,
+                migration_context.media_manifest_entries,
+                migration_context.export_bundle,
+                migration_context.media_concurrency,
+                all_warnings,
+            )
 
             # Phase 2: Create taxonomy term entries
             async with httpx.AsyncClient() as client:
@@ -1524,8 +1585,8 @@ class ContentMigratorAgent(BaseAgent):
                     await create_taxonomy_terms(
                         client,
                         resolved_base_url,
-                        api_token,
-                        content_items,
+                        migration_context.api_token,
+                        migration_context.content_items,
                         content_type_map,
                     )
                 )
@@ -1534,26 +1595,23 @@ class ContentMigratorAgent(BaseAgent):
             # Phase 3: Create content entries in batches
             content_stats = await migrate_content_entries(
                 resolved_base_url,
-                api_token,
-                content_items,
+                migration_context.api_token,
+                migration_context.content_items,
                 content_type_map,
                 media_url_map,
                 taxonomy_term_ids,
-                batch_size,
+                migration_context.batch_size,
             )
 
             # Phase 4: Create navigation menu entries
-            migrated_slugs: set[str] = {item.slug for item in content_items}
-            menu_entries_created = 0
-            if menus:
-                menu_entries_created, menu_warnings = await migrate_menus(
-                    resolved_base_url,
-                    api_token,
-                    menus,
-                    manifest,
-                    migrated_slugs,
-                )
-                all_warnings.extend(menu_warnings)
+            menu_entries_created = await _run_menu_migration_phase(
+                resolved_base_url,
+                migration_context.api_token,
+                migration_context.menus,
+                migration_context.content_items,
+                context,
+                all_warnings,
+            )
 
         # Phase 5: Build migration report
         total_succeeded = sum(s.succeeded for s in content_stats)

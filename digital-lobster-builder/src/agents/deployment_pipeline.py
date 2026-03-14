@@ -15,6 +15,7 @@ from src.utils.ssh import (
     ssh_run,
     strapi_base_url_context,
 )
+from src.utils.strapi import HEALTH_PROBE_PATHS
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 ASTRO_SRC_PATH = "/var/www/astro-src"
 ASTRO_DIST_PATH = "/var/www/astro"
-STRAPI_BUILD_URL = "http://localhost:1337"
+STRAPI_BUILD_URL = "http://127.0.0.1"
 REBUILD_ENDPOINT = "http://localhost:4000/rebuild"
 WEBHOOK_EVENTS = ["entry.create", "entry.update", "entry.delete"]
 
@@ -117,10 +118,24 @@ async def _check_strapi_status(
 ) -> str:
     """Check Strapi health from the VPS itself (localhost)."""
     try:
+        probe_paths = " ".join(HEALTH_PROBE_PATHS)
+        check_cmd = (
+            f"for path in {probe_paths}; do "
+            f"code=$(curl -s -o /dev/null -w '%{{http_code}}' {STRAPI_BUILD_URL}$path); "
+            "if { [ \"$path\" = \"/_health\" ] && [ \"$code\" = \"200\" ]; } || "
+            "{ [ \"$path\" = \"/admin\" ] && "
+            "( [ \"$code\" = \"200\" ] || [ \"$code\" = \"301\" ] || "
+            "[ \"$code\" = \"302\" ] || [ \"$code\" = \"307\" ] || "
+            "[ \"$code\" = \"308\" ] ); }; then "
+            "echo \"$code $path\"; exit 0; "
+            "fi; "
+            "done; "
+            "echo \"$code $path\""
+        )
         stdout, _ = await ssh_run(
             ssh_connection_string,
             ssh_private_key_path,
-            f"curl -s -o /dev/null -w '%{{http_code}}' {STRAPI_BUILD_URL}/_health",
+            check_cmd,
         )
         return f"HTTP {stdout.strip()}"
     except RuntimeError:
@@ -230,7 +245,7 @@ class DeploymentPipelineAgent(BaseAgent):
         """Execute the full deployment workflow.
 
         1. SCP the Astro project to VPS at /var/www/astro-src
-        2. SSH: npm install && npm run build (STRAPI_URL=http://localhost:1337)
+        2. SSH: npm install && npm run build (STRAPI_URL=http://127.0.0.1)
         3. SSH: copy built files to /var/www/astro, set www-data ownership
         4. SSH: nginx -t && systemctl reload nginx
         5. Verify: GET https://{domain}/ → 200

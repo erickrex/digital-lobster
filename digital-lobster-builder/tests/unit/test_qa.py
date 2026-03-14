@@ -10,9 +10,11 @@ from typing import Any
 from src.agents.qa import (
     QAAgent,
     check_accessibility,
+    count_strapi_entries,
     compute_visual_parity,
     derive_key_pages,
 )
+from src.models.strapi_types import ContentTypeMap
 from src.models.qa_report import PageCheck, QAReport
 from src.models.modeling_manifest import (
     ModelingManifest,
@@ -214,6 +216,52 @@ class TestDeriveKeyPages:
     def test_no_manifest_returns_only_defaults(self):
         pages = derive_key_pages({"some_key": "value"})
         assert pages == ["/", "/404"]
+
+
+class TestCountStrapiEntries:
+    @pytest.mark.asyncio
+    async def test_prefers_explicit_rest_endpoints(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requested_urls: list[str] = []
+
+        class FakeResponse:
+            status_code = 200
+
+            def json(self) -> dict[str, Any]:
+                return {"meta": {"pagination": {"total": 7}}}
+
+        class FakeClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            async def get(self, url: str, headers=None):
+                requested_urls.append(url)
+                return FakeResponse()
+
+        monkeypatch.setattr(
+            "src.agents.qa.httpx.AsyncClient",
+            lambda timeout=30.0: FakeClient(),
+        )
+
+        total = await count_strapi_entries(
+            "https://cms.example.com",
+            "tok-secret",
+            ContentTypeMap(
+                mappings={"news": "api::news.news"},
+                taxonomy_mappings={},
+                component_uids=[],
+                rest_endpoints={"news": "/api/editorial-news"},
+            ),
+        )
+
+        assert total == 7
+        assert requested_urls == [
+            "https://cms.example.com/api/editorial-news?pagination[pageSize]=1"
+        ]
 
 # ---------------------------------------------------------------------------
 # QAAgent — build failure

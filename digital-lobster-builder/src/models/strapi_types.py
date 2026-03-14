@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class StrapiFieldDefinition(BaseModel):
     """A single field in a Strapi Content Type."""
@@ -21,10 +21,12 @@ class StrapiContentTypeDefinition(BaseModel):
     pluralName: str
     api_id: str  # The Strapi API identifier (e.g., "api::post.post")
     fields: list[StrapiFieldDefinition]
-    components: list[str] = []  # Component UIDs used by this type
+    components: list[str] = Field(default_factory=list)  # Component UIDs used by this type
 
 class ContentTypeMap(BaseModel):
     """Maps Modeling_Manifest collection names to Strapi API identifiers."""
     mappings: dict[str, str]  # collection_name → Strapi api_id
     taxonomy_mappings: dict[str, str]  # taxonomy_name → Strapi api_id
-    component_uids: list[str]  # UIDs of created components
+    component_uids: list[str] = Field(default_factory=list)  # UIDs of created components
+    rest_endpoints: dict[str, str] = Field(default_factory=dict)  # collection_name → Strapi REST path
+    taxonomy_rest_endpoints: dict[str, str] = Field(default_factory=dict)  # taxonomy_name → Strapi REST path

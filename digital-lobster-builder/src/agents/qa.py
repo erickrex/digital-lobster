@@ -13,6 +13,7 @@ import httpx
 
 from src.agents.base import AgentResult, BaseAgent
 from src.models.qa_report import CMSValidation, PageCheck, QAReport
+from src.utils.strapi import describe_health_status, fallback_rest_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -146,18 +147,23 @@ async def count_strapi_entries(
     """
     total = 0
     mappings: dict[str, str] = {}
+    rest_endpoints: dict[str, str] = {}
     if hasattr(content_type_map, "mappings"):
         mappings = content_type_map.mappings
+        rest_endpoints = getattr(content_type_map, "rest_endpoints", {})
     elif isinstance(content_type_map, dict):
         mappings = content_type_map.get("mappings", {})
+        rest_endpoints = content_type_map.get("rest_endpoints", {})
 
     headers = {"Authorization": f"Bearer {token}"}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        for _col_name, api_id in mappings.items():
-            # api_id is like "api::post.post" → plural name is the last segment
-            plural = api_id.split(".")[-1] + "s" if "." in api_id else api_id
-            url = f"{base_url.rstrip('/')}/api/{plural}?pagination[pageSize]=1"
+        for collection_name, api_id in mappings.items():
+            endpoint = (
+                rest_endpoints.get(collection_name)
+                or fallback_rest_endpoint(api_id)
+            )
+            url = f"{base_url.rstrip('/')}{endpoint}?pagination[pageSize]=1"
             try:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code == 200:
@@ -504,10 +510,4 @@ class QAAgent(BaseAgent):
         base_url = context.get("strapi_base_url", "")
         if not base_url:
             return "no strapi_base_url configured"
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(f"{base_url.rstrip('/')}/_health")
-                return f"{resp.status_code}"
-        except httpx.HTTPError as exc:
-            return f"unreachable ({exc})"
-
+        return await describe_health_status(base_url, timeout=10.0)

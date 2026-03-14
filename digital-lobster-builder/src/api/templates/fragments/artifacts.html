@@ -1,0 +1,8 @@
+<h2>Artifacts</h2>
+<p class="artifact-count">{{ count }} artifact{{ "s" if count != 1 else "" }} available</p>
+<ul class="artifact-list">
+  {% for name in artifacts %}
+  <li><a href="/migrations/{{ run_id }}/artifacts/{{ name }}">{{ name }}</a></li>
+  {% endfor %}
+</ul>
+<a href="/ui/artifacts/{{ run_id }}/download-all" class="btn btn-secondary">Download All</a>

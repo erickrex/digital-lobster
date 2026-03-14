@@ -160,7 +160,10 @@ curl http://localhost:8000/migrations/<run_id>
 
 | Variable | Description |
 |---|---|
-| `GRADIENT_API_KEY` | DigitalOcean Gradient AI Platform API key |
+| `GRADIENT_MODEL_ACCESS_KEY` | Gradient model access key used for inference |
+| `DIGITALOCEAN_ACCESS_TOKEN` | DigitalOcean API token used for Knowledge Base and retrieve APIs |
+| `GRADIENT_MODEL_ID` | Optional model override. Defaults to `anthropic-claude-4.6-sonnet` |
+| `GRADIENT_API_KEY` | Legacy alias for `GRADIENT_MODEL_ACCESS_KEY` |
 | `DO_SPACES_KEY` | Spaces access key |
 | `DO_SPACES_SECRET` | Spaces secret key |
 | `DO_SPACES_REGION` | Spaces region |
@@ -182,7 +185,9 @@ Configurable via the inline settings panel on the **🧠 Migrate with AI Agents*
 ```bash
 cd digital-lobster-builder
 uv sync
-uv run pytest
+uv run python -m pytest
+# convenience wrapper
+sh scripts/test.sh
 ```
 
 ### Exporter
@@ -210,7 +215,7 @@ vendor/bin/phpunit
 │   ├── src/
 │   │   ├── agents/              # Pipeline agent implementations
 │   │   ├── api/                 # FastAPI routes and schemas
-│   │   ├── gradient/            # Gradient AI client and tracing
+│   │   ├── gradient/            # Gradient inference client and tracing
 │   │   ├── models/              # Pydantic data models
 │   │   ├── orchestrator/        # Pipeline orchestration and state
 │   │   ├── serialization/       # Markdown/MDX/frontmatter output

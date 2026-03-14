@@ -7,6 +7,7 @@ from src.agents.base import AgentResult
 from src.models.inventory import Inventory
 from src.models.modeling_manifest import ModelingManifest
 from src.models.strapi_types import ContentTypeMap
+from src.utils.strapi import fallback_rest_endpoint
 
 from .scaffold_shared import (
     generate_components,
@@ -68,24 +69,28 @@ def build_cms_project(
 
     for collection in manifest.collections:
         api_id = content_type_map.mappings.get(collection.collection_name)
-        if not api_id:
+        collection_endpoint = content_type_map.rest_endpoints.get(
+            collection.collection_name,
+        )
+        if not api_id and not collection_endpoint:
             warnings.append(
-                f"No Strapi API ID found for collection '{collection.collection_name}'; "
+                f"No Strapi endpoint metadata found for collection '{collection.collection_name}'; "
                 "skipping CMS route generation."
             )
             continue
+        collection_endpoint = collection_endpoint or fallback_rest_endpoint(api_id)
 
         current_route_dir = route_dir(collection.route_pattern)
         base = f"src/pages/{current_route_dir}" if current_route_dir else "src/pages"
         project[f"{base}/[slug].astro"] = generate_cms_route_page(
             collection.collection_name,
-            api_id,
+            collection_endpoint,
             collection.route_pattern,
         )
         if current_route_dir:
             project[f"{base}/index.astro"] = generate_cms_index_page(
                 collection.collection_name,
-                api_id,
+                collection_endpoint,
                 collection.route_pattern,
             )
         else:

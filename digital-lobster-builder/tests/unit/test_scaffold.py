@@ -11,6 +11,8 @@ from typing import Any
 from src.agents.scaffold import (
     ScaffoldAgent,
     generate_astro_config,
+    generate_cms_index_page,
+    generate_cms_route_page,
     generate_package_json,
     generate_tsconfig,
     generate_route_page,
@@ -217,6 +219,16 @@ class TestGenerateAstroConfig:
         config = generate_astro_config("https://example.com")
         assert "mdx" in config
         assert "@astrojs/mdx" in config
+
+
+class TestGenerateCmsPages:
+    def test_route_page_uses_rest_endpoint(self):
+        page = generate_cms_route_page("posts", "/api/posts", "/blog/[slug]")
+        assert "fetchAllPages<Posts>('/api/posts')" in page
+
+    def test_index_page_uses_rest_endpoint(self):
+        page = generate_cms_index_page("posts", "/api/posts", "/blog/[slug]")
+        assert "fetchAllPages<Posts>('/api/posts')" in page
 
     def test_contains_define_config(self):
         config = generate_astro_config("https://example.com")

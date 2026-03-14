@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Lobster — Migration Builder</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+  <h1>Digital Lobster Migration Builder</h1>
+
+  <!-- Upload area -->
+  <div id="upload-area" class="panel">
+    {% include "fragments/upload_form.html" %}
+  </div>
+
+  <!-- Progress panel -->
+  <div id="progress-panel" class="panel progress-panel">
+  </div>
+
+  <!-- Artifacts panel -->
+  <div id="artifacts-panel" class="panel">
+  </div>
+</body>
+</html>

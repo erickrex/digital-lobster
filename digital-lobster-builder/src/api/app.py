@@ -7,17 +7,28 @@ from pathlib import Path
 from typing import Mapping
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from src.api.routes import configure_routes, router
+from src.api.ui_routes import configure_ui_routes, register_ui_exception_handlers, root_page, ui_router
 from src.orchestrator.pipeline import PipelineOrchestrator
+from src.storage.local_upload import LocalUploadStore
 from src.storage.spaces import SpacesClient
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+API_DIR = Path(__file__).resolve().parent
+TEMPLATES_DIR = API_DIR / "templates"
+STATIC_DIR = API_DIR / "static"
+DEFAULT_UPLOAD_DIR = PROJECT_ROOT / "uploads"
 DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
+DEFAULT_GRADIENT_MODEL = "anthropic-claude-4.6-sonnet"
+MODEL_ACCESS_KEY_ENV = "GRADIENT_MODEL_ACCESS_KEY"
+LEGACY_MODEL_ACCESS_KEY_ENV = "GRADIENT_API_KEY"
+DO_ACCESS_TOKEN_ENV = "DIGITALOCEAN_ACCESS_TOKEN"
 REQUIRED_ENV_VARS = (
-    "GRADIENT_API_KEY",
     "DO_SPACES_KEY",
     "DO_SPACES_SECRET",
     "DO_SPACES_REGION",
@@ -27,7 +38,9 @@ REQUIRED_ENV_VARS = (
 
 @dataclass(frozen=True, slots=True)
 class BuilderRuntimeSettings:
-    gradient_api_key: str
+    gradient_model_access_key: str
+    gradient_model_id: str
+    do_access_token: str
     spaces_key: str
     spaces_secret: str
     spaces_region: str
@@ -62,6 +75,15 @@ def create_app(
     )
 
     app.include_router(router)
+
+    # UI routes (HTMX frontend)
+    templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+    upload_store = LocalUploadStore(upload_dir=DEFAULT_UPLOAD_DIR)
+    configure_ui_routes(templates=templates, upload_store=upload_store)
+    app.include_router(ui_router)
+    app.add_api_route("/", root_page, methods=["GET"])
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    register_ui_exception_handlers(app)
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:
@@ -98,9 +120,21 @@ def _load_env_file(env_file: str | Path = DEFAULT_ENV_FILE) -> None:
 
 def _read_settings(env: Mapping[str, str]) -> BuilderRuntimeSettings | None:
     """Return runtime settings when all required variables are available."""
+    gradient_model_access_key = _first_non_empty(
+        env,
+        MODEL_ACCESS_KEY_ENV,
+        LEGACY_MODEL_ACCESS_KEY_ENV,
+    )
+    do_access_token = _first_non_empty(env, DO_ACCESS_TOKEN_ENV)
     missing = [
         name for name in REQUIRED_ENV_VARS if not str(env.get(name, "")).strip()
     ]
+    if not gradient_model_access_key:
+        missing.append(
+            f"{MODEL_ACCESS_KEY_ENV} (or legacy {LEGACY_MODEL_ACCESS_KEY_ENV})"
+        )
+    if not do_access_token:
+        missing.append(DO_ACCESS_TOKEN_ENV)
     if missing:
         logger.info(
             "Builder app not fully configured; missing env vars: %s",
@@ -109,7 +143,11 @@ def _read_settings(env: Mapping[str, str]) -> BuilderRuntimeSettings | None:
         return None
 
     return BuilderRuntimeSettings(
-        gradient_api_key=str(env["GRADIENT_API_KEY"]).strip(),
+        gradient_model_access_key=gradient_model_access_key,
+        gradient_model_id=(
+            _first_non_empty(env, "GRADIENT_MODEL_ID") or DEFAULT_GRADIENT_MODEL
+        ),
+        do_access_token=do_access_token,
         spaces_key=str(env["DO_SPACES_KEY"]).strip(),
         spaces_secret=str(env["DO_SPACES_SECRET"]).strip(),
         spaces_region=str(env["DO_SPACES_REGION"]).strip(),
@@ -131,8 +169,11 @@ def _build_runtime_dependencies(
         region=settings.spaces_region,
     )
     orchestrator = PipelineOrchestrator(
-        gradient_client=GradientClient(api_key=settings.gradient_api_key),
-        kb_client=KnowledgeBaseClient(api_key=settings.gradient_api_key),
+        gradient_client=GradientClient(
+            model_access_key=settings.gradient_model_access_key,
+            model=settings.gradient_model_id,
+        ),
+        kb_client=KnowledgeBaseClient(access_token=settings.do_access_token),
         spaces_client=spaces_client,
         tracer=Tracer(run_id="app-bootstrap"),
         artifacts_bucket=settings.artifacts_bucket,
@@ -176,5 +217,14 @@ def create_app_from_env(
         ingestion_bucket=ingestion_bucket,
         artifacts_bucket=artifacts_bucket,
     )
+
+def _first_non_empty(env: Mapping[str, str], *keys: str) -> str:
+    """Return the first non-blank value for the given environment keys."""
+    for key in keys:
+        value = str(env.get(key, "")).strip()
+        if value:
+            return value
+    return ""
+
 
 app = create_app_from_env()

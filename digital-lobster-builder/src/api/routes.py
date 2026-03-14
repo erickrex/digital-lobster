@@ -66,6 +66,7 @@ async def _run_pipeline(
     run_id: str,
     bundle_key: str,
     cms_mode: bool = False,
+    production_mode: bool = False,
     cms_config: Any | None = None,
 ) -> None:
     """Background task that executes the pipeline and updates state."""
@@ -76,7 +77,11 @@ async def _run_pipeline(
     try:
         orchestrator = _require_orchestrator()
         final_state = await orchestrator.run(
-            bundle_key, run_id, cms_mode=cms_mode, cms_config=cms_config
+            bundle_key,
+            run_id,
+            cms_mode=cms_mode,
+            cms_config=cms_config,
+            production_mode=production_mode,
         )
         _run_states[run_id] = final_state
     except Exception as exc:
@@ -141,6 +146,7 @@ async def trigger_migration(
         run_id,
         request.bundle_key,
         cms_mode=request.cms_mode,
+        production_mode=request.production_mode,
         cms_config=request.cms_config,
     )
     return MigrationResponse(run_id=run_id, status=state.status)

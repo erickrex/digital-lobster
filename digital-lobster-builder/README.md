@@ -50,7 +50,10 @@ Copy `.env.example` to `.env` and provide:
 
 | Variable | Description |
 |---|---|
-| `GRADIENT_API_KEY` | Gradient AI Platform API key |
+| `GRADIENT_MODEL_ACCESS_KEY` | Gradient model access key used for inference |
+| `DIGITALOCEAN_ACCESS_TOKEN` | DigitalOcean API token used for Knowledge Base and retrieve APIs |
+| `GRADIENT_MODEL_ID` | Optional model override. Defaults to `anthropic-claude-4.6-sonnet` |
+| `GRADIENT_API_KEY` | Legacy alias for `GRADIENT_MODEL_ACCESS_KEY` |
 | `DO_SPACES_KEY` | DigitalOcean Spaces access key |
 | `DO_SPACES_SECRET` | Spaces secret key |
 | `DO_SPACES_REGION` | Spaces region (e.g. `nyc3`) |
@@ -78,8 +81,13 @@ uv run uvicorn src.api.app:app --host 0.0.0.0 --port 8000
 ## Tests
 
 ```bash
-uv run pytest
+uv run python -m pytest
+# convenience wrapper
+sh scripts/test.sh
 ```
+
+Use `python -m pytest` instead of `pytest` so test runs are not tied to a
+console-script shebang inside `.venv/`.
 
 ## Project Structure
 
@@ -87,7 +95,7 @@ uv run pytest
 src/
 ├── agents/          # Agent implementations (one per pipeline stage)
 ├── api/             # FastAPI app, routes, and request/response schemas
-├── gradient/        # Gradient AI client, knowledge base, and tracing
+├── gradient/        # Gradient inference client, knowledge base, and tracing
 ├── models/          # Pydantic models (inventory, content, reports, etc.)
 ├── orchestrator/    # Pipeline orchestration, state machine, error handling
 ├── serialization/   # Markdown, MDX, and frontmatter output formatters

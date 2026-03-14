@@ -1,0 +1,184 @@
+/* HTMX Migration Frontend — Minimal CSS */
+
+/* Reset & base */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  max-width: 48rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.75rem;
+}
+
+/* Panels — shared */
+.panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Upload form */
+.upload-form input[type="file"] {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.upload-form button,
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #0057b8;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.upload-form button:hover,
+.btn:hover {
+  background: #004494;
+}
+
+.btn-secondary {
+  background: #555;
+}
+
+.btn-secondary:hover {
+  background: #333;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Upload indicator */
+.upload-indicator {
+  display: none;
+  color: #555;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.htmx-request .upload-indicator {
+  display: block;
+}
+
+/* Progress panel */
+.progress-panel .current-agent {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.agent-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.agent-list li {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.agent-list li .duration {
+  color: #666;
+  margin-left: 0.5rem;
+}
+
+/* Warnings */
+.warnings {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+.warnings li {
+  background: #fff8e1;
+  border-left: 3px solid #f9a825;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+}
+
+/* Artifacts panel */
+.artifact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.artifact-list li {
+  padding: 0.3rem 0;
+}
+
+.artifact-list a {
+  color: #0057b8;
+  text-decoration: none;
+}
+
+.artifact-list a:hover {
+  text-decoration: underline;
+}
+
+.artifact-count {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+/* Error styling */
+.error-message {
+  background: #fdecea;
+  border-left: 3px solid #d32f2f;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #b71c1c;
+}
+
+/* Success styling */
+.success-message {
+  background: #e8f5e9;
+  border-left: 3px solid #388e3c;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #1b5e20;
+}
+
+/* Status badges */
+.status {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-pending  { background: #e0e0e0; color: #555; }
+.status-running  { background: #bbdefb; color: #0d47a1; }
+.status-completed { background: #c8e6c9; color: #1b5e20; }
+.status-failed   { background: #ffcdd2; color: #b71c1c; }

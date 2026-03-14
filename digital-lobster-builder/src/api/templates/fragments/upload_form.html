@@ -1,0 +1,10 @@
+<form class="upload-form"
+      hx-post="/ui/upload"
+      hx-target="#upload-area"
+      hx-swap="innerHTML"
+      hx-encoding="multipart/form-data">
+  <label for="file-input">Select a WordPress bundle ZIP file:</label>
+  <input id="file-input" type="file" name="file" accept=".zip" required>
+  <button type="submit" class="btn">Upload</button>
+  <div class="upload-indicator" aria-live="polite">Uploading…</div>
+</form>

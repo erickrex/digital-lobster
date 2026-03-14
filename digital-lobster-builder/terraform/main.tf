@@ -17,18 +17,18 @@ resource "digitalocean_ssh_key" "strapi" {
 }
 
 # ──────────────────────────────────────────────
-# Droplet — Strapi 1-Click Marketplace Image
+# Droplet — Owned Ubuntu 24.04 base image
 # ──────────────────────────────────────────────
 
 resource "digitalocean_droplet" "strapi" {
   name     = "strapi-${replace(var.domain_name, ".", "-")}"
-  image    = "strapi-20-04"
+  image    = "ubuntu-24-04-x64"
   region   = var.droplet_region
   size     = var.droplet_size
   ssh_keys = [digitalocean_ssh_key.strapi.fingerprint]
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tpl", {
-    domain_name          = var.domain_name
+    domain_name           = var.domain_name
     strapi_admin_email    = var.strapi_admin_email
     strapi_admin_password = var.strapi_admin_password
   })
