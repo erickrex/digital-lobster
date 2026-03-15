@@ -203,8 +203,9 @@
 			let errorMsg = 'AJAX error: ' + error;
 
 			if (xhr.status === 500) {
-				errorMsg = 'Server error (500): The exporter hit a fatal PHP error. ';
-				errorMsg += 'Please check your WordPress debug log (wp-content/debug.log) for details. ';
+				errorMsg = 'Server error (500): The exporter request failed on the server. ';
+				errorMsg += 'This is often a PHP fatal error or a request timeout. ';
+				errorMsg += 'Check wp-content/debug.log and your PHP/server error logs for details. ';
 
 				if (xhr.responseText) {
 					const match = xhr.responseText.match(/Fatal error:([^<]+)/i);

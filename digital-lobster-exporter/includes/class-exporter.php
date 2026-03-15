@@ -121,6 +121,14 @@ class Digital_Lobster_Exporter_Exporter {
 				'error'   => $e->getMessage(),
 				'errors'  => $this->errors,
 			);
+		} catch ( \Error $e ) {
+			$this->log_error( 'exporter', 'PHP Error: ' . $e->getMessage(), 'critical' );
+
+			return array(
+				'success' => false,
+				'error'   => $e->getMessage(),
+				'errors'  => $this->errors,
+			);
 		}
 	}
 
@@ -173,21 +181,56 @@ class Digital_Lobster_Exporter_Exporter {
 	}
 
 	/**
+	 * Get a nested result value using multiple possible keys.
+	 *
+	 * @param array $source Source array.
+	 * @param array $paths  Candidate key paths.
+	 * @return mixed|null
+	 */
+	private function get_first_result_match( $source, $paths ) {
+		foreach ( $paths as $path ) {
+			$value = $source;
+
+			foreach ( $path as $segment ) {
+				if ( ! is_array( $value ) || ! array_key_exists( $segment, $value ) ) {
+					continue 2;
+				}
+
+				$value = $value[ $segment ];
+			}
+
+			return $value;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Get theme information for blueprint.
 	 *
 	 * @return array Theme information.
 	 */
 	private function get_theme_info() {
-		if ( ! isset( $this->results['theme'] ) || ! isset( $this->results['theme']['theme'] ) ) {
+		if ( ! isset( $this->results['theme'] ) || ! is_array( $this->results['theme'] ) ) {
 			return array();
 		}
 
-		$theme_data = $this->results['theme']['theme'];
+		$theme_data = $this->get_first_result_match(
+			$this->results['theme'],
+			array(
+				array( 'theme_info' ),
+				array( 'theme' ),
+			)
+		);
+
+		if ( ! is_array( $theme_data ) ) {
+			return array();
+		}
 		
 		return array(
 			'name'         => isset( $theme_data['name'] ) ? $theme_data['name'] : '',
 			'version'      => isset( $theme_data['version'] ) ? $theme_data['version'] : '',
-			'block_theme'  => isset( $theme_data['is_block_theme'] ) ? $theme_data['is_block_theme'] : false,
+			'block_theme'  => ! empty( $theme_data['block_theme'] ) || ! empty( $theme_data['is_block_theme'] ),
 			'parent_theme' => isset( $theme_data['parent_theme'] ) ? $theme_data['parent_theme'] : null,
 		);
 	}
@@ -198,18 +241,33 @@ class Digital_Lobster_Exporter_Exporter {
 	 * @return array Plugins list.
 	 */
 	private function get_plugins_list() {
-		if ( ! isset( $this->results['plugins'] ) || ! isset( $this->results['plugins']['plugins'] ) ) {
+		if ( ! isset( $this->results['plugins'] ) || ! is_array( $this->results['plugins'] ) ) {
 			return array();
 		}
 
-		$plugins = $this->results['plugins']['plugins'];
+		$plugins = $this->get_first_result_match(
+			$this->results['plugins'],
+			array(
+				array( 'plugins_list', 'plugins' ),
+				array( 'plugins' ),
+			)
+		);
+
+		if ( ! is_array( $plugins ) ) {
+			return array();
+		}
+
 		$plugins_list = array();
 
 		foreach ( $plugins as $plugin_file => $plugin_data ) {
+			if ( ! is_array( $plugin_data ) ) {
+				continue;
+			}
+
 			$plugins_list[] = array(
-				'file'    => $plugin_file,
-				'name'    => isset( $plugin_data['Name'] ) ? $plugin_data['Name'] : '',
-				'version' => isset( $plugin_data['Version'] ) ? $plugin_data['Version'] : '',
+				'file'    => isset( $plugin_data['file'] ) ? $plugin_data['file'] : $plugin_file,
+				'name'    => isset( $plugin_data['name'] ) ? $plugin_data['name'] : ( isset( $plugin_data['Name'] ) ? $plugin_data['Name'] : '' ),
+				'version' => isset( $plugin_data['version'] ) ? $plugin_data['version'] : ( isset( $plugin_data['Version'] ) ? $plugin_data['Version'] : '' ),
 				'active'  => isset( $plugin_data['active'] ) ? $plugin_data['active'] : false,
 			);
 		}
@@ -223,11 +281,25 @@ class Digital_Lobster_Exporter_Exporter {
 	 * @return array Plugin features.
 	 */
 	private function get_plugin_features() {
-		if ( ! isset( $this->results['plugins'] ) || ! isset( $this->results['plugins']['plugin_features'] ) ) {
+		if ( ! isset( $this->results['plugins'] ) || ! is_array( $this->results['plugins'] ) ) {
 			return array();
 		}
 
-		return $this->results['plugins']['plugin_features'];
+		$features = array();
+
+		if ( isset( $this->results['plugins']['plugin_features'] ) ) {
+			$features['plugin_features'] = $this->results['plugins']['plugin_features'];
+		}
+
+		if ( isset( $this->results['plugins']['enhanced_detection'] ) ) {
+			$features['enhanced_detection'] = $this->results['plugins']['enhanced_detection'];
+		}
+
+		if ( isset( $this->results['plugins']['behavioral_fingerprints'] ) ) {
+			$features['behavioral_fingerprints'] = $this->results['plugins']['behavioral_fingerprints'];
+		}
+
+		return $features;
 	}
 
 	/**
@@ -257,8 +329,30 @@ class Digital_Lobster_Exporter_Exporter {
 		}
 
 		// Get total exported content count
-		if ( isset( $this->results['content'] ) && isset( $this->results['content']['exported_items'] ) ) {
-			$summary['total_exported'] = count( $this->results['content']['exported_items'] );
+		if ( isset( $this->results['content'] ) && is_array( $this->results['content'] ) ) {
+			if ( isset( $this->results['content']['exported_items'] ) && is_array( $this->results['content']['exported_items'] ) ) {
+				$summary['total_exported'] = count( $this->results['content']['exported_items'] );
+			} else {
+				$total_exported = 0;
+
+				if ( isset( $this->results['content']['posts'] ) && is_array( $this->results['content']['posts'] ) ) {
+					$total_exported += count( $this->results['content']['posts'] );
+				}
+
+				if ( isset( $this->results['content']['pages'] ) && is_array( $this->results['content']['pages'] ) ) {
+					$total_exported += count( $this->results['content']['pages'] );
+				}
+
+				if ( isset( $this->results['content']['custom_post_types'] ) && is_array( $this->results['content']['custom_post_types'] ) ) {
+					foreach ( $this->results['content']['custom_post_types'] as $items ) {
+						if ( is_array( $items ) ) {
+							$total_exported += count( $items );
+						}
+					}
+				}
+
+				$summary['total_exported'] = $total_exported;
+			}
 		}
 
 		return $summary;
@@ -298,7 +392,9 @@ class Digital_Lobster_Exporter_Exporter {
 			'total_size'  => 0,
 		);
 
-		if ( isset( $this->results['media'] ) && isset( $this->results['media']['media_files'] ) ) {
+		if ( isset( $this->results['media']['total_files'] ) ) {
+			$summary['total_files'] = (int) $this->results['media']['total_files'];
+		} elseif ( isset( $this->results['media']['media_files'] ) && is_array( $this->results['media']['media_files'] ) ) {
 			$summary['total_files'] = count( $this->results['media']['media_files'] );
 			
 			// Calculate total size if available
@@ -421,9 +517,29 @@ class Digital_Lobster_Exporter_Exporter {
 			$this->write_json_file( 'site_environment.json', $this->results['environment'] );
 		}
 
-		// Export plugins fingerprint
-		if ( isset( $this->results['plugins'] ) && isset( $this->results['plugins']['plugin_behaviors'] ) ) {
-			$this->write_json_file( 'plugins_fingerprint.json', $this->results['plugins']['plugin_behaviors'] );
+		// Export plugin behaviors and fingerprint details.
+		if ( isset( $this->results['plugins'] ) && is_array( $this->results['plugins'] ) ) {
+			if ( isset( $this->results['plugins']['behavioral_fingerprints'] ) ) {
+				$this->write_json_file( 'plugin_behaviors.json', $this->results['plugins']['behavioral_fingerprints'] );
+			}
+
+			$fingerprint_data = array();
+
+			if ( isset( $this->results['plugins']['plugin_features'] ) ) {
+				$fingerprint_data['plugin_features'] = $this->results['plugins']['plugin_features'];
+			}
+
+			if ( isset( $this->results['plugins']['enhanced_detection'] ) ) {
+				$fingerprint_data['enhanced_detection'] = $this->results['plugins']['enhanced_detection'];
+			}
+
+			if ( empty( $fingerprint_data ) && isset( $this->results['plugins']['plugin_behaviors'] ) ) {
+				$fingerprint_data = $this->results['plugins']['plugin_behaviors'];
+			}
+
+			if ( ! empty( $fingerprint_data ) ) {
+				$this->write_json_file( 'plugins_fingerprint.json', $fingerprint_data );
+			}
 		}
 
 		// Export block usage statistics

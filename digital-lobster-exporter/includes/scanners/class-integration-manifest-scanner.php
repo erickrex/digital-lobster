@@ -115,6 +115,11 @@ class Digital_Lobster_Exporter_Integration_Manifest_Scanner extends Digital_Lobs
 	 * Scan webhook integrations.
 	 */
 	private function scan_webhooks() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		// Check for WP Webhooks plugin.
 		if ( class_exists( 'WP_Webhooks_Pro' ) || class_exists( 'WP_Webhooks' ) ) {
 			$this->add_integration(
@@ -157,6 +162,11 @@ class Digital_Lobster_Exporter_Integration_Manifest_Scanner extends Digital_Lobs
 	 * Scan CRM and newsletter integrations.
 	 */
 	private function scan_crm_newsletter() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		// Mailchimp.
 		$mc_api_key = get_option( 'mc4wp_api_key', '' );
 		if ( ! empty( $mc_api_key ) || is_plugin_active( 'mailchimp-for-wp/mailchimp-for-wp.php' ) ) {

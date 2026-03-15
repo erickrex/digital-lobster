@@ -826,6 +826,11 @@ class Digital_Lobster_Exporter_Theme_Scanner extends Digital_Lobster_Exporter_Sc
 	 * @return array Export status and CSS sources documentation.
 	 */
 	private function scan_custom_css_sources() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		$css_sources = array();
 
 		// 1. Check for custom CSS in theme options

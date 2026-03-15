@@ -86,4 +86,83 @@ abstract class Digital_Lobster_Exporter_Scanner_Base {
 	public function get_data() {
 		return $this->scan();
 	}
+
+	/**
+	 * Get deduplicated sampled content items from Content Scanner context.
+	 *
+	 * Later scanners should prefer these sampled items over whole-site queries
+	 * so the export stays aligned with the configured sample limits.
+	 *
+	 * @param string[] $post_types Optional post type allow-list.
+	 * @return array
+	 */
+	protected function get_sampled_content_items( array $post_types = array() ) {
+		if ( empty( $this->context['content'] ) || ! is_array( $this->context['content'] ) ) {
+			return array();
+		}
+
+		$content = $this->context['content'];
+		$items   = array();
+		$seen    = array();
+
+		$item_groups = array();
+
+		if ( ! empty( $content['posts'] ) && is_array( $content['posts'] ) ) {
+			$item_groups[] = $content['posts'];
+		}
+
+		if ( ! empty( $content['pages'] ) && is_array( $content['pages'] ) ) {
+			$item_groups[] = $content['pages'];
+		}
+
+		if ( ! empty( $content['custom_post_types'] ) && is_array( $content['custom_post_types'] ) ) {
+			foreach ( $content['custom_post_types'] as $post_type_items ) {
+				if ( is_array( $post_type_items ) ) {
+					$item_groups[] = $post_type_items;
+				}
+			}
+		}
+
+		foreach ( $item_groups as $group ) {
+			foreach ( $group as $item ) {
+				if ( ! is_array( $item ) || empty( $item['id'] ) ) {
+					continue;
+				}
+
+				$post_type = isset( $item['type'] ) ? $item['type'] : '';
+				if ( ! empty( $post_types ) && ! in_array( $post_type, $post_types, true ) ) {
+					continue;
+				}
+
+				$post_id = (int) $item['id'];
+				if ( $post_id < 1 || isset( $seen[ $post_id ] ) ) {
+					continue;
+				}
+
+				$seen[ $post_id ] = true;
+				$items[]          = $item;
+			}
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Resolve sampled content items into WP_Post objects.
+	 *
+	 * @param string[] $post_types Optional post type allow-list.
+	 * @return array
+	 */
+	protected function get_sampled_posts( array $post_types = array() ) {
+		$posts = array();
+
+		foreach ( $this->get_sampled_content_items( $post_types ) as $item ) {
+			$post = get_post( (int) $item['id'] );
+			if ( $post ) {
+				$posts[] = $post;
+			}
+		}
+
+		return $posts;
+	}
 }

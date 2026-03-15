@@ -28,29 +28,41 @@ class Digital_Lobster_Exporter_Page_Composition_Scanner extends Digital_Lobster_
 	private $pages = array();
 
 	/**
-	 * Scan per-page composition for all published content.
+	 * Scan per-page composition for sampled content.
 	 *
 	 * @return array Page composition data matching PageCompositionArtifact schema.
 	 */
 	public function scan() {
 		$this->pages = array();
+		$posts       = $this->get_sampled_posts();
 
-		$post_types = get_post_types( array( 'public' => true ), 'names' );
+		if ( empty( $posts ) ) {
+			$post_types = get_post_types( array( 'public' => true ), 'names' );
 
-		foreach ( $post_types as $post_type ) {
-			if ( 'attachment' === $post_type ) {
+			foreach ( $post_types as $post_type ) {
+				if ( 'attachment' === $post_type ) {
+					continue;
+				}
+
+				$posts = array_merge(
+					$posts,
+					get_posts(
+						array(
+							'post_type'      => $post_type,
+							'posts_per_page' => -1,
+							'post_status'    => array( 'publish', 'draft' ),
+						)
+					)
+				);
+			}
+		}
+
+		foreach ( $posts as $post ) {
+			if ( empty( $post ) || 'attachment' === $post->post_type ) {
 				continue;
 			}
 
-			$posts = get_posts( array(
-				'post_type'      => $post_type,
-				'posts_per_page' => -1,
-				'post_status'    => array( 'publish', 'draft' ),
-			) );
-
-			foreach ( $posts as $post ) {
-				$this->scan_page( $post );
-			}
+			$this->scan_page( $post );
 		}
 
 		return array(

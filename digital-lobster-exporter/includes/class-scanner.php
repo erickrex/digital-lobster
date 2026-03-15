@@ -84,6 +84,19 @@ class Digital_Lobster_Exporter_Scanner {
 	}
 
 	/**
+	 * Refresh runtime limits so long scans fail less often on constrained hosts.
+	 */
+	private function refresh_runtime_budget() {
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 0 );
+		}
+
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			wp_raise_memory_limit( 'admin' );
+		}
+	}
+
+	/**
 	 * Load settings from wp_options.
 	 */
 	private function load_settings() {
@@ -98,13 +111,17 @@ class Digital_Lobster_Exporter_Scanner {
 	 * Setup export directory.
 	 */
 	private function setup_export_directory() {
-		$upload_dir = wp_upload_dir();
-		$this->export_dir = trailingslashit( $upload_dir['basedir'] ) . 'ai_migration_artifacts';
-		
-		// Create directory if it doesn't exist
-		if ( ! file_exists( $this->export_dir ) ) {
-			wp_mkdir_p( $this->export_dir );
+		require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/trait-error-logger.php';
+		require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-packager.php';
+
+		$packager = new Digital_Lobster_Exporter_Packager();
+		$export_dir = $packager->create_artifacts_directory();
+
+		if ( empty( $export_dir ) ) {
+			throw new Exception( 'Failed to initialize export directory.' );
 		}
+
+		$this->export_dir = rtrim( $export_dir, '/\\' );
 	}
 
 	/**
@@ -277,6 +294,8 @@ class Digital_Lobster_Exporter_Scanner {
 	 * @return array Scan results or error information.
 	 */
 	public function run_scan() {
+		$this->refresh_runtime_budget();
+
 		// Initialize results
 		$this->results = array();
 
@@ -344,15 +363,12 @@ class Digital_Lobster_Exporter_Scanner {
 					$error_message = $this->get_user_friendly_error_message( $e->getMessage(), $name );
 					$this->log_error( $name, $error_message, 'error' );
 
-					/**
-					 * Fires when a scanner fails with an exception.
-					 *
-					 * @since 1.0.0
-					 *
-					 * @param string    $name Scanner identifier.
-					 * @param Exception $e The exception that was thrown.
-					 * @param Digital_Lobster_Exporter_Scanner $scanner The scanner orchestrator instance.
-					 */
+					do_action( 'digital_lobster_scanner_error', $name, $e, $this );
+				} catch ( \Error $e ) {
+					// Catch PHP fatal errors (TypeError, etc.) so one scanner doesn't kill the export
+					$error_message = $this->get_user_friendly_error_message( $e->getMessage(), $name );
+					$this->log_error( $name, $error_message, 'critical' );
+
 					do_action( 'digital_lobster_scanner_error', $name, $e, $this );
 				}
 			}
@@ -419,15 +435,25 @@ class Digital_Lobster_Exporter_Scanner {
 
 			$this->log_error( 'scanner', $e->getMessage(), 'critical' );
 
-			/**
-			 * Fires when the scan process fails with a critical error.
-			 *
-			 * @since 1.0.0
-			 *
-			 * @param Exception $e The exception that caused the failure.
-			 * @param array $errors Error log entries.
-			 * @param Digital_Lobster_Exporter_Scanner $scanner The scanner instance.
-			 */
+			do_action( 'digital_lobster_scan_failed', $e, $this->get_errors(), $this );
+
+			return array(
+				'success' => false,
+				'error'   => $e->getMessage(),
+				'errors'  => $this->get_errors(),
+			);
+		} catch ( \Error $e ) {
+			// PHP fatal error - scan failed
+			$this->update_progress(
+				'failed',
+				0,
+				sprintf( 'Scan failed (PHP Error): %s', $e->getMessage() ),
+				false,
+				$e->getMessage()
+			);
+
+			$this->log_error( 'scanner', 'PHP Error: ' . $e->getMessage(), 'critical' );
+
 			do_action( 'digital_lobster_scan_failed', $e, $this->get_errors(), $this );
 
 			return array(
@@ -451,6 +477,9 @@ class Digital_Lobster_Exporter_Scanner {
 	 */
 	private function execute_scanner( $name, $scanner_config, $percent ) {
 		$class_name = $scanner_config['class'];
+		$started_at = microtime( true );
+
+		$this->refresh_runtime_budget();
 
 		// Update progress
 		$this->update_progress(
@@ -463,6 +492,10 @@ class Digital_Lobster_Exporter_Scanner {
 		if ( ! class_exists( $class_name ) ) {
 			$this->log_error( $name, sprintf( 'Scanner class %s not found', $class_name ), 'error' );
 			return;
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Digital Lobster Exporter: Starting scanner %s (%s)', $name, $class_name ) );
 		}
 
 		// Build deps — same for every scanner
@@ -533,6 +566,16 @@ class Digital_Lobster_Exporter_Scanner {
 				);
 			}
 		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log(
+				sprintf(
+					'Digital Lobster Exporter: Completed scanner %s in %.2fs',
+					$name,
+					microtime( true ) - $started_at
+				)
+			);
+		}
 	}
 
 	/**
@@ -554,6 +597,9 @@ class Digital_Lobster_Exporter_Scanner {
 		} catch ( Exception $e ) {
 			$this->log_error( $name, $e->getMessage(), 'error' );
 			return false;
+		} catch ( \Error $e ) {
+			$this->log_error( $name, 'PHP Error: ' . $e->getMessage(), 'critical' );
+			return false;
 		}
 	}
 
@@ -571,6 +617,8 @@ class Digital_Lobster_Exporter_Scanner {
 
 		try {
 			while ( $has_more ) {
+				$this->refresh_runtime_budget();
+
 				$batch_number++;
 
 				// Get batch size from scanner or use default
@@ -615,6 +663,9 @@ class Digital_Lobster_Exporter_Scanner {
 
 		} catch ( Exception $e ) {
 			$this->log_error( $name, $e->getMessage(), 'error' );
+			return false;
+		} catch ( \Error $e ) {
+			$this->log_error( $name, 'PHP Error: ' . $e->getMessage(), 'critical' );
 			return false;
 		}
 	}
@@ -819,6 +870,15 @@ class Digital_Lobster_Exporter_Scanner {
 						'warning'
 					);
 				}
+
+				if ( $time_percent > 90 ) {
+					throw new Exception(
+						sprintf(
+							'The export is approaching the PHP execution time limit after %d seconds. Increase max_execution_time or reduce the export settings and try again.',
+							$elapsed_time
+						)
+					);
+				}
 			}
 		}
 	}
@@ -906,6 +966,8 @@ class Digital_Lobster_Exporter_Scanner {
 	 */
 	private function export_data() {
 		try {
+			$this->refresh_runtime_budget();
+
 			// Create exporter instance
 			$exporter = new Digital_Lobster_Exporter_Exporter( $this->export_dir, $this->results );
 
@@ -963,6 +1025,13 @@ class Digital_Lobster_Exporter_Scanner {
 				'success' => false,
 				'error'   => $e->getMessage(),
 			);
+		} catch ( \Error $e ) {
+			$this->log_error( 'exporter', 'PHP Error: ' . $e->getMessage(), 'critical' );
+			
+			return array(
+				'success' => false,
+				'error'   => $e->getMessage(),
+			);
 		}
 	}
 
@@ -973,6 +1042,8 @@ class Digital_Lobster_Exporter_Scanner {
 	 */
 	private function package_artifacts() {
 		try {
+			$this->refresh_runtime_budget();
+
 			// Create packager instance
 			$packager = new Digital_Lobster_Exporter_Packager();
 
@@ -1005,6 +1076,13 @@ class Digital_Lobster_Exporter_Scanner {
 
 		} catch ( Exception $e ) {
 			$this->log_error( 'packager', $e->getMessage(), 'error' );
+			
+			return array(
+				'success' => false,
+				'error'   => $e->getMessage(),
+			);
+		} catch ( \Error $e ) {
+			$this->log_error( 'packager', 'PHP Error: ' . $e->getMessage(), 'critical' );
 			
 			return array(
 				'success' => false,

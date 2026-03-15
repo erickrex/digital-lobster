@@ -120,17 +120,19 @@ class Digital_Lobster_Exporter_Page_Templates_Scanner extends Digital_Lobster_Ex
 	 */
 	private function get_template_assignments() {
 		$assignments = array();
+		$pages       = $this->get_sampled_posts( array( 'page' ) );
 
-		// Query all pages
-		$pages = get_posts(
-			array(
-				'post_type'      => 'page',
-				'posts_per_page' => -1,
-				'post_status'    => array( 'publish', 'draft', 'private' ),
-				'orderby'        => 'title',
-				'order'          => 'ASC',
-			)
-		);
+		if ( empty( $pages ) ) {
+			$pages = get_posts(
+				array(
+					'post_type'      => 'page',
+					'posts_per_page' => -1,
+					'post_status'    => array( 'publish', 'draft', 'private' ),
+					'orderby'        => 'title',
+					'order'          => 'ASC',
+				)
+			);
+		}
 
 		foreach ( $pages as $page ) {
 			$template = get_page_template_slug( $page->ID );

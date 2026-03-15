@@ -273,27 +273,31 @@ class Digital_Lobster_Exporter_Packager {
 	 * @return string Download URL.
 	 */
 	public function generate_download_url() {
-		// Generate secure token
-		$token = $this->generate_download_token();
-
-		// Store token in transient with expiration
-		$transient_key = 'digital_lobster_download_' . $token;
-		$transient_data = array(
-			'zip_path'     => $this->zip_file_path,
-			'zip_filename' => $this->zip_filename,
-			'created_at'   => current_time( 'timestamp' ),
-		);
-
-		// Set transient to expire after cleanup hours
 		$expiration = $this->cleanup_after_hours * HOUR_IN_SECONDS;
-		set_transient( $transient_key, $transient_data, $expiration );
+		$expires_at = current_time( 'timestamp' ) + $expiration;
+		$signature  = $this->build_download_signature( $this->zip_filename, $expires_at );
+
+		// Keep the legacy transient-backed token as a fallback for older links.
+		$token = $this->generate_download_token();
+		set_transient(
+			'digital_lobster_download_' . $token,
+			array(
+				'zip_path'     => $this->zip_file_path,
+				'zip_filename' => $this->zip_filename,
+				'created_at'   => current_time( 'timestamp' ),
+			),
+			$expiration
+		);
 
 		// Generate download URL
 		$download_url = add_query_arg(
 			array(
-				'action' => 'digital_lobster_download',
-				'token'  => $token,
-				'nonce'  => wp_create_nonce( 'digital_lobster_download_' . $token ),
+				'action'    => 'digital_lobster_download',
+				'file'      => rawurlencode( $this->zip_filename ),
+				'expires'   => $expires_at,
+				'signature' => $signature,
+				'token'     => $token,
+				'nonce'     => wp_create_nonce( 'digital_lobster_download_' . $token ),
 			),
 			admin_url( 'admin-ajax.php' )
 		);
@@ -317,6 +321,106 @@ class Digital_Lobster_Exporter_Packager {
 	}
 
 	/**
+	 * Build a stateless signature for a downloadable ZIP file.
+	 *
+	 * @param string $zip_filename ZIP filename.
+	 * @param int    $expires_at Absolute expiration timestamp.
+	 * @return string
+	 */
+	private function build_download_signature( $zip_filename, $expires_at ) {
+		return hash_hmac( 'sha256', $zip_filename . '|' . (int) $expires_at, wp_salt( 'auth' ) );
+	}
+
+	/**
+	 * Resolve a ZIP filename into a safe absolute path inside the artifacts directory.
+	 *
+	 * @param string $zip_filename ZIP filename.
+	 * @return string|false
+	 */
+	private function get_zip_path_from_filename( $zip_filename ) {
+		$zip_filename = basename( rawurldecode( (string) $zip_filename ) );
+
+		if ( empty( $zip_filename ) || substr( $zip_filename, -4 ) !== '.zip' ) {
+			return false;
+		}
+
+		$zip_path = $this->artifacts_base_dir . $zip_filename;
+		$real_dir = realpath( $this->artifacts_base_dir );
+		$real_zip = realpath( $zip_path );
+
+		if ( false === $real_dir || false === $real_zip ) {
+			return false;
+		}
+
+		if ( strpos( $real_zip, $real_dir . DIRECTORY_SEPARATOR ) !== 0 && $real_zip !== $real_dir . DIRECTORY_SEPARATOR . $zip_filename ) {
+			return false;
+		}
+
+		return $real_zip;
+	}
+
+	/**
+	 * Verify a stateless signed download request.
+	 *
+	 * @param string $zip_filename ZIP filename.
+	 * @param int    $expires_at Expiration timestamp.
+	 * @param string $signature Provided signature.
+	 * @return array|false
+	 */
+	private function verify_signed_download( $zip_filename, $expires_at, $signature ) {
+		$expires_at = (int) $expires_at;
+
+		if ( empty( $zip_filename ) || empty( $signature ) || $expires_at < 1 ) {
+			$this->debug_log_download_failure( 'Signed download request is missing required fields.' );
+			return false;
+		}
+
+		if ( current_time( 'timestamp' ) > $expires_at ) {
+			$this->debug_log_download_failure( 'Signed download request expired for file ' . basename( rawurldecode( (string) $zip_filename ) ) );
+			return false;
+		}
+
+		$expected_signature = $this->build_download_signature( basename( rawurldecode( (string) $zip_filename ) ), $expires_at );
+		if ( ! hash_equals( $expected_signature, (string) $signature ) ) {
+			$this->debug_log_download_failure( 'Signed download request failed signature verification.' );
+			return false;
+		}
+
+		$zip_path = $this->get_zip_path_from_filename( $zip_filename );
+		if ( false === $zip_path || ! file_exists( $zip_path ) ) {
+			$this->debug_log_download_failure( 'Signed download request points to a missing ZIP: ' . basename( rawurldecode( (string) $zip_filename ) ) );
+			return false;
+		}
+
+		return array(
+			'zip_path'     => $zip_path,
+			'zip_filename' => basename( $zip_path ),
+		);
+	}
+
+	/**
+	 * Verify a download request using either the stateless signature or the legacy transient token.
+	 *
+	 * @param array $request Request arguments.
+	 * @return array|false
+	 */
+	public function verify_download_request( array $request ) {
+		if ( ! empty( $request['file'] ) && ! empty( $request['expires'] ) && ! empty( $request['signature'] ) ) {
+			$verified = $this->verify_signed_download( $request['file'], $request['expires'], $request['signature'] );
+			if ( false !== $verified ) {
+				return $verified;
+			}
+		}
+
+		if ( ! empty( $request['token'] ) && ! empty( $request['nonce'] ) ) {
+			return $this->verify_download_token( $request['token'], $request['nonce'] );
+		}
+
+		$this->debug_log_download_failure( 'Download request did not include a valid verification mechanism.' );
+		return false;
+	}
+
+	/**
 	 * Verify download token and get ZIP file path.
 	 *
 	 * @param string $token Download token.
@@ -326,6 +430,7 @@ class Digital_Lobster_Exporter_Packager {
 	public function verify_download_token( $token, $nonce ) {
 		// Verify nonce
 		if ( ! wp_verify_nonce( $nonce, 'digital_lobster_download_' . $token ) ) {
+			$this->debug_log_download_failure( 'Legacy download nonce verification failed.' );
 			return false;
 		}
 
@@ -334,15 +439,29 @@ class Digital_Lobster_Exporter_Packager {
 		$transient_data = get_transient( $transient_key );
 
 		if ( ! $transient_data || ! is_array( $transient_data ) ) {
+			$this->debug_log_download_failure( 'Legacy download transient was missing for token ' . substr( $token, 0, 12 ) . '...' );
 			return false;
 		}
 
 		// Verify ZIP file exists
 		if ( ! isset( $transient_data['zip_path'] ) || ! file_exists( $transient_data['zip_path'] ) ) {
+			$this->debug_log_download_failure( 'Legacy download ZIP path was missing on disk for token ' . substr( $token, 0, 12 ) . '...' );
 			return false;
 		}
 
 		return $transient_data;
+	}
+
+	/**
+	 * Emit download verification failures to the PHP error log when WP_DEBUG is enabled.
+	 *
+	 * @param string $message Message to log.
+	 * @return void
+	 */
+	private function debug_log_download_failure( $message ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Digital Lobster Exporter: Download verification failed: ' . $message );
+		}
 	}
 
 	/**
@@ -401,6 +520,15 @@ class Digital_Lobster_Exporter_Packager {
 			// Use provided export_dir or the one set in the instance
 			if ( empty( $export_dir ) ) {
 				$export_dir = $this->export_dir;
+			}
+
+			$real_export_dir = realpath( $export_dir );
+			$real_artifacts_dir = realpath( $this->artifacts_base_dir );
+
+			// Never recursively delete the base artifacts directory that stores ZIP files.
+			if ( false !== $real_export_dir && false !== $real_artifacts_dir && $real_export_dir === $real_artifacts_dir ) {
+				$this->debug_log_download_failure( 'Refused to delete the base artifacts directory during temporary cleanup.' );
+				return true;
 			}
 
 			// Validate directory exists

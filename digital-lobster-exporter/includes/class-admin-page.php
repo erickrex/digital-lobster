@@ -195,6 +195,23 @@ class Digital_Lobster_Exporter_Admin_Page {
 	}
 
 	/**
+	 * Prepare the current request for a long-running export.
+	 */
+	private function prepare_long_running_request() {
+		if ( function_exists( 'ignore_user_abort' ) ) {
+			ignore_user_abort( true );
+		}
+
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			wp_raise_memory_limit( 'admin' );
+		}
+
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 0 );
+		}
+	}
+
+	/**
 	 * Handle AJAX request to start scan.
 	 */
 	public function handle_ajax_start_scan() {
@@ -215,6 +232,8 @@ class Digital_Lobster_Exporter_Admin_Page {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'Digital Lobster Exporter: Starting AJAX scan request' );
 		}
+
+		$this->prepare_long_running_request();
 
 		try {
 			// Load security filters
@@ -280,7 +299,9 @@ class Digital_Lobster_Exporter_Admin_Page {
 		}
 
 		// Discard any captured output (warnings, notices, etc.)
-		ob_end_clean();
+		if ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
 		
 		if ( $result['success'] ) {
 			// Get download URL from results
@@ -362,17 +383,26 @@ class Digital_Lobster_Exporter_Admin_Page {
 		// Load security filters
 		require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-security-filters.php';
 
-		// Get token and nonce from request
-		$token = isset( $_GET['token'] ) ? sanitize_text_field( $_GET['token'] ) : '';
-		$nonce = isset( $_GET['nonce'] ) ? sanitize_text_field( $_GET['nonce'] ) : '';
+		// Get verification data from request.
+		$request = array(
+			'token'     => isset( $_GET['token'] ) ? sanitize_text_field( $_GET['token'] ) : '',
+			'nonce'     => isset( $_GET['nonce'] ) ? sanitize_text_field( $_GET['nonce'] ) : '',
+			'file'      => isset( $_GET['file'] ) ? sanitize_text_field( wp_unslash( $_GET['file'] ) ) : '',
+			'expires'   => isset( $_GET['expires'] ) ? absint( $_GET['expires'] ) : 0,
+			'signature' => isset( $_GET['signature'] ) ? sanitize_text_field( $_GET['signature'] ) : '',
+		);
 
 		// Check user capabilities
 		if ( ! Digital_Lobster_Exporter_Security_Filters::verify_capability( 'manage_options' ) ) {
 			wp_die( 'Insufficient permissions.', 'Access Denied', array( 'response' => 403 ) );
 		}
 
-		// Validate token
-		if ( empty( $token ) || empty( $nonce ) ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Digital Lobster Exporter: Handling download request' );
+		}
+
+		// Validate request
+		if ( empty( $request['token'] ) && empty( $request['file'] ) ) {
 			wp_die( 'Invalid download request.', 'Invalid Request', array( 'response' => 400 ) );
 		}
 
@@ -380,8 +410,8 @@ class Digital_Lobster_Exporter_Admin_Page {
 		require_once DIGITAL_LOBSTER_EXPORTER_PATH . 'includes/class-packager.php';
 		$packager = new Digital_Lobster_Exporter_Packager();
 
-		// Verify download token
-		$download_data = $packager->verify_download_token( $token, $nonce );
+		// Verify download request
+		$download_data = $packager->verify_download_request( $request );
 
 		if ( ! $download_data ) {
 			wp_die( 'Invalid or expired download link.', 'Invalid Link', array( 'response' => 404 ) );

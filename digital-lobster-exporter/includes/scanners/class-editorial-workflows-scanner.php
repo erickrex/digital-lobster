@@ -124,6 +124,11 @@ class Digital_Lobster_Exporter_Editorial_Workflows_Scanner extends Digital_Lobst
 	 * @return string Description of preview behavior.
 	 */
 	private function detect_preview_expectations() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		// Check if a preview plugin is active.
 		if ( is_plugin_active( 'public-post-preview/public-post-preview.php' ) ) {
 			return 'public_preview_links';

@@ -174,6 +174,11 @@ class Digital_Lobster_Exporter_Redirects_Scanner extends Digital_Lobster_Exporte
 	 * @return array Detected redirect plugins.
 	 */
 	private function detect_redirect_plugins() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		$plugins = array();
 
 		// Check for Redirection plugin
@@ -275,12 +280,14 @@ class Digital_Lobster_Exporter_Redirects_Scanner extends Digital_Lobster_Exporte
 		$table_name = $wpdb->prefix . 'redirection_items';
 
 		// Check if table exists
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) !== $table_name ) {
+		$safe_table = esc_sql( $table_name );
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ) !== $table_name ) {
 			return $redirects;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$results = $wpdb->get_results(
-			"SELECT url, action_data, action_code, regex, status FROM $table_name WHERE status = 'enabled' ORDER BY id",
+			"SELECT url, action_data, action_code, regex, status FROM `{$safe_table}` WHERE status = 'enabled' ORDER BY id",
 			ARRAY_A
 		);
 
@@ -393,12 +400,14 @@ class Digital_Lobster_Exporter_Redirects_Scanner extends Digital_Lobster_Exporte
 		$table_name = $wpdb->prefix . 'rank_math_redirections';
 
 		// Check if table exists
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) !== $table_name ) {
+		$safe_table = esc_sql( $table_name );
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ) !== $table_name ) {
 			return $redirects;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$results = $wpdb->get_results(
-			"SELECT url_from, url_to, header_code, status FROM $table_name WHERE status = 'active' ORDER BY id",
+			"SELECT url_from, url_to, header_code, status FROM `{$safe_table}` WHERE status = 'active' ORDER BY id",
 			ARRAY_A
 		);
 

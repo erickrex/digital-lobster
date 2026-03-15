@@ -289,6 +289,11 @@ class Digital_Lobster_Exporter_Environment_Scanner extends Digital_Lobster_Expor
 	 * @return array Features information.
 	 */
 	private function collect_features_info() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		$features = array(
 			'rest_api_enabled' => true, // REST API is always enabled in modern WordPress.
 			'xmlrpc_enabled'   => apply_filters( 'xmlrpc_enabled', true ),
@@ -325,6 +330,11 @@ class Digital_Lobster_Exporter_Environment_Scanner extends Digital_Lobster_Expor
 	 * @return array CDN detection results.
 	 */
 	private function detect_cdn() {
+		// Ensure is_plugin_active() is available.
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		$cdn_info = array(
 			'detected' => false,
 			'type'     => null,

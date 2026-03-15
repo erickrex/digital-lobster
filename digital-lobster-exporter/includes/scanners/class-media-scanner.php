@@ -321,8 +321,12 @@ class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Sc
 	private function is_local_upload_url( $url ) {
 		$upload_url = $this->upload_dir['baseurl'];
 		
-		// Check if URL starts with upload URL
-		if ( strpos( $url, $upload_url ) === 0 ) {
+		// Normalize both URLs to protocol-relative for comparison
+		$normalized_url = preg_replace( '#^https?:#', '', $url );
+		$normalized_upload_url = preg_replace( '#^https?:#', '', $upload_url );
+
+		// Check if URL starts with upload URL (protocol-agnostic)
+		if ( strpos( $normalized_url, $normalized_upload_url ) === 0 ) {
 			return true;
 		}
 
@@ -406,10 +410,10 @@ class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Sc
 		$file_path = $this->get_file_path_from_url( $url );
 		
 		if ( ! $file_path || ! file_exists( $file_path ) ) {
-			error_log( sprintf(
-				'Digital Lobster Exporter: Media file not found: %s',
-				$url
-			) );
+			$this->log_warning(
+				'media',
+				sprintf( 'Media file not found on disk (may be a deleted thumbnail): %s', $url )
+			);
 			return;
 		}
 
@@ -417,10 +421,10 @@ class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Sc
 		$relative_path = $this->get_relative_upload_path( $url );
 		
 		if ( ! $relative_path ) {
-			error_log( sprintf(
-				'Digital Lobster Exporter: Could not determine relative path for: %s',
-				$url
-			) );
+			$this->log_warning(
+				'media',
+				sprintf( 'Could not determine relative path for: %s', $url )
+			);
 			return;
 		}
 
@@ -437,11 +441,10 @@ class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Sc
 		$result = copy( $file_path, $dest_path );
 
 		if ( ! $result ) {
-			error_log( sprintf(
-				'Digital Lobster Exporter: Failed to copy media file: %s to %s',
-				$file_path,
-				$dest_path
-			) );
+			$this->log_error(
+				'media',
+				sprintf( 'Failed to copy media file: %s to %s', $file_path, $dest_path )
+			);
 		}
 	}
 
@@ -455,9 +458,14 @@ class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Sc
 		$upload_url = $this->upload_dir['baseurl'];
 		$upload_path = $this->upload_dir['basedir'];
 
-		// Replace upload URL with upload path
-		if ( strpos( $url, $upload_url ) === 0 ) {
-			return str_replace( $upload_url, $upload_path, $url );
+		// Normalize both to protocol-relative for comparison
+		$normalized_url = preg_replace( '#^https?:#', '', $url );
+		$normalized_upload_url = preg_replace( '#^https?:#', '', $upload_url );
+
+		// Replace upload URL with upload path (protocol-agnostic)
+		if ( strpos( $normalized_url, $normalized_upload_url ) === 0 ) {
+			$relative = substr( $normalized_url, strlen( $normalized_upload_url ) );
+			return $upload_path . $relative;
 		}
 
 		// Handle relative URLs
@@ -478,9 +486,13 @@ class Digital_Lobster_Exporter_Media_Scanner extends Digital_Lobster_Exporter_Sc
 	private function get_relative_upload_path( $url ) {
 		$upload_url = $this->upload_dir['baseurl'];
 
-		// Get path relative to uploads directory
-		if ( strpos( $url, $upload_url ) === 0 ) {
-			return str_replace( trailingslashit( $upload_url ), '', $url );
+		// Normalize both to protocol-relative for comparison
+		$normalized_url = preg_replace( '#^https?:#', '', $url );
+		$normalized_upload_url = preg_replace( '#^https?:#', '', trailingslashit( $upload_url ) );
+
+		// Get path relative to uploads directory (protocol-agnostic)
+		if ( strpos( $normalized_url, $normalized_upload_url ) === 0 ) {
+			return substr( $normalized_url, strlen( $normalized_upload_url ) );
 		}
 
 		// Handle relative URLs
