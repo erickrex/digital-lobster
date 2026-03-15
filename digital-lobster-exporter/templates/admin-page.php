@@ -23,18 +23,18 @@ $settings = wp_parse_args( $settings, $defaults );
 ?>
 
 <div class="wrap digital-lobster-exporter-wrap">
-	<h1><?php echo esc_html( 'AI Website Exporter' ); ?></h1>
+	<h1><?php echo esc_html( '🦞 Digital Lobster Exporter' ); ?></h1>
 	
 	<div class="digital-lobster-exporter-container">
 		<div class="digital-lobster-exporter-header">
 			<p class="digital-lobster-exporter-tagline">
-				<?php echo esc_html( 'Collects everything needed to recreate your website in a modern Python architecture using AI Agents' ); ?>
+				<?php echo esc_html( 'Export your WordPress site for migration to Digital Ocean with Astro + Strapi CMS' ); ?>
 			</p>
 			
 			<p class="digital-lobster-exporter-description">
 				<?php
 				echo esc_html(
-					'This plugin will scan your WordPress site and export all necessary data including content, theme files, plugin configurations, and database schema. All data is packaged into a downloadable ZIP file. No user data, passwords, or API keys are included in the export.'
+					'This plugin scans your WordPress site and exports all necessary data including content, theme files, plugin configurations, and database schema for migration to Astro + Strapi on Digital Ocean. All data is packaged into a downloadable ZIP file. No user data, passwords, or API keys are included in the export.'
 				);
 				?>
 			</p>

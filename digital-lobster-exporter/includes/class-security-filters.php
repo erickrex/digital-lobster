@@ -544,6 +544,26 @@ class Digital_Lobster_Exporter_Security_Filters {
 	}
 
 	/**
+	 * Filter a single value, redacting PII and sensitive data.
+	 *
+	 * Works on strings, arrays, and scalar types.
+	 *
+	 * @param mixed $value The value to filter.
+	 * @return mixed The filtered value.
+	 */
+	public function filter_value( $value ) {
+		if ( is_array( $value ) ) {
+			return self::filter_array_recursive( $value );
+		}
+
+		if ( is_string( $value ) ) {
+			return self::sanitize_content( $value );
+		}
+
+		return $value;
+	}
+
+	/**
 	 * Sanitize export data before saving.
 	 *
 	 * @param mixed $data Data to sanitize.

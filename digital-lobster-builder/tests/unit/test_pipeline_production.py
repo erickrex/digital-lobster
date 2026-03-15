@@ -74,12 +74,12 @@ def _make_orchestrator(
 # ---------------------------------------------------------------------------
 
 class TestProductionCmsAgentOrder:
-    """PRODUCTION_CMS_AGENT_ORDER has the correct 13-agent sequence.
+    """PRODUCTION_CMS_AGENT_ORDER has the correct 14-agent sequence.
 
     Validates: Requirement 22.1
     """
-    def test_has_exactly_13_agents(self) -> None:
-        assert len(PRODUCTION_CMS_AGENT_ORDER) == 13
+    def test_has_exactly_14_agents(self) -> None:
+        assert len(PRODUCTION_CMS_AGENT_ORDER) == 14
 
     def test_exact_sequence(self) -> None:
         expected = [
@@ -89,6 +89,7 @@ class TestProductionCmsAgentOrder:
             "schema_compiler",
             "presentation_compiler",
             "behavior_compiler",
+            "manifest_review",
             "content_type_generator",
             "theming",
             "scaffold",

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -110,8 +109,14 @@ def _inject_active_plugin(
     existing.append(entry)
     return bundle.model_copy(update={"plugins_fingerprint": {"plugins": existing}})
 
-def _make_agent(adapters=None) -> CapabilityResolutionAgent:
-    return CapabilityResolutionAgent(gradient_client=None, adapters=adapters)
+def _make_agent(
+    adapters=None,
+    gradient_client=None,
+) -> CapabilityResolutionAgent:
+    return CapabilityResolutionAgent(
+        gradient_client=gradient_client,
+        adapters=adapters,
+    )
 
 def _run(coro):
     return asyncio.run(coro)
@@ -214,9 +219,8 @@ class TestUnsupportedPluginFinding:
 # ---------------------------------------------------------------------------
 
 class TestLlmFallback:
-    def test_low_confidence_shortcode_triggers_llm_stub(self, caplog):
-        """Shortcodes produce confidence=0.7 capabilities, which should
-        trigger the LLM fallback stub and log accordingly."""
+    def test_low_confidence_shortcode_triggers_structured_ai_review(self):
+        """Low-confidence capabilities should invoke structured AI review."""
         bundle = _clean_bundle(
             shortcodes_inventory={
                 "shortcodes": [
@@ -224,30 +228,81 @@ class TestLlmFallback:
                 ]
             }
         )
-        agent = _make_agent()
-        with caplog.at_level(logging.INFO):
-            result = _run(agent.execute({"bundle_manifest": bundle}))
+        gradient_client = MagicMock()
+        gradient_client.complete_structured = AsyncMock(
+            return_value={
+                "decisions": [
+                    {
+                        "construct": "shortcode:gallery",
+                        "suggested_classification": "unsupported",
+                        "suggested_confidence": 0.95,
+                        "rationale": "Gallery shortcode relies on runtime markup not mapped by an adapter",
+                        "recommended_action": "Render as fallback HTML or implement an Astro component",
+                        "evidence_refs": ["shortcode:gallery"],
+                    }
+                ]
+            }
+        )
+        agent = _make_agent(gradient_client=gradient_client)
+        result = _run(agent.execute({"bundle_manifest": bundle}))
 
-        assert "LLM fallback" in caplog.text
-
-        # The stub returns capabilities unchanged, so the shortcode cap
-        # should still be present in the manifest
+        gradient_client.complete_structured.assert_awaited_once()
         manifest = result.artifacts["capability_manifest"]
         shortcode_caps = [
             c for c in manifest.capabilities if c.capability_type == "shortcode"
         ]
         assert len(shortcode_caps) == 1
+        assert shortcode_caps[0].classification == "unsupported"
+        assert shortcode_caps[0].confidence == 0.95
+
+        report = result.artifacts["capability_review_report"]
+        assert report.ai_review_requested is True
+        assert report.ai_review_completed is True
+        assert report.applied_count == 1
+        assert len(report.decisions) == 1
+
+    def test_high_confidence_caps_skip_ai_review(self):
+        """When all capabilities are already high confidence, AI review is skipped."""
+        bundle = _inject_active_plugin(_clean_bundle(), slug="acf", family="acf")
+        gradient_client = MagicMock()
+        gradient_client.complete_structured = AsyncMock()
+        agent = _make_agent(gradient_client=gradient_client)
+        result = _run(agent.execute({"bundle_manifest": bundle}))
+
+        gradient_client.complete_structured.assert_not_awaited()
+        report = result.artifacts["capability_review_report"]
+        assert report.reviewed_count == 0
+        assert report.ai_review_requested is False
+
+    def test_ai_review_failure_falls_back_to_deterministic_result(self):
+        """AI review failures should preserve the original capability output."""
+        bundle = _clean_bundle(
+            shortcodes_inventory={
+                "shortcodes": [
+                    {"tag": "gallery", "source_plugin": "core"},
+                ]
+            }
+        )
+        gradient_client = MagicMock()
+        gradient_client.complete_structured = AsyncMock(
+            side_effect=RuntimeError("model unavailable")
+        )
+        agent = _make_agent(gradient_client=gradient_client)
+        result = _run(agent.execute({"bundle_manifest": bundle}))
+
+        manifest = result.artifacts["capability_manifest"]
+        shortcode_caps = [
+            c for c in manifest.capabilities if c.capability_type == "shortcode"
+        ]
+        assert len(shortcode_caps) == 1
+        assert shortcode_caps[0].classification == "astro_runtime"
         assert shortcode_caps[0].confidence == 0.7
 
-    def test_high_confidence_caps_skip_llm_fallback(self, caplog):
-        """When all capabilities have confidence >= 0.8, no LLM fallback
-        should be triggered."""
-        bundle = _inject_active_plugin(_clean_bundle(), slug="acf", family="acf")
-        agent = _make_agent()
-        with caplog.at_level(logging.INFO):
-            _run(agent.execute({"bundle_manifest": bundle}))
-
-        assert "LLM fallback" not in caplog.text
+        report = result.artifacts["capability_review_report"]
+        assert report.ai_review_requested is True
+        assert report.ai_review_completed is False
+        assert report.applied_count == 0
+        assert result.warnings
 
 # ---------------------------------------------------------------------------
 # Critical finding aborts stage — Requirement 18.5

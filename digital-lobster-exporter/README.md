@@ -1,8 +1,8 @@
 # Digital Lobster Exporter
 
-**AI-Powered WordPress Site Exporter**
+**WordPress to Strapi CMS on Digital Ocean — Site Exporter**
 
-Digital Lobster Exporter is a WordPress plugin that exports comprehensive website data and metadata for AI-powered migration to modern architectures like Astro and Strapi. With a single click, collect all the artifacts needed to recreate your WordPress site in a new platform.
+Digital Lobster Exporter is a WordPress plugin that exports comprehensive website data and metadata for migration to Strapi CMS hosted on Digital Ocean. With a single click, collect all the artifacts needed to recreate your WordPress site in Astro + Strapi.
 
 ## Features
 
@@ -71,9 +71,9 @@ wp plugin install digital-lobster-exporter.zip --activate
 
 ### Basic Usage
 
-1. After activation, navigate to **🧠 Migrate with AI Agents** in the WordPress admin sidebar
+1. After activation, navigate to **🦞 Digital Lobster Exporter** in the WordPress admin sidebar
 2. Review the information on the page about what will be exported
-3. Click the **Migrate** button
+3. Click the **Export** button
 4. Keep the page open while the export request runs (typically 1-5 minutes)
 5. Click **Download Artifacts (.zip)** when the scan completes
 6. Save the ZIP file to your local machine
@@ -82,7 +82,7 @@ wp plugin install digital-lobster-exporter.zip --activate
 
 To customize how much sample content is exported:
 
-1. Navigate to **🧠 Migrate with AI Agents** in the WordPress admin sidebar
+1. Navigate to **🦞 Digital Lobster Exporter** in the WordPress admin sidebar
 2. Click the **Settings** toggle to expand the inline settings panel
 3. Adjust the following options:
    - **Max Posts**: Number of sample posts to export (default: 100)
@@ -226,7 +226,7 @@ A: Yes. The plugin automatically excludes passwords, API keys, and PII. Exports 
 ### Content Export Questions
 
 **Q: Why are only sample content items exported?**  
-A: The plugin exports representative samples to keep file sizes manageable and focus on structure rather than bulk data. This is sufficient for AI-powered migration planning.
+A: The plugin exports representative samples to keep file sizes manageable and focus on structure rather than bulk data. This is sufficient for planning your migration to Strapi CMS on Digital Ocean.
 
 **Q: Can I export all my content?**  
 A: You can increase sample limits in the settings panel on the export page, but exporting thousands of posts may cause timeouts and very large files.
@@ -754,7 +754,7 @@ See [TESTING.md](TESTING.md) for detailed testing guide and [tests/INTEGRATION-T
 
 ## Credits
 
-Developed for AI-powered WordPress to Astro/Strapi migrations.
+Developed for WordPress to Strapi CMS on Digital Ocean migrations.
 
 ### Development Team
 
@@ -769,4 +769,4 @@ Developed for AI-powered WordPress to Astro/Strapi migrations.
 
 ---
 
-**Note**: This plugin is designed to work with AI migration systems. The exported data is optimized for machine parsing and may require additional processing for human consumption.
+**Note**: This plugin is designed to export your WordPress site for migration to Strapi CMS on Digital Ocean. The exported data is structured for seamless import into Astro + Strapi.

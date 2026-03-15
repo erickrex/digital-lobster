@@ -42,8 +42,8 @@ class Digital_Lobster_Exporter_Admin_Page {
 	 */
 	public function add_admin_menu() {
 		add_menu_page(
-			'AI Website Exporter',
-			'🧠 Export with AI Agents',
+			'Digital Lobster Exporter',
+			'🦞 Digital Lobster Exporter',
 			'manage_options',
 			'digital-lobster-exporter',
 			array( $this, 'render_page' ),

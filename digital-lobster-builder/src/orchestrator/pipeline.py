@@ -13,6 +13,7 @@ from src.agents.content_migrator import ContentMigratorAgent
 from src.agents.content_type_generator import ContentTypeGeneratorAgent
 from src.agents.deployment_pipeline import DeploymentPipelineAgent
 from src.agents.importer import ImporterAgent
+from src.agents.manifest_review import ManifestReviewAgent
 from src.agents.modeling import ModelingAgent
 from src.agents.parity_qa import ParityQAAgent
 from src.agents.prd_lite import PrdLiteAgent
@@ -62,7 +63,8 @@ CMS_AGENT_ORDER: list[str] = [
     "deployment_pipeline",
 ]
 
-# Production CMS mode — 13-agent deterministic compilation pipeline.
+# Production CMS mode — 14-agent deterministic compilation pipeline with
+# AI review layered on top of deterministic manifests.
 # Replaces CMS_AGENT_ORDER when cms_mode=True AND production_mode=True.
 PRODUCTION_CMS_AGENT_ORDER: list[str] = [
     "blueprint_intake",
@@ -71,6 +73,7 @@ PRODUCTION_CMS_AGENT_ORDER: list[str] = [
     "schema_compiler",
     "presentation_compiler",
     "behavior_compiler",
+    "manifest_review",
     "content_type_generator",
     "theming",
     "scaffold",
@@ -105,6 +108,11 @@ PERSISTED_ARTIFACTS: set[str] = {
     "qa_report",
     "migration_report",
     "deployment_report",
+    "capability_review_report",
+    "schema_enrichment_report",
+    "presentation_risk_report",
+    "behavior_decision_log",
+    "ai_decision_metrics",
 }
 
 class PipelineOrchestrator:
@@ -114,7 +122,7 @@ class PipelineOrchestrator:
 
     * ``cms_mode=False`` — standard 7-agent ``AGENT_ORDER``.
     * ``cms_mode=True, production_mode=False`` — 11-agent ``CMS_AGENT_ORDER``.
-    * ``cms_mode=True, production_mode=True`` — 13-agent
+    * ``cms_mode=True, production_mode=True`` — 14-agent
       ``PRODUCTION_CMS_AGENT_ORDER`` with deterministic compilation,
       finding accumulation, and critical-finding abort.
     """
@@ -147,7 +155,7 @@ class PipelineOrchestrator:
         """Execute the pipeline sequentially.
 
         When *cms_mode* is ``True`` and *production_mode* is ``True``
-        the orchestrator uses the 13-agent
+        the orchestrator uses the 14-agent
         ``PRODUCTION_CMS_AGENT_ORDER`` with finding accumulation and
         critical-finding abort.  When *cms_mode* is ``True`` but
         *production_mode* is ``False`` the 11-agent ``CMS_AGENT_ORDER``
@@ -359,7 +367,12 @@ class PipelineOrchestrator:
             elif isinstance(value, str):
                 data = value.encode("utf-8")
             else:
-                data = json.dumps(value, default=str).encode("utf-8")
+                serialized = (
+                    value.model_dump()
+                    if hasattr(value, "model_dump")
+                    else value
+                )
+                data = json.dumps(serialized, default=str).encode("utf-8")
 
             await self._spaces_client.upload(
                 self._artifacts_bucket, key, data
@@ -405,7 +418,7 @@ class PipelineOrchestrator:
         When *cms_mode* is ``False`` the original 7-agent sequence is
         returned.  When ``True`` and *production_mode* is ``False`` the
         11-agent CMS sequence is returned.  When both are ``True`` the
-        13-agent production compilation pipeline is returned.
+        14-agent production compilation pipeline is returned.
         """
         gc = self._gradient_client
         kb = self._kb_client
@@ -427,12 +440,13 @@ class PipelineOrchestrator:
         }
 
         if cms_mode and production_mode:
-            # Production CMS pipeline — 13 agents.
+            # Production CMS pipeline — deterministic compilation plus AI review.
             agent_map["qualification"] = QualificationAgent(gc, kb)
             agent_map["capability_resolution"] = CapabilityResolutionAgent(gc, kb)
             agent_map["schema_compiler"] = SchemaCompilerAgent(gc, kb)
             agent_map["presentation_compiler"] = PresentationCompilerAgent(gc, kb)
             agent_map["behavior_compiler"] = BehaviorCompilerAgent(gc, kb)
+            agent_map["manifest_review"] = ManifestReviewAgent(gc, kb)
             agent_map["content_type_generator"] = ContentTypeGeneratorAgent(gc, kb)
             agent_map["content_migrator"] = ContentMigratorAgent(gc, kb)
             agent_map["parity_qa"] = ParityQAAgent(gc, kb)

@@ -9,6 +9,7 @@ Jinja2 templates.  Dependencies are injected at startup through
 from __future__ import annotations
 
 import io
+import json
 import logging
 import uuid
 import zipfile
@@ -292,7 +293,12 @@ async def download_all(run_id: str) -> Response:
             elif isinstance(content, bytes):
                 data = content
             else:
-                data = str(content).encode()
+                serialized = (
+                    content.model_dump()
+                    if hasattr(content, "model_dump")
+                    else content
+                )
+                data = json.dumps(serialized, default=str).encode()
             zf.writestr(name, data)
 
     return Response(
@@ -300,4 +306,3 @@ async def download_all(run_id: str) -> Response:
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={run_id}-artifacts.zip"},
     )
-
