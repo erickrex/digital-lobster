@@ -80,8 +80,11 @@ class BlueprintIntakeAgent(BaseAgent):
                 uploaded ZIP in the DigitalOcean Spaces ingestion bucket.
 
         Returns:
-            AgentResult with ``inventory`` and ``kb_ref`` artifacts on
-            success, or ``errors`` artifact listing validation issues.
+            AgentResult with normalized bundle artifacts for downstream agents.
+
+        Raises:
+            BundleValidationError: If the ZIP is malformed, incomplete, or
+                does not contain usable content for migration.
         """
         start = time.monotonic()
         warnings: list[str] = []
@@ -94,47 +97,65 @@ class BlueprintIntakeAgent(BaseAgent):
         try:
             zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
         except zipfile.BadZipFile as exc:
-            return AgentResult(
-                agent_name="blueprint_intake",
-                artifacts={"errors": [{"path": bundle_key, "error": str(exc)}]},
-                warnings=warnings,
-                duration_seconds=time.monotonic() - start,
-            )
+            raise BundleValidationError(
+                message=f"Invalid ZIP bundle '{bundle_key}': {exc}",
+                validation_failures=[{"artifact": bundle_key, "error": str(exc)}],
+            ) from exc
 
-        errors = validate_bundle_structure(zf)
-        if errors:
-            return AgentResult(
-                agent_name="blueprint_intake",
-                artifacts={"errors": errors},
-                warnings=warnings,
-                duration_seconds=time.monotonic() - start,
-            )
+        try:
+            errors = validate_bundle_structure(zf)
+            if errors:
+                _raise_bundle_validation_errors(errors)
 
-        # 3. Parse manifest + site metadata with compatibility fallbacks
-        manifest = _parse_manifest(zf)
+            # 3. Parse manifest + site metadata with compatibility fallbacks
+            manifest = _parse_manifest(zf)
 
-        # 4. Parse site_info/site_blueprint
-        site_info = _load_site_info(zf)
+            # 4. Parse site_info/site_blueprint
+            site_info = _load_site_info(zf)
 
-        # 5. Build Inventory
-        inventory = build_inventory(zf, manifest, site_info, warnings)
-        export_bundle = extract_export_bundle(zf, warnings)
-        content_items = extract_content_items(zf, warnings)
-        menus = extract_menu_definitions(zf, warnings)
-        redirect_rules = extract_redirect_rules(zf, warnings)
-        html_snapshots = extract_html_snapshots(zf, warnings)
-        media_manifest = extract_media_manifest(zf, warnings)
+            # 5. Build Inventory
+            inventory = build_inventory(zf, manifest, site_info, warnings)
+            export_bundle = extract_export_bundle(zf, warnings)
+            content_items = extract_content_items(zf, warnings)
+            menus = extract_menu_definitions(zf, warnings)
+            redirect_rules = extract_redirect_rules(zf, warnings)
+            html_snapshots = extract_html_snapshots(zf, warnings)
+            media_manifest = extract_media_manifest(zf, warnings)
+            validation_errors = validate_extracted_bundle(site_info, content_items)
+            if validation_errors:
+                _raise_bundle_validation_errors(validation_errors)
 
-        # 6. CMS mode: validate bundle against Bundle_Schema and produce BundleManifest
-        cms_mode = context.get("cms_mode", False)
-        if cms_mode:
-            bundle_manifest = validate_cms_bundle(zf, site_info, warnings)
-            zf.close()
+            # 6. CMS mode: validate bundle against Bundle_Schema and produce BundleManifest
+            cms_mode = context.get("cms_mode", False)
+            if cms_mode:
+                bundle_manifest = validate_cms_bundle(zf, site_info, warnings)
+                return AgentResult(
+                    agent_name="blueprint_intake",
+                    artifacts={
+                        "inventory": inventory,
+                        "bundle_manifest": bundle_manifest,
+                        "export_bundle": export_bundle,
+                        "content_items": content_items,
+                        "menus": menus,
+                        "redirect_rules": redirect_rules,
+                        "html_snapshots": html_snapshots,
+                        "media_manifest": [entry.model_dump() for entry in media_manifest],
+                    },
+                    warnings=warnings,
+                    duration_seconds=time.monotonic() - start,
+                )
+
+            # 7. Create Knowledge Base and upload documents
+            kb_ref: str | None = None
+            if self.kb_client is not None:
+                run_id = context.get("run_id", bundle_key)
+                kb_ref = await self._create_and_populate_kb(run_id, zf, warnings)
+
             return AgentResult(
                 agent_name="blueprint_intake",
                 artifacts={
                     "inventory": inventory,
-                    "bundle_manifest": bundle_manifest,
+                    "kb_ref": kb_ref,
                     "export_bundle": export_bundle,
                     "content_items": content_items,
                     "menus": menus,
@@ -145,30 +166,8 @@ class BlueprintIntakeAgent(BaseAgent):
                 warnings=warnings,
                 duration_seconds=time.monotonic() - start,
             )
-
-        # 7. Create Knowledge Base and upload documents
-        kb_ref: str | None = None
-        if self.kb_client is not None:
-            run_id = context.get("run_id", bundle_key)
-            kb_ref = await self._create_and_populate_kb(run_id, zf, warnings)
-
-        zf.close()
-
-        return AgentResult(
-            agent_name="blueprint_intake",
-            artifacts={
-                "inventory": inventory,
-                "kb_ref": kb_ref,
-                "export_bundle": export_bundle,
-                "content_items": content_items,
-                "menus": menus,
-                "redirect_rules": redirect_rules,
-                "html_snapshots": html_snapshots,
-                "media_manifest": [entry.model_dump() for entry in media_manifest],
-            },
-            warnings=warnings,
-            duration_seconds=time.monotonic() - start,
-        )
+        finally:
+            zf.close()
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -221,6 +220,9 @@ def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
         "site/site_info.json" in names or "site_blueprint.json" in names
     )
     has_menus = any(n.startswith("menus/") for n in names) or "menus.json" in names
+    has_content_files = any(
+        n.startswith("content/") and n.endswith(".json") for n in names
+    )
 
     if not has_manifest:
         errors.append({"path": "MANIFEST.json", "error": "missing required file"})
@@ -232,6 +234,11 @@ def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
     for req_dir in ("theme/", "content/"):
         if not any(n.startswith(req_dir) for n in names):
             errors.append({"path": req_dir, "error": "missing required directory"})
+    if any(n.startswith("content/") for n in names) and not has_content_files:
+        errors.append({
+            "path": "content/",
+            "error": "no exported content JSON files found",
+        })
     if not has_menus:
         errors.append({"path": "menus/", "error": "missing required directory"})
 
@@ -244,6 +251,50 @@ def validate_bundle_structure(zf: zipfile.ZipFile) -> list[dict[str, str]]:
                 errors.append({"path": req_file, "error": f"malformed JSON: {exc}"})
 
     return errors
+
+def validate_extracted_bundle(
+    site_info: dict[str, Any],
+    content_items: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    """Validate normalized intake artifacts required for any migration run."""
+    errors: list[dict[str, str]] = []
+
+    if not site_info.get("site_url"):
+        errors.append({
+            "path": "site/site_info.json",
+            "error": "missing required site_url in bundle metadata",
+        })
+    if not site_info.get("site_name"):
+        errors.append({
+            "path": "site/site_info.json",
+            "error": "missing required site_name in bundle metadata",
+        })
+    if not content_items:
+        errors.append({
+            "path": "content/",
+            "error": "no exported content items found in bundle content JSON files",
+        })
+
+    return errors
+
+def _raise_bundle_validation_errors(errors: list[dict[str, str]]) -> None:
+    """Raise BundleValidationError from normalized intake validation errors."""
+    missing_artifacts = [
+        error["path"]
+        for error in errors
+        if error["error"].startswith("missing required")
+    ]
+    validation_failures = [
+        {"artifact": error["path"], "error": error["error"]}
+        for error in errors
+        if not error["error"].startswith("missing required")
+    ]
+    message = "; ".join(f"{error['path']}: {error['error']}" for error in errors)
+    raise BundleValidationError(
+        message=message,
+        missing_artifacts=missing_artifacts,
+        validation_failures=validation_failures,
+    )
 
 # ---------------------------------------------------------------------------
 # CMS bundle validation — used when cms_mode=True
@@ -319,6 +370,17 @@ def _is_version_compatible(actual: str, expected: str) -> bool:
         return False
     return actual_parts[0] == expected_parts[0]
 
+def _resolve_artifact_path(
+    names: set[str],
+    canonical_path: str,
+    alternate_paths: list[str],
+) -> str | None:
+    """Return the first matching artifact path from canonical and alias paths."""
+    for path in (canonical_path, *alternate_paths):
+        if path in names:
+            return path
+    return None
+
 def validate_cms_bundle(
     zf: zipfile.ZipFile,
     site_info: dict[str, Any],
@@ -336,7 +398,12 @@ def validate_cms_bundle(
     missing: list[str] = []
     for artifact_def in schema.artifacts:
         if artifact_def.requirement == ArtifactRequirement.REQUIRED:
-            if artifact_def.file_path not in names:
+            actual_path = _resolve_artifact_path(
+                names,
+                artifact_def.file_path,
+                artifact_def.alternate_paths,
+            )
+            if actual_path is None:
                 missing.append(artifact_def.file_path)
 
     if missing:
@@ -351,13 +418,18 @@ def validate_cms_bundle(
 
     for artifact_def in schema.artifacts:
         file_path = artifact_def.file_path
-        if file_path not in names:
+        actual_path = _resolve_artifact_path(
+            names,
+            file_path,
+            artifact_def.alternate_paths,
+        )
+        if actual_path is None:
             # Optional artifact not present — skip
             continue
 
         # Load raw JSON
         try:
-            raw = json.loads(zf.read(file_path))
+            raw = json.loads(zf.read(actual_path))
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             validation_failures.append({
                 "artifact": file_path,
@@ -660,6 +732,7 @@ def extract_menu_definitions(
             warnings.append(f"Skipping malformed menu file {name}: {exc}")
             continue
 
+        location_assignments = _extract_menu_location_assignments(raw)
         if isinstance(raw, dict) and "menus" in raw and isinstance(raw["menus"], list):
             menus = raw["menus"]
         else:
@@ -667,14 +740,9 @@ def extract_menu_definitions(
         for menu in menus:
             if not isinstance(menu, dict):
                 continue
-            location = menu.get("location", "")
-            if not location:
-                locations = menu.get("locations")
-                if isinstance(locations, list) and locations:
-                    location = str(locations[0])
             menu_defs.append({
                 "name": menu.get("name", PurePosixPath(name).stem),
-                "location": location,
+                "location": _resolve_menu_location(menu, location_assignments),
                 "items": _normalize_menu_items(menu.get("items", [])),
             })
 
@@ -801,7 +869,7 @@ def _normalize_content_item(
 
     blocks = _normalize_blocks(raw.get("blocks"), raw_html)
     taxonomies = _normalize_taxonomies(raw.get("taxonomies"))
-    meta = raw.get("meta") if isinstance(raw.get("meta"), dict) else {}
+    meta = _metadata_dict(raw)
 
     featured_media_raw = raw.get("featured_media")
     featured_media: dict[str, Any] | None
@@ -977,12 +1045,20 @@ def _is_text_like_path(path: str) -> bool:
 # Internal extraction helpers
 # ======================================================================
 
-def _load_json(zf: zipfile.ZipFile, path: str) -> dict:
+def _load_json(zf: zipfile.ZipFile, path: str) -> Any:
     """Read and parse a JSON file from the ZIP, returning {} on failure."""
     try:
         return json.loads(zf.read(path))
     except (KeyError, json.JSONDecodeError, UnicodeDecodeError):
         return {}
+
+def _load_first_json(zf: zipfile.ZipFile, paths: tuple[str, ...]) -> Any:
+    """Return the first existing JSON artifact from the candidate paths."""
+    names = set(zf.namelist())
+    for path in paths:
+        if path in names:
+            return _load_json(zf, path)
+    return {}
 
 def _parse_manifest(zf: zipfile.ZipFile) -> ExportManifest:
     """Parse MANIFEST.json into an ExportManifest model."""
@@ -994,12 +1070,31 @@ def _parse_manifest(zf: zipfile.ZipFile) -> ExportManifest:
             if isinstance(blueprint, dict)
             else {}
         )
+        site_data = blueprint.get("site", {}) if isinstance(blueprint, dict) else {}
+        content_summary = (
+            blueprint.get("content", {}) if isinstance(blueprint, dict) else {}
+        )
         data = {
-            "export_version": export_metadata.get("version", ""),
-            "site_url": export_metadata.get("site_url", ""),
-            "export_date": export_metadata.get("export_date", ""),
-            "wordpress_version": export_metadata.get("wordpress_version", ""),
-            "total_files": export_metadata.get("total_files", 0),
+            "export_version": str(
+                export_metadata.get("version", blueprint.get("schema_version", ""))
+            ),
+            "site_url": (
+                site_data.get("site_url")
+                or site_data.get("url", export_metadata.get("site_url", ""))
+            ),
+            "export_date": export_metadata.get(
+                "export_date",
+                blueprint.get("exported_at", ""),
+            ),
+            "wordpress_version": (
+                site_data.get("wordpress_version")
+                or site_data.get("wp_version")
+                or export_metadata.get("wordpress_version", "")
+            ),
+            "total_files": export_metadata.get(
+                "total_files",
+                content_summary.get("total_exported", 0),
+            ),
             "total_size_bytes": export_metadata.get("total_size_bytes", 0),
             "files": export_metadata.get("files", {}),
         }
@@ -1034,17 +1129,45 @@ def _load_site_info(zf: zipfile.ZipFile) -> dict[str, Any]:
         if isinstance(blueprint, dict)
         else {}
     )
-    raw_site_info = (
-        blueprint.get("site_info", {}) if isinstance(blueprint, dict) else {}
-    )
+    raw_site_info = {}
+    if isinstance(blueprint, dict):
+        raw_site_info = blueprint.get("site_info") or blueprint.get("site") or {}
     return {
-        "site_url": raw_site_info.get("site_url", raw_site_info.get("url", export_metadata.get("site_url", ""))),
-        "site_name": raw_site_info.get("site_name", raw_site_info.get("name", export_metadata.get("site_name", ""))),
+        "site_url": raw_site_info.get(
+            "site_url",
+            raw_site_info.get("url", export_metadata.get("site_url", "")),
+        ),
+        "site_name": raw_site_info.get(
+            "site_name",
+            raw_site_info.get(
+                "name",
+                raw_site_info.get(
+                    "site_title",
+                    export_metadata.get("site_name", ""),
+                ),
+            ),
+        ),
         "wordpress_version": raw_site_info.get(
             "wordpress_version",
-            raw_site_info.get("version", export_metadata.get("wordpress_version", "")),
+            raw_site_info.get(
+                "version",
+                raw_site_info.get(
+                    "wp_version",
+                    export_metadata.get("wordpress_version", ""),
+                ),
+            ),
         ),
     }
+
+def _metadata_dict(item: dict[str, Any]) -> dict[str, Any]:
+    """Return normalized post meta from legacy and current exporter keys."""
+    meta = item.get("meta")
+    if isinstance(meta, dict):
+        return meta
+    postmeta = item.get("postmeta")
+    if isinstance(postmeta, dict):
+        return postmeta
+    return {}
 
 def _extract_content_types(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -1069,7 +1192,7 @@ def _extract_content_types(
         for item in items:
             if not isinstance(item, dict):
                 continue
-            post_type = item.get("post_type", "post")
+            post_type = item.get("post_type") or item.get("type") or "post"
             if post_type not in summaries:
                 summaries[post_type] = ContentTypeSummary(
                     post_type=post_type,
@@ -1082,7 +1205,7 @@ def _extract_content_types(
             s.count += 1
 
             # Collect custom fields from meta
-            for field_name in item.get("meta", {}):
+            for field_name in _metadata_dict(item):
                 if field_name not in s.custom_fields:
                     s.custom_fields.append(field_name)
 
@@ -1096,13 +1219,180 @@ def _extract_content_types(
             if slug and len(s.sample_slugs) < 5:
                 s.sample_slugs.append(slug)
 
+    if summaries:
+        return list(summaries.values())
+
+    blueprint = _load_json(zf, "site_blueprint.json")
+    content_summary = blueprint.get("content", {}) if isinstance(blueprint, dict) else {}
+    post_types = (
+        content_summary.get("post_types", {})
+        if isinstance(content_summary, dict)
+        else {}
+    )
+    if isinstance(post_types, dict):
+        for post_type, count in post_types.items():
+            try:
+                normalized_count = int(count)
+            except (TypeError, ValueError):
+                continue
+            summaries[str(post_type)] = ContentTypeSummary(
+                post_type=str(post_type),
+                count=max(normalized_count, 0),
+                custom_fields=[],
+                taxonomies=[],
+                sample_slugs=[],
+            )
+
     return list(summaries.values())
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    """Return values with order preserved and empty strings removed."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        result.append(text)
+    return result
+
+def _normalize_detected_features(raw_features: Any) -> list[str]:
+    """Normalize plugin feature flags into a flat string list."""
+    if isinstance(raw_features, list):
+        return _dedupe_strings([str(item) for item in raw_features])
+    if isinstance(raw_features, dict):
+        features: list[str] = []
+        for key, value in raw_features.items():
+            if isinstance(value, bool) and value:
+                features.append(str(key))
+            elif isinstance(value, (list, dict)) and value:
+                features.append(str(key))
+            elif isinstance(value, str) and value:
+                features.append(str(key))
+            elif isinstance(value, (int, float)) and value:
+                features.append(str(key))
+        return _dedupe_strings(features)
+    if isinstance(raw_features, str) and raw_features.strip():
+        return [raw_features.strip()]
+    return []
+
+def _plugin_slug_from_file(file_ref: str) -> str:
+    """Derive a plugin slug from a WordPress plugin file reference."""
+    if not file_ref:
+        return ""
+    path = PurePosixPath(file_ref)
+    if len(path.parts) > 1:
+        return path.parts[0]
+    return path.stem
+
+def _looks_like_plugin_descriptor(data: Any) -> bool:
+    """Return True when a JSON object represents a single plugin descriptor."""
+    if not isinstance(data, dict):
+        return False
+    if isinstance(data.get("plugin_info"), dict):
+        return True
+    return any(
+        key in data
+        for key in ("slug", "plugin_slug", "file", "name", "plugin_name", "version")
+    )
+
+def _iter_plugin_fingerprint_items(data: Any) -> list[dict[str, Any]]:
+    """Extract plugin fingerprint entries from legacy and current shapes."""
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, dict)]
+    if not isinstance(data, dict):
+        return []
+    fingerprints = data.get("fingerprints")
+    if isinstance(fingerprints, list):
+        return [item for item in fingerprints if isinstance(item, dict)]
+    if any(key in data for key in ("plugin_slug", "slug", "plugin_name", "name")):
+        return [data]
+    return []
+
+def _iter_feature_maps(zf: zipfile.ZipFile) -> list[dict[str, Any]]:
+    """Collect plugin feature maps from known exporter artifacts."""
+    feature_maps: list[dict[str, Any]] = []
+
+    root_fingerprint = _load_json(zf, "plugins_fingerprint.json")
+    if isinstance(root_fingerprint, dict):
+        enhanced = root_fingerprint.get("enhanced_detection", {})
+        if isinstance(enhanced, dict):
+            raw_maps = enhanced.get("feature_maps", {})
+            if isinstance(raw_maps, dict):
+                for value in raw_maps.values():
+                    if isinstance(value, dict):
+                        feature_maps.append(value)
+
+    blueprint = _load_json(zf, "site_blueprint.json")
+    if isinstance(blueprint, dict):
+        plugin_features = blueprint.get("plugin_features", {})
+        if isinstance(plugin_features, dict):
+            enhanced = plugin_features.get("enhanced_detection", {})
+            if isinstance(enhanced, dict):
+                raw_maps = enhanced.get("feature_maps", {})
+                if isinstance(raw_maps, dict):
+                    for value in raw_maps.values():
+                        if isinstance(value, dict):
+                            feature_maps.append(value)
+
+    for name in zf.namelist():
+        if not (name.startswith("plugins/feature_maps/") and name.endswith(".json")):
+            continue
+        data = _load_json(zf, name)
+        if isinstance(data, dict):
+            feature_maps.append(data)
+
+    return feature_maps
+
+def _upsert_plugin_record(
+    plugins: dict[str, dict[str, Any]],
+    *,
+    slug: str,
+    name: str = "",
+    version: str = "",
+    custom_post_types: list[str] | None = None,
+    custom_taxonomies: list[str] | None = None,
+    detected_features: list[str] | None = None,
+) -> None:
+    """Merge plugin metadata from multiple exporter artifacts."""
+    normalized_slug = slug.strip()
+    if not normalized_slug:
+        return
+
+    record = plugins.setdefault(
+        normalized_slug,
+        {
+            "slug": normalized_slug,
+            "name": normalized_slug,
+            "version": "",
+            "family": detect_plugin_family(normalized_slug),
+            "custom_post_types": [],
+            "custom_taxonomies": [],
+            "detected_features": [],
+        },
+    )
+
+    if name and record["name"] == normalized_slug:
+        record["name"] = name
+    if version and not record["version"]:
+        record["version"] = version
+
+    record["custom_post_types"] = _dedupe_strings(
+        [*record["custom_post_types"], *(custom_post_types or [])]
+    )
+    record["custom_taxonomies"] = _dedupe_strings(
+        [*record["custom_taxonomies"], *(custom_taxonomies or [])]
+    )
+    record["detected_features"] = _dedupe_strings(
+        [*record["detected_features"], *(detected_features or [])]
+    )
 
 def _extract_plugins(
     zf: zipfile.ZipFile, warnings: list[str]
 ) -> list[PluginFeature]:
-    """Build PluginFeature entries from plugins/ JSON files."""
-    plugins: list[PluginFeature] = []
+    """Build PluginFeature entries from normalized plugin export artifacts."""
+    plugin_records: dict[str, dict[str, Any]] = {}
 
     for name in zf.namelist():
         if not (name.startswith("plugins/") and name.endswith(".json")):
@@ -1113,75 +1403,133 @@ def _extract_plugins(
             warnings.append(f"Skipping malformed plugin file {name}: {exc}")
             continue
 
-        if not isinstance(data, dict):
+        if not _looks_like_plugin_descriptor(data):
             continue
 
-        slug = data.get("slug", PurePosixPath(name).stem)
-        family = detect_plugin_family(slug)
-
-        plugins.append(
-            PluginFeature(
-                slug=slug,
-                name=data.get("name", slug),
-                version=data.get("version", ""),
-                family=family,
-                custom_post_types=data.get("custom_post_types", []),
-                custom_taxonomies=data.get("custom_taxonomies", []),
-                detected_features=data.get("detected_features", []),
-            )
+        plugin_info = data.get("plugin_info", {}) if isinstance(data, dict) else {}
+        slug = (
+            data.get("slug")
+            or data.get("plugin_slug")
+            or _plugin_slug_from_file(data.get("file", ""))
+            or plugin_info.get("slug")
+            or _plugin_slug_from_file(plugin_info.get("file", ""))
+            or PurePosixPath(name).stem
+        )
+        custom_taxonomies = [
+            str(item.get("name", ""))
+            for item in data.get("taxonomies", [])
+            if isinstance(item, dict) and item.get("name")
+        ]
+        _upsert_plugin_record(
+            plugin_records,
+            slug=str(slug),
+            name=_coerce_text(
+                data.get("name")
+                or data.get("plugin_name")
+                or plugin_info.get("name", "")
+            ),
+            version=_coerce_text(
+                data.get("version") or plugin_info.get("version", "")
+            ),
+            custom_post_types=_dedupe_strings([
+                str(item)
+                for item in data.get("custom_post_types", [])
+            ]),
+            custom_taxonomies=custom_taxonomies,
+            detected_features=_normalize_detected_features(
+                data.get("detected_features") or data.get("features")
+            ),
         )
 
-    if not plugins and "plugins_fingerprint.json" in zf.namelist():
-        try:
-            data = json.loads(zf.read("plugins_fingerprint.json"))
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            warnings.append(f"Skipping malformed plugin file plugins_fingerprint.json: {exc}")
-            data = []
-        if isinstance(data, list):
-            for item in data:
-                if not isinstance(item, dict):
-                    continue
-                slug = item.get("slug", item.get("plugin_slug", "unknown"))
-                family = detect_plugin_family(slug)
-                plugins.append(
-                    PluginFeature(
-                        slug=slug,
-                        name=item.get("name", item.get("plugin_name", slug)),
-                        version=item.get("version", ""),
-                        family=family,
-                        custom_post_types=item.get("custom_post_types", []),
-                        custom_taxonomies=item.get("custom_taxonomies", []),
-                        detected_features=item.get(
-                            "detected_features", item.get("features", [])
-                        ),
-                    )
-                )
+    for path in ("plugins/plugins_fingerprint.json", "plugins_fingerprint.json"):
+        if path not in zf.namelist():
+            continue
+        data = _load_json(zf, path)
+        for item in _iter_plugin_fingerprint_items(data):
+            slug = (
+                item.get("slug")
+                or item.get("plugin_slug")
+                or _plugin_slug_from_file(item.get("file", ""))
+            )
+            _upsert_plugin_record(
+                plugin_records,
+                slug=_coerce_text(slug),
+                name=_coerce_text(item.get("name") or item.get("plugin_name")),
+                version=_coerce_text(item.get("version")),
+                custom_post_types=_dedupe_strings([
+                    str(value) for value in item.get("custom_post_types", [])
+                ]),
+                custom_taxonomies=_dedupe_strings([
+                    str(value) for value in item.get("custom_taxonomies", [])
+                ]),
+                detected_features=_normalize_detected_features(
+                    item.get("detected_features") or item.get("features")
+                ),
+            )
 
-    if not plugins and "site_blueprint.json" in zf.namelist():
-        blueprint = _load_json(zf, "site_blueprint.json")
-        active_plugins = blueprint.get("active_plugins", []) if isinstance(blueprint, dict) else []
+    blueprint = _load_json(zf, "site_blueprint.json")
+    if isinstance(blueprint, dict):
+        plugin_lists: list[list[dict[str, Any]]] = []
+        plugins_value = blueprint.get("plugins")
+        if isinstance(plugins_value, list):
+            plugin_lists.append(
+                [item for item in plugins_value if isinstance(item, dict)]
+            )
+        active_plugins = blueprint.get("active_plugins")
         if isinstance(active_plugins, list):
-            for item in active_plugins:
-                if not isinstance(item, dict):
-                    continue
-                slug = item.get("slug", "unknown")
-                family = detect_plugin_family(slug)
-                detected_features = item.get("detected_features")
-                if not detected_features:
-                    detected_features = item.get("blocks", []) or item.get("shortcodes", []) or item.get("rest_endpoints", [])
-                plugins.append(
-                    PluginFeature(
-                        slug=slug,
-                        name=item.get("name", slug),
-                        version=item.get("version", ""),
-                        family=family,
-                        custom_post_types=item.get("custom_post_types", []),
-                        custom_taxonomies=item.get("custom_taxonomies", []),
-                        detected_features=detected_features if isinstance(detected_features, list) else [],
-                    )
+            plugin_lists.append(
+                [item for item in active_plugins if isinstance(item, dict)]
+            )
+
+        for plugin_list in plugin_lists:
+            for item in plugin_list:
+                slug = (
+                    item.get("slug")
+                    or _plugin_slug_from_file(item.get("file", ""))
+                )
+                _upsert_plugin_record(
+                    plugin_records,
+                    slug=_coerce_text(slug),
+                    name=_coerce_text(item.get("name")),
+                    version=_coerce_text(item.get("version")),
+                    detected_features=_normalize_detected_features(
+                        item.get("detected_features")
+                        or item.get("blocks")
+                        or item.get("shortcodes")
+                        or item.get("rest_endpoints")
+                    ),
                 )
 
-    return plugins
+    for feature_map in _iter_feature_maps(zf):
+        plugin_info = feature_map.get("plugin_info", {})
+        if not isinstance(plugin_info, dict):
+            continue
+        custom_taxonomies = [
+            str(item.get("name", ""))
+            for item in feature_map.get("taxonomies", [])
+            if isinstance(item, dict) and item.get("name")
+        ]
+        _upsert_plugin_record(
+            plugin_records,
+            slug=_coerce_text(
+                plugin_info.get("slug")
+                or _plugin_slug_from_file(plugin_info.get("file", ""))
+            ),
+            name=_coerce_text(plugin_info.get("name")),
+            version=_coerce_text(plugin_info.get("version")),
+            custom_post_types=_dedupe_strings([
+                str(value) for value in feature_map.get("custom_post_types", [])
+            ]),
+            custom_taxonomies=custom_taxonomies,
+            detected_features=_normalize_detected_features(
+                feature_map.get("features")
+            ),
+        )
+
+    return [
+        PluginFeature.model_validate(record)
+        for record in plugin_records.values()
+    ]
 
 def _extract_taxonomies(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -1190,20 +1538,88 @@ def _extract_taxonomies(
     taxonomies: dict[str, TaxonomySummary] = {}
 
     # Try dedicated taxonomies file first
-    tax_data = _load_json(zf, "taxonomies/taxonomies.json")
-    if not tax_data:
-        tax_data = _load_json(zf, "taxonomies.json")
+    tax_data = _load_first_json(
+        zf,
+        ("taxonomies/taxonomies.json", "taxonomies.json", "plugins/taxonomies.json"),
+    )
     if isinstance(tax_data, list):
         for item in tax_data:
             if not isinstance(item, dict):
                 continue
-            tax_name = item.get("taxonomy", "")
-            if tax_name:
-                taxonomies[tax_name] = TaxonomySummary(
-                    taxonomy=tax_name,
-                    term_count=item.get("term_count", 0),
-                    associated_post_types=item.get("associated_post_types", []),
+            tax_name = _coerce_text(item.get("taxonomy") or item.get("name"))
+            if not tax_name:
+                continue
+            taxonomies[tax_name] = TaxonomySummary(
+                taxonomy=tax_name,
+                term_count=int(item.get("term_count", 0) or 0),
+                associated_post_types=_dedupe_strings([
+                    str(value)
+                    for value in item.get("associated_post_types", [])
+                ]),
+            )
+    elif isinstance(tax_data, dict):
+        taxonomies_by_plugin = tax_data.get("taxonomies_by_plugin")
+        if isinstance(taxonomies_by_plugin, dict):
+            for plugin_taxonomies in taxonomies_by_plugin.values():
+                if not isinstance(plugin_taxonomies, list):
+                    continue
+                for item in plugin_taxonomies:
+                    if not isinstance(item, dict):
+                        continue
+                    tax_name = _coerce_text(item.get("name"))
+                    if not tax_name:
+                        continue
+                    summary = taxonomies.setdefault(
+                        tax_name,
+                        TaxonomySummary(
+                            taxonomy=tax_name,
+                            term_count=0,
+                            associated_post_types=[],
+                        ),
+                    )
+                    for post_type in item.get("object_types", []):
+                        normalized = str(post_type).strip()
+                        if (
+                            normalized
+                            and normalized not in summary.associated_post_types
+                        ):
+                            summary.associated_post_types.append(normalized)
+        else:
+            for tax_name, item in tax_data.items():
+                if tax_name == "schema_version" or not isinstance(item, dict):
+                    continue
+                summary_name = _coerce_text(
+                    item.get("taxonomy") or item.get("name") or tax_name
                 )
+                taxonomies[summary_name] = TaxonomySummary(
+                    taxonomy=summary_name,
+                    term_count=int(item.get("term_count", 0) or 0),
+                    associated_post_types=_dedupe_strings([
+                        str(value)
+                        for value in item.get("associated_post_types", [])
+                    ]),
+                )
+
+    blueprint = _load_json(zf, "site_blueprint.json")
+    blueprint_taxonomies = (
+        blueprint.get("taxonomies", {}) if isinstance(blueprint, dict) else {}
+    )
+    if isinstance(blueprint_taxonomies, dict):
+        for tax_name, details in blueprint_taxonomies.items():
+            if not isinstance(details, dict):
+                continue
+            summary = taxonomies.setdefault(
+                str(tax_name),
+                TaxonomySummary(
+                    taxonomy=str(tax_name),
+                    term_count=0,
+                    associated_post_types=[],
+                ),
+            )
+            for post_type in details.get("object_types", []):
+                normalized = str(post_type).strip()
+                if normalized and normalized not in summary.associated_post_types:
+                    summary.associated_post_types.append(normalized)
 
     # Also scan content files for taxonomy references
     for name in zf.namelist():
@@ -1220,7 +1636,7 @@ def _extract_taxonomies(
         for item in items:
             if not isinstance(item, dict):
                 continue
-            post_type = item.get("post_type", "post")
+            post_type = item.get("post_type") or item.get("type") or "post"
             for tax_name, terms in item.get("taxonomies", {}).items():
                 if tax_name not in taxonomies:
                     taxonomies[tax_name] = TaxonomySummary(
@@ -1235,6 +1651,47 @@ def _extract_taxonomies(
                     t.associated_post_types.append(post_type)
 
     return list(taxonomies.values())
+
+def _extract_menu_location_assignments(data: Any) -> dict[str, str]:
+    """Return a map of menu term IDs to assigned menu locations."""
+    if not isinstance(data, dict):
+        return {}
+    menu_locations = data.get("menu_locations", {})
+    if not isinstance(menu_locations, dict):
+        return {}
+
+    assignments: dict[str, str] = {}
+    for location, details in menu_locations.items():
+        if not isinstance(details, dict):
+            continue
+        assigned_menu = details.get("assigned_menu")
+        if assigned_menu in (None, "", 0, "0"):
+            continue
+        assignments[str(assigned_menu)] = str(location)
+    return assignments
+
+def _resolve_menu_location(
+    menu: dict[str, Any],
+    location_assignments: dict[str, str],
+) -> str:
+    """Resolve a menu location from direct fields or top-level assignments."""
+    location = _coerce_text(menu.get("location"))
+    if location:
+        return location
+
+    locations = menu.get("locations")
+    if isinstance(locations, list) and locations:
+        return _coerce_text(locations[0])
+
+    for key in ("term_id", "id", "menu_id"):
+        menu_id = menu.get(key)
+        if menu_id is None:
+            continue
+        assigned = location_assignments.get(str(menu_id))
+        if assigned:
+            return assigned
+
+    return ""
 
 def _extract_menus(
     zf: zipfile.ZipFile, warnings: list[str]
@@ -1254,24 +1711,29 @@ def _extract_menus(
             warnings.append(f"Skipping malformed menu file {name}: {exc}")
             continue
 
+        location_assignments = _extract_menu_location_assignments(data)
         if isinstance(data, dict) and "menus" in data and isinstance(data["menus"], list):
             data = data["menus"]
         if isinstance(data, list):
             # File contains a list of menus
             for menu in data:
                 if isinstance(menu, dict):
-                    menus.append(_menu_from_dict(menu, name))
+                    menus.append(_menu_from_dict(menu, name, location_assignments))
         elif isinstance(data, dict):
-            menus.append(_menu_from_dict(data, name))
+            menus.append(_menu_from_dict(data, name, location_assignments))
 
     return menus
 
-def _menu_from_dict(data: dict, source_file: str) -> MenuSummary:
+def _menu_from_dict(
+    data: dict,
+    source_file: str,
+    location_assignments: dict[str, str] | None = None,
+) -> MenuSummary:
     """Build a MenuSummary from a menu dict."""
     items = data.get("items", [])
     return MenuSummary(
         name=data.get("name", PurePosixPath(source_file).stem),
-        location=data.get("location", ""),
+        location=_resolve_menu_location(data, location_assignments or {}),
         item_count=len(items) if isinstance(items, list) else 0,
     )
 

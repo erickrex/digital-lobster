@@ -13,6 +13,7 @@ class ArtifactDefinition(BaseModel):
     requirement: ArtifactRequirement
     schema_version: str = Field(min_length=1)
     description: str = Field(min_length=1)
+    alternate_paths: list[str] = Field(default_factory=list)
 
 class BundleSchema(BaseModel):
     """Canonical versioned contract for the export bundle."""
@@ -56,6 +57,7 @@ BUNDLE_SCHEMA_V1 = BundleSchema(
             requirement=ArtifactRequirement.REQUIRED,
             schema_version="1.0.0",
             description="Registered taxonomies with terms and term-post assignments",
+            alternate_paths=["plugins/taxonomies.json"],
         ),
         ArtifactDefinition(
             file_path="menus.json",
@@ -68,18 +70,21 @@ BUNDLE_SCHEMA_V1 = BundleSchema(
             requirement=ArtifactRequirement.REQUIRED,
             schema_version="1.0.0",
             description="Media library inventory with URLs, sizes, and alt text",
+            alternate_paths=["media/media_map.json"],
         ),
         ArtifactDefinition(
             file_path="theme_mods.json",
             requirement=ArtifactRequirement.REQUIRED,
             schema_version="1.0.0",
             description="Active theme modifications and customizer values",
+            alternate_paths=["theme/theme_mods.json"],
         ),
         ArtifactDefinition(
             file_path="global_styles.json",
             requirement=ArtifactRequirement.REQUIRED,
             schema_version="1.0.0",
             description="Global styles and theme.json design tokens",
+            alternate_paths=["theme/global_styles.json"],
         ),
         ArtifactDefinition(
             file_path="customizer_settings.json",
@@ -92,12 +97,14 @@ BUNDLE_SCHEMA_V1 = BundleSchema(
             requirement=ArtifactRequirement.REQUIRED,
             schema_version="1.0.0",
             description="Enqueued stylesheets and inline CSS sources",
+            alternate_paths=["theme/css_sources.json"],
         ),
         ArtifactDefinition(
             file_path="plugins_fingerprint.json",
             requirement=ArtifactRequirement.REQUIRED,
             schema_version="1.0.0",
             description="Installed plugins with versions, status, and family classification",
+            alternate_paths=["plugins/plugins_fingerprint.json"],
         ),
         ArtifactDefinition(
             file_path="plugin_behaviors.json",

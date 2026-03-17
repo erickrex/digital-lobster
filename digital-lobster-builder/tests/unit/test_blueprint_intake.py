@@ -16,6 +16,7 @@ from src.agents.blueprint_intake import (
     validate_bundle_structure,
 )
 from src.models.manifest import ExportManifest
+from src.orchestrator.errors import BundleValidationError
 
 # ------------------------------------------------------------------
 # Helpers
@@ -52,63 +53,162 @@ def _minimal_bundle_files() -> dict[str, str]:
         "MANIFEST.json": manifest,
         "site/site_info.json": site_info,
         "theme/style.css": "/* theme */",
-        "content/posts.json": json.dumps([]),
-        "menus/primary.json": json.dumps({"name": "Primary", "location": "header", "items": []}),
-    }
-
-def _exporter_bundle_files() -> dict[str, str]:
-    """Return a compatible bundle using the exporter-style root artifacts."""
-    return {
-        "site_blueprint.json": json.dumps({
-            "export_metadata": {
-                "version": "2.0",
-                "site_url": "https://example.com",
-                "site_name": "Exporter Site",
-                "export_date": "2024-01-02",
-                "wordpress_version": "6.5",
-                "total_files": 7,
-                "total_size_bytes": 4096,
-                "files": {"content": 1, "media": 1},
-            },
-            "site_info": {
-                "site_url": "https://example.com",
-                "site_name": "Exporter Site",
-                "wordpress_version": "6.5",
-            },
-            "active_plugins": [
-                {"slug": "wordpress-seo", "name": "Yoast SEO", "version": "22.0"}
-            ],
-        }),
-        "theme/style.css": "/* theme */",
         "content/posts.json": json.dumps([
             {
                 "id": 1,
                 "post_type": "post",
-                "title": "Hello Exporter",
-                "slug": "hello-exporter",
+                "title": "Hello",
+                "slug": "hello",
                 "status": "publish",
-                "date": "2024-01-02",
+                "date": "2024-01-01",
                 "content": {"rendered": "<p>Hello</p>"},
-                "taxonomies": {"category": ["news"]},
+                "taxonomies": {},
                 "meta": {},
-                "link": "https://example.com/hello-exporter/",
+                "link": "https://example.com/hello/",
             }
         ]),
+        "menus/primary.json": json.dumps({"name": "Primary", "location": "header", "items": []}),
+    }
+
+def _exporter_bundle_files() -> dict[str, str]:
+    """Return a compatible bundle using the current exporter artifact shape."""
+    return {
+        "site_blueprint.json": json.dumps({
+            "schema_version": 1,
+            "exported_at": "2024-01-02 10:00:00",
+            "site": {
+                "url": "https://example.com",
+                "site_title": "Exporter Site",
+                "wp_version": "6.5",
+            },
+            "theme": {
+                "name": "Exporter Theme",
+                "version": "1.0.0",
+                "block_theme": True,
+            },
+            "plugins": [
+                {
+                    "file": "wordpress-seo/wp-seo.php",
+                    "name": "Yoast SEO",
+                    "version": "22.0",
+                    "active": True,
+                },
+                {
+                    "file": "geodirectory/geodirectory.php",
+                    "name": "GeoDirectory",
+                    "version": "2.0.0",
+                    "active": True,
+                },
+            ],
+            "plugin_features": {
+                "enhanced_detection": {
+                    "feature_maps": {
+                        "geodirectory": {
+                            "plugin_info": {
+                                "file": "geodirectory/geodirectory.php",
+                                "name": "GeoDirectory",
+                                "version": "2.0.0",
+                            },
+                            "custom_post_types": ["gd_place"],
+                            "taxonomies": [
+                                {
+                                    "name": "gd_placecategory",
+                                    "post_types": ["gd_place"],
+                                }
+                            ],
+                            "features": {"has_custom_tables": True},
+                        }
+                    }
+                }
+            },
+            "content": {
+                "post_types": {"post": 1, "gd_place": 3},
+                "total_exported": 1,
+            },
+            "taxonomies": {
+                "category": {"object_types": ["post"]},
+                "gd_placecategory": {"object_types": ["gd_place"]},
+            },
+        }),
+        "theme/style.css": "/* theme */",
+        "theme/theme.json": json.dumps({
+            "name": "Exporter Theme",
+            "settings": {"color": {"palette": [{"slug": "brand", "color": "#123456"}]}},
+        }),
+        "theme/theme_mods.json": json.dumps({"schema_version": 1, "mods": {}}),
+        "theme/global_styles.json": json.dumps({"schema_version": 1, "styles": {}}),
+        "theme/css_sources.json": json.dumps({"schema_version": 1, "sources": []}),
+        "content/post/hello-exporter.json": json.dumps({
+            "id": 1,
+            "type": "post",
+            "title": "Hello Exporter",
+            "slug": "hello-exporter",
+            "status": "publish",
+            "date_gmt": "2024-01-02 10:00:00",
+            "raw_html": "<p>Hello</p>",
+            "blocks": [{"name": "core/paragraph", "html": "<p>Hello</p>"}],
+            "taxonomies": {"category": ["news"]},
+            "postmeta": {"author": "admin"},
+            "legacy_permalink": "https://example.com/hello-exporter/",
+        }),
         "menus.json": json.dumps({
+            "menu_locations": {
+                "primary": {"description": "Primary", "assigned_menu": 40}
+            },
             "menus": [
                 {
+                    "term_id": 40,
                     "name": "Primary",
-                    "location": "header",
                     "items": [{"title": "Home", "url": "https://example.com/"}],
                 }
-            ]
+            ],
         }),
-        "taxonomies.json": json.dumps({"category": ["news"]}),
+        "plugins/plugins_fingerprint.json": json.dumps({
+            "schema_version": 1,
+            "fingerprints": [
+                {
+                    "plugin_slug": "wordpress-seo",
+                    "plugin_name": "Yoast SEO",
+                    "version": "22.0",
+                    "features": {"has_rest_api": True},
+                },
+                {
+                    "plugin_slug": "geodirectory",
+                    "plugin_name": "GeoDirectory",
+                    "version": "2.0.0",
+                    "features": {"has_cron_jobs": True},
+                },
+            ],
+        }),
+        "plugins_fingerprint.json": json.dumps({
+            "schema_version": 1,
+            "enhanced_detection": {
+                "feature_maps": {
+                    "geodirectory": {
+                        "plugin_info": {
+                            "file": "geodirectory/geodirectory.php",
+                            "name": "GeoDirectory",
+                            "version": "2.0.0",
+                        },
+                        "custom_post_types": ["gd_place"],
+                        "taxonomies": [{"name": "gd_placecategory"}],
+                        "features": {"has_custom_tables": True},
+                    }
+                }
+            },
+        }),
+        "plugins/taxonomies.json": json.dumps({
+            "schema_version": 1,
+            "taxonomies_by_plugin": {
+                "geodirectory": [
+                    {"name": "gd_placecategory", "object_types": ["gd_place"]}
+                ]
+            },
+        }),
         "media/media_map.json": json.dumps([
             {
-                "source_url": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
-                "filename": "photo.jpg",
-                "bundle_path": "media/2024/01/photo.jpg",
+                "wp_src": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
+                "artifact": "media/2024/01/photo.jpg",
                 "metadata": {"alt": "Photo", "caption": "Caption"},
             }
         ]),
@@ -170,6 +270,19 @@ class TestValidateBundleStructure:
         errors = validate_bundle_structure(zf)
         paths = [e["path"] for e in errors]
         assert "content/" in paths
+
+    def test_content_dir_without_content_json_is_invalid(self):
+        files = _minimal_bundle_files()
+        del files["content/posts.json"]
+        files["content/"] = ""
+        zf = _make_zip(files)
+        errors = validate_bundle_structure(zf)
+        assert errors == [
+            {
+                "path": "content/",
+                "error": "no exported content JSON files found",
+            }
+        ]
 
     def test_missing_menus_dir(self):
         files = _minimal_bundle_files()
@@ -358,10 +471,41 @@ class TestBuildInventory:
         inv = build_inventory(
             zf,
             _manifest(),
-            {"site_url": "", "site_name": "", "wordpress_version": ""},
+            {
+                "site_url": "https://example.com",
+                "site_name": "Exporter Site",
+                "wordpress_version": "6.5",
+            },
             warnings,
         )
         assert inv.has_media_manifest is True
+
+    def test_current_exporter_bundle_parses_plugin_taxonomy_and_menu_metadata(self):
+        zf = _make_zip(_exporter_bundle_files())
+        warnings: list[str] = []
+        inv = build_inventory(
+            zf,
+            _manifest(),
+            {
+                "site_url": "https://example.com",
+                "site_name": "Exporter Site",
+                "wordpress_version": "6.5",
+            },
+            warnings,
+        )
+
+        assert inv.site_name == "Exporter Site"
+        assert inv.site_url == "https://example.com"
+        assert {plugin.slug for plugin in inv.plugins} == {
+            "wordpress-seo",
+            "geodirectory",
+        }
+        assert any(t.taxonomy == "gd_placecategory" for t in inv.taxonomies)
+        primary_menu = next(menu for menu in inv.menus if menu.name == "Primary")
+        assert primary_menu.location == "primary"
+        content_types = {item.post_type: item for item in inv.content_types}
+        assert content_types["post"].count == 1
+        assert "author" in content_types["post"].custom_fields
 
     def test_malformed_content_file_produces_warning(self):
         files = _minimal_bundle_files()
@@ -549,15 +693,16 @@ class TestBlueprintIntakeAgentExecute:
 
         result = await agent.execute({"bundle_key": "exporter.zip"})
 
-        assert "errors" not in result.artifacts
         assert result.artifacts["inventory"].site_name == "Exporter Site"
-        assert result.artifacts["menus"][0]["location"] == "header"
+        assert result.artifacts["inventory"].site_url == "https://example.com"
+        assert result.artifacts["menus"][0]["location"] == "primary"
+        assert result.artifacts["content_items"][0]["slug"] == "hello-exporter"
         assert result.artifacts["media_manifest"][0]["bundle_path"] == "media/2024/01/photo.jpg"
         assert result.artifacts["redirect_rules"][0]["destination"] == "/new"
 
     @pytest.mark.asyncio
-    async def test_missing_files_returns_errors(self):
-        """Bundle missing required files → returns errors artifact."""
+    async def test_missing_files_raise_bundle_validation_error(self):
+        """Bundle missing required files should fail intake immediately."""
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("readme.txt", "hello")
@@ -572,15 +717,14 @@ class TestBlueprintIntakeAgentExecute:
             ingestion_bucket="bucket",
         )
 
-        result = await agent.execute({"bundle_key": "bad.zip"})
+        with pytest.raises(BundleValidationError) as exc_info:
+            await agent.execute({"bundle_key": "bad.zip"})
 
-        assert "errors" in result.artifacts
-        assert len(result.artifacts["errors"]) == 5
-        assert "inventory" not in result.artifacts
+        assert "missing required file" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_bad_zip_returns_error(self):
-        """Corrupt ZIP data → returns error artifact."""
+    async def test_bad_zip_raises_bundle_validation_error(self):
+        """Corrupt ZIP data should fail intake immediately."""
         spaces_client = AsyncMock()
         spaces_client.download.return_value = b"not a zip file"
 
@@ -590,10 +734,36 @@ class TestBlueprintIntakeAgentExecute:
             ingestion_bucket="bucket",
         )
 
-        result = await agent.execute({"bundle_key": "corrupt.zip"})
+        with pytest.raises(BundleValidationError) as exc_info:
+            await agent.execute({"bundle_key": "corrupt.zip"})
 
-        assert "errors" in result.artifacts
-        assert len(result.artifacts["errors"]) == 1
+        assert "Invalid ZIP bundle" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_contentless_exporter_bundle_raises_bundle_validation_error(self):
+        files = _exporter_bundle_files()
+        files.pop("content/post/hello-exporter.json")
+        files["content/"] = ""
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for path, content in files.items():
+                zf.writestr(path, content if isinstance(content, bytes) else content.encode())
+        zip_bytes = buf.getvalue()
+
+        spaces_client = AsyncMock()
+        spaces_client.download.return_value = zip_bytes
+
+        agent = BlueprintIntakeAgent(
+            gradient_client=MagicMock(),
+            spaces_client=spaces_client,
+            ingestion_bucket="bucket",
+        )
+
+        with pytest.raises(BundleValidationError) as exc_info:
+            await agent.execute({"bundle_key": "contentless.zip"})
+
+        assert "no exported content JSON files found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_no_kb_client_skips_kb_creation(self):

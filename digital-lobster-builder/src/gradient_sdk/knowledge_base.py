@@ -18,6 +18,7 @@ UPLOAD_BACKOFF_MULTIPLIER = 2.0
 DEFAULT_EMBEDDING_MODEL_UUID = "22653204-79ed-11ef-bf8f-4e013e2ddde4"  # GTE Large EN v1.5
 DEFAULT_DB_READY_TIMEOUT = 600.0  # seconds; matches Gradient SDK default
 DEFAULT_DB_POLL_INTERVAL = 5.0
+DEFAULT_INDEX_READY_TIMEOUT = 60.0
 QUERY_INDEX_RETRIES = 6
 QUERY_INDEX_BACKOFF = 10.0  # seconds between retries on index-not-found 404s
 
@@ -35,6 +36,7 @@ class KnowledgeBaseClient:
         upload_backoff: float = UPLOAD_BACKOFF_SECONDS,
         db_ready_timeout: float = DEFAULT_DB_READY_TIMEOUT,
         db_poll_interval: float = DEFAULT_DB_POLL_INTERVAL,
+        index_ready_timeout: float = DEFAULT_INDEX_READY_TIMEOUT,
     ) -> None:
         resolved_access_token = (access_token or api_key or "").strip()
         if not resolved_access_token:
@@ -52,6 +54,7 @@ class KnowledgeBaseClient:
         self._upload_backoff = upload_backoff
         self._db_ready_timeout = db_ready_timeout
         self._db_poll_interval = db_poll_interval
+        self._index_ready_timeout = index_ready_timeout
 
     async def create(self, run_id: str, documents: list[dict] | None = None) -> str:
         """Create a new Knowledge Base for a pipeline run.
@@ -143,16 +146,28 @@ class KnowledgeBaseClient:
         through an asynchronous indexing pipeline.  Queries return 404
         "index not found" until indexing completes.
         """
-        deadline = asyncio.get_event_loop().time() + self._db_ready_timeout
+        if self._index_ready_timeout <= 0:
+            logger.info("Skipping KB %s indexing wait (timeout disabled)", kb_id)
+            return
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self._index_ready_timeout
         interval = self._db_poll_interval
 
-        while asyncio.get_event_loop().time() < deadline:
+        while loop.time() < deadline:
             try:
                 jobs_resp = await self._sdk.knowledge_bases.list_indexing_jobs(kb_id)
             except APIError as exc:
                 logger.warning("Failed to list indexing jobs for KB %s: %s", kb_id, exc)
                 await asyncio.sleep(interval)
                 continue
+            except Exception as exc:
+                logger.warning(
+                    "Unexpected indexing wait error for KB %s: %s; proceeding without waiting",
+                    kb_id,
+                    str(exc)[:200],
+                )
+                return
 
             jobs = getattr(jobs_resp, "jobs", None) or []
             if not jobs:

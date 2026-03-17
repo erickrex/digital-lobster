@@ -29,6 +29,7 @@ from src.gradient_sdk.tracing import Tracer, TracingBackend
 from src.models.finding import Finding, FindingSeverity
 from src.orchestrator.errors import (
     AgentError,
+    BundleValidationError,
     CompilationError,
     ParityGateError,
     QualificationError,
@@ -326,16 +327,21 @@ class PipelineOrchestrator:
 
         Updates the pipeline state with agent start/completion markers
         and per-agent duration. On failure, marks the state as failed
-        and raises the error.  Domain errors (``QualificationError``,
-        ``CompilationError``, ``ParityGateError``) are re-raised as-is
-        so the run loop can handle them with structured findings.
+        and raises the error. Domain errors (``BundleValidationError``,
+        ``QualificationError``, ``CompilationError``, ``ParityGateError``)
+        are re-raised as-is so the run loop can handle them directly.
         """
         state.mark_agent_started(agent_name)
 
         async with tracer.agent_span(agent_name) as span:
             try:
                 result = await agent.execute(context)
-            except (QualificationError, CompilationError, ParityGateError) as exc:
+            except (
+                BundleValidationError,
+                QualificationError,
+                CompilationError,
+                ParityGateError,
+            ) as exc:
                 span.set_error(exc)
                 state.mark_failed(agent_name, exc)
                 raise

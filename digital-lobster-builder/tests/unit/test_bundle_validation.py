@@ -283,3 +283,19 @@ class TestSuccessfulValidation:
         assert isinstance(result.site_blueprint, dict)
         assert isinstance(result.plugins_fingerprint, dict)
         assert isinstance(result.menus, list)
+
+    def test_alias_paths_are_accepted_for_current_exporter_layout(self):
+        files = _all_artifact_data()
+        files["plugins/taxonomies.json"] = files.pop("taxonomies.json")
+        files["media/media_map.json"] = files.pop("media_map.json")
+        files["theme/theme_mods.json"] = files.pop("theme_mods.json")
+        files["theme/global_styles.json"] = files.pop("global_styles.json")
+        files["theme/css_sources.json"] = files.pop("css_sources.json")
+        files["plugins/plugins_fingerprint.json"] = files.pop("plugins_fingerprint.json")
+
+        zf = _make_zip(files)
+        result = validate_cms_bundle(zf, _SITE_INFO, [])
+
+        assert isinstance(result, BundleManifest)
+        assert isinstance(result.taxonomies, dict)
+        assert isinstance(result.media_map, list)

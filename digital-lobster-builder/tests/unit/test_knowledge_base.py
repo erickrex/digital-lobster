@@ -60,6 +60,13 @@ def _make_query_response(results: list[MagicMock]) -> MagicMock:
     resp.total_results = len(results)
     return resp
 
+def _make_indexing_jobs_response(status: str = "COMPLETED") -> MagicMock:
+    job = MagicMock()
+    job.status = status
+    resp = MagicMock()
+    resp.jobs = [job]
+    return resp
+
 # ---------------------------------------------------------------------------
 # Tests — create()
 # ---------------------------------------------------------------------------
@@ -101,6 +108,9 @@ class TestCreate:
             return_value=_make_create_response()
         )
         client._sdk.knowledge_bases.wait_for_database = AsyncMock()
+        client._sdk.knowledge_bases.list_indexing_jobs = AsyncMock(
+            return_value=_make_indexing_jobs_response()
+        )
         client._sdk.knowledge_bases.data_sources.create_presigned_urls = AsyncMock(
             return_value=_make_presigned_response(1)
         )
@@ -126,6 +136,7 @@ class TestCreate:
         assert len(datasources) == 1
         assert "file_upload_data_source" in datasources[0]
         assert datasources[0]["file_upload_data_source"]["stored_object_key"] == "obj-key-0"
+        client._sdk.knowledge_bases.list_indexing_jobs.assert_awaited_once_with("kb-123")
 
     async def test_propagates_api_error(self):
         client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
@@ -135,6 +146,38 @@ class TestCreate:
 
         with pytest.raises(APIError):
             await client.create("run-001")
+
+    async def test_proceeds_when_indexing_wait_errors_unexpectedly(self):
+        client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
+        client._sdk.knowledge_bases.create = AsyncMock(
+            return_value=_make_create_response("kb-abc")
+        )
+        client._sdk.knowledge_bases.wait_for_database = AsyncMock()
+        client._sdk.knowledge_bases.list_indexing_jobs = AsyncMock(
+            side_effect=RuntimeError("boom")
+        )
+        client._sdk.knowledge_bases.data_sources.create_presigned_urls = AsyncMock(
+            return_value=_make_presigned_response(1)
+        )
+
+        mock_put_resp = MagicMock()
+        mock_put_resp.raise_for_status = MagicMock()
+
+        with patch(
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
+        ) as MockClient:
+            mock_http = AsyncMock()
+            mock_http.put = AsyncMock(return_value=mock_put_resp)
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=False)
+            MockClient.return_value = mock_http
+
+            kb_id = await client.create(
+                "run-001",
+                documents=[{"content": "hello", "metadata": {"file": "a.json"}}],
+            )
+
+        assert kb_id == "kb-abc"
 
 # ---------------------------------------------------------------------------
 # Tests — upload_documents()
