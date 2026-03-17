@@ -524,8 +524,10 @@ class TestBlueprintIntakeAgentExecute:
         assert result.artifacts["media_manifest"][0]["artifact_path"] == "media/2024/01/photo.jpg"
 
         spaces_client.download.assert_awaited_once_with("test-bucket", "export.zip")
-        kb_client.create.assert_awaited_once_with("run-1")
-        kb_client.upload_documents.assert_awaited_once()
+        kb_client.create.assert_awaited_once()
+        call_args = kb_client.create.call_args
+        assert call_args.args[0] == "run-1"
+        assert call_args.kwargs.get("documents") is not None
 
     @pytest.mark.asyncio
     async def test_exporter_bundle_shape_executes_successfully(self):

@@ -37,6 +37,7 @@ class GradientClient:
 
         self._sdk = AsyncGradient(
             model_access_key=resolved_model_access_key,
+            access_token=None,  # Prevent SDK from auto-reading DIGITALOCEAN_ACCESS_TOKEN
             max_retries=0,  # We handle retries ourselves
         )
         self._default_model = model
@@ -155,9 +156,15 @@ class GradientClient:
                     return ""
                 return content
 
-            except AuthenticationError:
-                # Never retry auth failures — surface immediately
-                logger.error("Gradient authentication failed. Check your API key.")
+            except AuthenticationError as exc:
+                # Never retry auth failures — surface immediately.
+                # The SDK maps both bad-key 401s and subscription-tier
+                # 401s to AuthenticationError, so include the server
+                # message for clarity.
+                logger.error(
+                    "Gradient authentication failed for model %s: %s",
+                    model, exc,
+                )
                 raise
 
             except APITimeoutError:

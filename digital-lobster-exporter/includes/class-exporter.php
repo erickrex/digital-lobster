@@ -87,6 +87,9 @@ class Digital_Lobster_Exporter_Exporter {
 			// Export site blueprint (main manifest file)
 			$this->export_site_blueprint();
 
+			// Export per-item content JSON files
+			$this->export_content_files();
+
 			// Export settings files
 			$this->export_settings_files();
 
@@ -549,6 +552,100 @@ class Digital_Lobster_Exporter_Exporter {
 				'block_usage'    => $this->results['content']['block_usage'],
 			) );
 		}
+	}
+
+	/**
+	 * Export structured content items to per-post JSON files.
+	 *
+	 * Files are written under content/{post_type}/{slug}.json so downstream
+	 * migration tooling can consume individual records directly.
+	 */
+	private function export_content_files() {
+		if ( empty( $this->results['content'] ) || ! is_array( $this->results['content'] ) ) {
+			return;
+		}
+
+		$content = $this->results['content'];
+
+		if ( ! empty( $content['posts'] ) && is_array( $content['posts'] ) ) {
+			$this->export_content_group( $content['posts'], 'post' );
+		}
+
+		if ( ! empty( $content['pages'] ) && is_array( $content['pages'] ) ) {
+			$this->export_content_group( $content['pages'], 'page' );
+		}
+
+		if ( ! empty( $content['custom_post_types'] ) && is_array( $content['custom_post_types'] ) ) {
+			foreach ( $content['custom_post_types'] as $post_type => $items ) {
+				if ( is_array( $items ) ) {
+					$this->export_content_group( $items, $post_type );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Export one content group into its post-type directory.
+	 *
+	 * @param array  $items     Content items.
+	 * @param string $post_type Post type slug.
+	 * @return void
+	 */
+	private function export_content_group( $items, $post_type ) {
+		$used_filenames = array();
+
+		foreach ( $items as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$filename = $this->build_content_item_filename( $item, $used_filenames );
+			$relative_path = sprintf(
+				'content/%s/%s',
+				sanitize_file_name( (string) $post_type ),
+				$filename
+			);
+
+			$this->write_json_file( $relative_path, $item );
+		}
+	}
+
+	/**
+	 * Build a unique filename for an exported content item.
+	 *
+	 * @param array $item           Content item.
+	 * @param array $used_filenames Already-used filenames for this group.
+	 * @return string
+	 */
+	private function build_content_item_filename( $item, &$used_filenames ) {
+		$base = '';
+
+		if ( ! empty( $item['slug'] ) ) {
+			$base = sanitize_file_name( (string) $item['slug'] );
+		}
+
+		if ( empty( $base ) && ! empty( $item['title'] ) ) {
+			$base = sanitize_file_name( (string) $item['title'] );
+		}
+
+		if ( empty( $base ) && ! empty( $item['id'] ) ) {
+			$base = 'item-' . (int) $item['id'];
+		}
+
+		if ( empty( $base ) ) {
+			$base = 'content-item';
+		}
+
+		$filename = $base . '.json';
+
+		if ( isset( $used_filenames[ $filename ] ) ) {
+			$suffix   = ! empty( $item['id'] ) ? '-' . (int) $item['id'] : '-' . ( $used_filenames[ $filename ] + 1 );
+			$filename = $base . $suffix . '.json';
+		}
+
+		$used_filenames[ $filename ] = 1;
+
+		return $filename;
 	}
 
 	/**

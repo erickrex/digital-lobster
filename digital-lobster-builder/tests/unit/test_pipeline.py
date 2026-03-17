@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.agents.base import AgentResult, BaseAgent
-from src.gradient.tracing import Tracer
+from src.gradient_sdk.tracing import Tracer
 from src.orchestrator.pipeline import PipelineOrchestrator
 
 # ---------------------------------------------------------------------------

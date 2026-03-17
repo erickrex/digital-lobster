@@ -7,7 +7,7 @@ import httpx
 import pytest
 from gradient import AuthenticationError, APITimeoutError, RateLimitError
 
-from src.gradient.client import (
+from src.gradient_sdk.client import (
     BACKOFF_MULTIPLIER,
     DEFAULT_MODEL,
     GradientClient,
@@ -234,7 +234,7 @@ class TestRetryLogic:
             side_effect=[_make_rate_limit_error(retry_after="0.0"), mock_resp]
         )
 
-        with patch("src.gradient.client.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch("src.gradient_sdk.client.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             result = await client.complete([{"role": "user", "content": "hi"}])
 
         assert result == "ok"
@@ -250,7 +250,7 @@ class TestRetryLogic:
             side_effect=[_make_rate_limit_error(retry_after=None), mock_resp]
         )
 
-        with patch("src.gradient.client.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch("src.gradient_sdk.client.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             result = await client.complete([{"role": "user", "content": "hi"}])
 
         assert result == "ok"
@@ -278,7 +278,7 @@ class TestRetryLogic:
             side_effect=_make_timeout_error()
         )
 
-        with patch("src.gradient.client.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch("src.gradient_sdk.client.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             with pytest.raises(APITimeoutError):
                 await client.complete([{"role": "user", "content": "hi"}])
 

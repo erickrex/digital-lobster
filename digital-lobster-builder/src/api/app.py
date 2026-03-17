@@ -6,6 +6,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
+# Configure logging before anything else so all module-level loggers
+# (src.gradient_sdk, src.agents, etc.) emit to stderr.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s: %(message)s",
+)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("gradient._base_client").setLevel(logging.WARNING)
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -157,11 +167,12 @@ def _read_settings(env: Mapping[str, str]) -> BuilderRuntimeSettings | None:
 
 def _build_runtime_dependencies(
     settings: BuilderRuntimeSettings,
+    upload_store: LocalUploadStore | None = None,
 ) -> tuple[SpacesClient, PipelineOrchestrator, str, str]:
     """Construct runtime dependencies for the module-level builder app."""
-    from src.gradient.client import GradientClient
-    from src.gradient.knowledge_base import KnowledgeBaseClient
-    from src.gradient.tracing import Tracer
+    from src.gradient_sdk.client import GradientClient
+    from src.gradient_sdk.knowledge_base import KnowledgeBaseClient
+    from src.gradient_sdk.tracing import Tracer
 
     spaces_client = SpacesClient(
         access_key=settings.spaces_key,
@@ -173,11 +184,16 @@ def _build_runtime_dependencies(
             model_access_key=settings.gradient_model_access_key,
             model=settings.gradient_model_id,
         ),
-        kb_client=KnowledgeBaseClient(access_token=settings.do_access_token),
+        kb_client=KnowledgeBaseClient(
+            access_token=settings.do_access_token,
+            region=os.environ.get("DO_KB_REGION", "").strip() or None,
+            db_ready_timeout=float(os.environ.get("DO_KB_READY_TIMEOUT", "600")),
+        ),
         spaces_client=spaces_client,
         tracer=Tracer(run_id="app-bootstrap"),
         artifacts_bucket=settings.artifacts_bucket,
         ingestion_bucket=settings.ingestion_bucket,
+        upload_store=upload_store,
     )
     return (
         spaces_client,
@@ -202,8 +218,9 @@ def create_app_from_env(
         return create_app()
 
     try:
+        upload_store = LocalUploadStore(upload_dir=DEFAULT_UPLOAD_DIR)
         spaces_client, orchestrator, ingestion_bucket, artifacts_bucket = (
-            _build_runtime_dependencies(settings)
+            _build_runtime_dependencies(settings, upload_store=upload_store)
         )
     except Exception:
         if raise_on_error:

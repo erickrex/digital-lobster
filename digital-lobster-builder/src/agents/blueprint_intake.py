@@ -65,10 +65,12 @@ class BlueprintIntakeAgent(BaseAgent):
         kb_client: Any = None,
         spaces_client: Any = None,
         ingestion_bucket: str = "",
+        upload_store: Any = None,
     ) -> None:
         super().__init__(gradient_client, kb_client)
         self.spaces_client = spaces_client
         self.ingestion_bucket = ingestion_bucket
+        self.upload_store = upload_store
 
     async def execute(self, context: dict[str, Any]) -> AgentResult:
         """Execute the Blueprint Intake agent.
@@ -173,9 +175,19 @@ class BlueprintIntakeAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     async def _download_bundle(self, bundle_key: str) -> bytes:
-        """Download the export bundle ZIP from Spaces."""
+        """Download the export bundle ZIP from local storage or Spaces."""
+        # Prefer local upload store (used by the HTMX UI upload flow).
+        if self.upload_store is not None:
+            local_path = self.upload_store.get_path(bundle_key)
+            if local_path.exists():
+                logger.info("Reading bundle from local storage: %s", bundle_key)
+                return local_path.read_bytes()
+
         if self.spaces_client is None:
-            raise RuntimeError("SpacesClient is required for bundle download")
+            raise RuntimeError(
+                "SpacesClient is required for bundle download and "
+                f"bundle not found in local storage: {bundle_key}"
+            )
         return await self.spaces_client.download(
             self.ingestion_bucket, bundle_key
         )
@@ -186,11 +198,9 @@ class BlueprintIntakeAgent(BaseAgent):
         zf: zipfile.ZipFile,
         warnings: list[str],
     ) -> str:
-        """Create a Gradient Knowledge Base and upload relevant documents."""
-        kb_id = await self.kb_client.create(run_id)
+        """Create a Gradient Knowledge Base seeded with relevant documents."""
         documents = collect_kb_documents(zf)
-        if documents:
-            await self.kb_client.upload_documents(kb_id, documents)
+        kb_id = await self.kb_client.create(run_id, documents=documents or None)
         return kb_id
 
 # ======================================================================

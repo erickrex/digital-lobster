@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from inspect import isawaitable
+from pathlib import Path
 from typing import Any
 
 from src.agents.base import AgentResult, BaseAgent
@@ -24,7 +25,7 @@ from src.agents.scaffold import ScaffoldAgent
 from src.agents.schema_compiler import SchemaCompilerAgent
 from src.agents.strapi_provisioner import StrapiProvisionerAgent
 from src.agents.theming import ThemingAgent
-from src.gradient.tracing import Tracer, TracingBackend
+from src.gradient_sdk.tracing import Tracer, TracingBackend
 from src.models.finding import Finding, FindingSeverity
 from src.orchestrator.errors import (
     AgentError,
@@ -134,6 +135,7 @@ class PipelineOrchestrator:
         tracer: Tracer,
         artifacts_bucket: str,
         ingestion_bucket: str = "",
+        upload_store: Any = None,
     ) -> None:
         self._gradient_client = gradient_client
         self._kb_client = kb_client
@@ -143,6 +145,7 @@ class PipelineOrchestrator:
         )
         self._artifacts_bucket = artifacts_bucket
         self._ingestion_bucket = ingestion_bucket
+        self._upload_store = upload_store
 
     async def run(
         self,
@@ -359,25 +362,49 @@ class PipelineOrchestrator:
     async def _store_artifacts(
         self, run_id: str, artifacts: dict[str, Any]
     ) -> None:
-        """Upload all accumulated artifacts to Spaces with run_id prefix."""
-        for name, value in artifacts.items():
-            key = f"{run_id}/{name}"
-            if isinstance(value, bytes):
-                data = value
-            elif isinstance(value, str):
-                data = value.encode("utf-8")
-            else:
-                serialized = (
-                    value.model_dump()
-                    if hasattr(value, "model_dump")
-                    else value
-                )
-                data = json.dumps(serialized, default=str).encode("utf-8")
+        """Upload all accumulated artifacts to Spaces with run_id prefix.
 
-            await self._spaces_client.upload(
-                self._artifacts_bucket, key, data
+        Falls back to writing artifacts to ``output/{run_id}/`` on disk
+        when the Spaces upload fails (e.g. invalid credentials).
+        """
+        try:
+            for name, value in artifacts.items():
+                key = f"{run_id}/{name}"
+                data = self._serialize_artifact(value)
+                await self._spaces_client.upload(
+                    self._artifacts_bucket, key, data
+                )
+                logger.info("Stored artifact %s to %s", name, key)
+        except Exception as exc:
+            logger.warning(
+                "Spaces upload failed for run %s (%s), saving to disk",
+                run_id, exc,
             )
-            logger.info("Stored artifact %s to %s", name, key)
+            self._store_artifacts_locally(run_id, artifacts)
+
+    def _store_artifacts_locally(
+        self, run_id: str, artifacts: dict[str, Any]
+    ) -> None:
+        """Write artifacts to ``output/{run_id}/`` as a local fallback."""
+        out_dir = Path(__file__).resolve().parents[2] / "output" / run_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for name, value in artifacts.items():
+            data = self._serialize_artifact(value)
+            (out_dir / name).write_bytes(data)
+        logger.info("Saved %d artifact(s) to %s", len(artifacts), out_dir)
+
+    @staticmethod
+    def _serialize_artifact(value: Any) -> bytes:
+        if isinstance(value, bytes):
+            return value
+        if isinstance(value, str):
+            return value.encode("utf-8")
+        serialized = (
+            value.model_dump()
+            if hasattr(value, "model_dump")
+            else value
+        )
+        return json.dumps(serialized, default=str).encode("utf-8")
 
     @staticmethod
     def _filter_persisted_artifacts(
@@ -430,6 +457,7 @@ class PipelineOrchestrator:
                 kb,
                 spaces_client=self._spaces_client,
                 ingestion_bucket=self._ingestion_bucket,
+                upload_store=self._upload_store,
             ),
             "prd_lite": PrdLiteAgent(gc, kb),
             "modeling": ModelingAgent(gc, kb),

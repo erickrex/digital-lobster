@@ -9,7 +9,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from src.agents.base import AgentResult, BaseAgent
-from src.gradient.tracing import Tracer
+from src.gradient_sdk.tracing import Tracer
 from src.models.finding import Finding, FindingSeverity
 from src.orchestrator.errors import CompilationError
 from src.orchestrator.pipeline import (

@@ -6,7 +6,7 @@ import httpx
 import pytest
 from gradient import APITimeoutError, APIError
 
-from src.gradient.knowledge_base import (
+from src.gradient_sdk.knowledge_base import (
     KnowledgeBaseClient,
     MAX_UPLOAD_RETRIES,
     UPLOAD_BACKOFF_SECONDS,
@@ -67,7 +67,7 @@ def _make_query_response(results: list[MagicMock]) -> MagicMock:
 class TestCreate:
     """Tests for KnowledgeBaseClient.create()."""
     async def test_returns_kb_uuid(self):
-        client = KnowledgeBaseClient(api_key="test-key")
+        client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
         client._sdk.knowledge_bases.create = AsyncMock(
             return_value=_make_create_response("kb-abc")
         )
@@ -76,7 +76,7 @@ class TestCreate:
         assert kb_id == "kb-abc"
 
     async def test_passes_run_id_in_name(self):
-        client = KnowledgeBaseClient(api_key="test-key")
+        client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
         client._sdk.knowledge_bases.create = AsyncMock(
             return_value=_make_create_response()
         )
@@ -85,8 +85,50 @@ class TestCreate:
         call_kwargs = client._sdk.knowledge_bases.create.call_args.kwargs
         assert "run-xyz" in call_kwargs["name"]
 
+    async def test_passes_empty_datasources_without_documents(self):
+        client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
+        client._sdk.knowledge_bases.create = AsyncMock(
+            return_value=_make_create_response()
+        )
+
+        await client.create("run-001")
+        call_kwargs = client._sdk.knowledge_bases.create.call_args.kwargs
+        assert call_kwargs["datasources"] == []
+
+    async def test_uploads_documents_as_datasources(self):
+        client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
+        client._sdk.knowledge_bases.create = AsyncMock(
+            return_value=_make_create_response()
+        )
+        client._sdk.knowledge_bases.wait_for_database = AsyncMock()
+        client._sdk.knowledge_bases.data_sources.create_presigned_urls = AsyncMock(
+            return_value=_make_presigned_response(1)
+        )
+
+        mock_put_resp = MagicMock()
+        mock_put_resp.raise_for_status = MagicMock()
+
+        docs = [{"content": "hello", "metadata": {"file": "a.json"}}]
+
+        with patch(
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
+        ) as MockClient:
+            mock_http = AsyncMock()
+            mock_http.put = AsyncMock(return_value=mock_put_resp)
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=False)
+            MockClient.return_value = mock_http
+
+            await client.create("run-001", documents=docs)
+
+        call_kwargs = client._sdk.knowledge_bases.create.call_args.kwargs
+        datasources = call_kwargs["datasources"]
+        assert len(datasources) == 1
+        assert "file_upload_data_source" in datasources[0]
+        assert datasources[0]["file_upload_data_source"]["stored_object_key"] == "obj-key-0"
+
     async def test_propagates_api_error(self):
-        client = KnowledgeBaseClient(api_key="test-key")
+        client = KnowledgeBaseClient(api_key="test-key", project_id="proj-test")
         client._sdk.knowledge_bases.create = AsyncMock(
             side_effect=_make_api_error("creation failed")
         )
@@ -98,9 +140,9 @@ class TestCreate:
 # Tests — upload_documents()
 # ---------------------------------------------------------------------------
 
-class TestUploadDocuments:
-    """Tests for KnowledgeBaseClient.upload_documents()."""
-    async def test_uploads_successfully(self):
+class TestUploadAndBuildDatasources:
+    """Tests for KnowledgeBaseClient._upload_and_build_datasources()."""
+    async def test_uploads_and_returns_datasource_dicts(self):
         client = KnowledgeBaseClient(api_key="test-key")
         client._sdk.knowledge_bases.data_sources.create_presigned_urls = AsyncMock(
             return_value=_make_presigned_response(1)
@@ -112,7 +154,7 @@ class TestUploadDocuments:
         mock_put_resp.raise_for_status = MagicMock()
 
         with patch(
-            "src.gradient.knowledge_base.httpx.AsyncClient"
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
         ) as MockClient:
             mock_http = AsyncMock()
             mock_http.put = AsyncMock(return_value=mock_put_resp)
@@ -120,14 +162,13 @@ class TestUploadDocuments:
             mock_http.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = mock_http
 
-            await client.upload_documents("kb-123", docs)
+            result = await client._upload_and_build_datasources(docs)
 
+        assert len(result) == 1
+        assert result[0]["file_upload_data_source"]["stored_object_key"] == "obj-key-0"
+        assert result[0]["file_upload_data_source"]["original_file_name"] == "doc_0.json"
         # Presigned URL was requested
         client._sdk.knowledge_bases.data_sources.create_presigned_urls.assert_called_once()
-        call_kwargs = (
-            client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_args.kwargs
-        )
-        assert call_kwargs["knowledge_base_id"] == "kb-123"
         # File was PUT to the presigned URL
         mock_http.put.assert_called_once()
 
@@ -147,7 +188,7 @@ class TestUploadDocuments:
         docs = [{"content": "data", "metadata": {}}]
 
         with patch(
-            "src.gradient.knowledge_base.httpx.AsyncClient"
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
         ) as MockClient:
             mock_http = AsyncMock()
             mock_http.put = AsyncMock(return_value=mock_put_resp)
@@ -155,8 +196,9 @@ class TestUploadDocuments:
             mock_http.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = mock_http
 
-            await client.upload_documents("kb-123", docs)
+            result = await client._upload_and_build_datasources(docs)
 
+        assert len(result) == 1
         assert (
             client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_count
             == 2
@@ -177,7 +219,7 @@ class TestUploadDocuments:
         docs = [{"content": "data", "metadata": {}}]
 
         with patch(
-            "src.gradient.knowledge_base.httpx.AsyncClient"
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
         ) as MockClient:
             mock_http = AsyncMock()
             mock_http.put = AsyncMock(return_value=mock_put_resp)
@@ -185,8 +227,9 @@ class TestUploadDocuments:
             mock_http.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = mock_http
 
-            await client.upload_documents("kb-123", docs)
+            result = await client._upload_and_build_datasources(docs)
 
+        assert len(result) == 1
         assert (
             client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_count
             == 2
@@ -202,7 +245,7 @@ class TestUploadDocuments:
 
         docs = [{"content": "data", "metadata": {}}]
         with pytest.raises(APIError):
-            await client.upload_documents("kb-123", docs)
+            await client._upload_and_build_datasources(docs)
 
         assert (
             client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_count
@@ -219,7 +262,7 @@ class TestUploadDocuments:
 
         docs = [{"content": "data", "metadata": {}}]
         with pytest.raises(APITimeoutError):
-            await client.upload_documents("kb-123", docs)
+            await client._upload_and_build_datasources(docs)
 
         assert (
             client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_count
@@ -235,12 +278,12 @@ class TestUploadDocuments:
         )
 
         with patch(
-            "src.gradient.knowledge_base.asyncio.sleep",
+            "src.gradient_sdk.knowledge_base.asyncio.sleep",
             new_callable=AsyncMock,
         ) as mock_sleep:
             with pytest.raises(APIError):
-                await client.upload_documents(
-                    "kb-123", [{"content": "x", "metadata": {}}]
+                await client._upload_and_build_datasources(
+                    [{"content": "x", "metadata": {}}]
                 )
 
         # 1 sleep: after attempt 1 fails, before attempt 2 (which also fails)
@@ -258,7 +301,7 @@ class TestUploadDocuments:
         mock_put_resp.raise_for_status = MagicMock()
 
         with patch(
-            "src.gradient.knowledge_base.httpx.AsyncClient"
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
         ) as MockClient:
             mock_http = AsyncMock()
             mock_http.put = AsyncMock(return_value=mock_put_resp)
@@ -266,10 +309,11 @@ class TestUploadDocuments:
             mock_http.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = mock_http
 
-            await client.upload_documents(
-                "kb-123", [{"content": "ok", "metadata": {}}]
+            result = await client._upload_and_build_datasources(
+                [{"content": "ok", "metadata": {}}]
             )
 
+        assert len(result) == 1
         assert (
             client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_count
             == 1
@@ -305,7 +349,7 @@ class TestUploadDocuments:
             return ok_resp
 
         with patch(
-            "src.gradient.knowledge_base.httpx.AsyncClient"
+            "src.gradient_sdk.knowledge_base.httpx.AsyncClient"
         ) as MockClient:
             mock_http = AsyncMock()
             mock_http.put = AsyncMock(side_effect=mock_put_side_effect)
@@ -313,10 +357,11 @@ class TestUploadDocuments:
             mock_http.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = mock_http
 
-            await client.upload_documents(
-                "kb-123", [{"content": "data", "metadata": {}}]
+            result = await client._upload_and_build_datasources(
+                [{"content": "data", "metadata": {}}]
             )
 
+        assert len(result) == 1
         # Both attempts called create_presigned_urls (full retry loop)
         assert (
             client._sdk.knowledge_bases.data_sources.create_presigned_urls.call_count

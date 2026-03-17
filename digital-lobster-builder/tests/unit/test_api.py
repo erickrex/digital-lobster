@@ -323,7 +323,7 @@ class TestEnvConfiguredFactory:
         mock_orchestrator = AsyncMock()
         captured = {}
 
-        def fake_build_runtime_dependencies(settings):
+        def fake_build_runtime_dependencies(settings, **kwargs):
             captured["settings"] = settings
             return (
                 mock_spaces,
@@ -385,7 +385,7 @@ class TestEnvConfiguredFactory:
         )
         mock_orchestrator = AsyncMock()
 
-        def fake_build_runtime_dependencies(settings):
+        def fake_build_runtime_dependencies(settings, **kwargs):
             assert settings.spaces_region == "ams3"
             assert settings.gradient_model_id == "anthropic-claude-4.6-sonnet"
             return (

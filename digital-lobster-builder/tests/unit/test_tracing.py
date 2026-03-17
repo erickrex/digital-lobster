@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.gradient.tracing import (
+from src.gradient_sdk.tracing import (
     LoggingBackend,
     ReasoningStep,
     SpanStatus,
@@ -259,7 +259,7 @@ class TestLoggingBackend:
         )
         span.set_ok()
 
-        with caplog.at_level("INFO", logger="src.gradient.tracing"):
+        with caplog.at_level("INFO", logger="src.gradient_sdk.tracing"):
             await backend.send_span(span)
 
         assert any("OK" in r.message and "A0" in r.message for r in caplog.records)
@@ -270,7 +270,7 @@ class TestLoggingBackend:
         span = TraceSpan(span_id="s1", run_id="r1", agent_name="A0")
         span.set_error(RuntimeError("oops"))
 
-        with caplog.at_level("ERROR", logger="src.gradient.tracing"):
+        with caplog.at_level("ERROR", logger="src.gradient_sdk.tracing"):
             await backend.send_span(span)
 
         assert any("FAILED" in r.message and "oops" in r.message for r in caplog.records)
