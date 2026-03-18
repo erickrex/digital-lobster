@@ -1637,7 +1637,10 @@ def _extract_taxonomies(
             if not isinstance(item, dict):
                 continue
             post_type = item.get("post_type") or item.get("type") or "post"
-            for tax_name, terms in item.get("taxonomies", {}).items():
+            raw_taxonomies = item.get("taxonomies", {})
+            if not isinstance(raw_taxonomies, dict):
+                continue
+            for tax_name, terms in raw_taxonomies.items():
                 if tax_name not in taxonomies:
                     taxonomies[tax_name] = TaxonomySummary(
                         taxonomy=tax_name,

@@ -562,6 +562,11 @@ class Digital_Lobster_Exporter_Exporter {
 	 */
 	private function export_content_files() {
 		if ( empty( $this->results['content'] ) || ! is_array( $this->results['content'] ) ) {
+			$this->log_error(
+				'exporter',
+				'Skipping content file export: results[content] is empty or not an array',
+				'warning'
+			);
 			return;
 		}
 

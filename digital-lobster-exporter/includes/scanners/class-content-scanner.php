@@ -65,12 +65,40 @@ class Digital_Lobster_Exporter_Content_Scanner extends Digital_Lobster_Exporter_
 	public function scan() {
 		$this->block_usage = array();
 
+		$posts = $this->export_posts();
+		$pages = $this->export_pages();
+		$cpts  = $this->export_custom_post_types();
+
 		$content_data = array(
-			'posts' => $this->export_posts(),
-			'pages' => $this->export_pages(),
-			'custom_post_types' => $this->export_custom_post_types(),
-			'block_usage' => $this->get_block_usage_stats(),
+			'posts'             => $posts,
+			'pages'             => $pages,
+			'custom_post_types' => $cpts,
+			'block_usage'       => $this->get_block_usage_stats(),
 		);
+
+		// Surface a warning when the content scanner finds nothing so the
+		// empty-content/ issue is visible in the error log.
+		$total = count( $posts ) + count( $pages );
+		foreach ( $cpts as $items ) {
+			$total += is_array( $items ) ? count( $items ) : 0;
+		}
+		if ( $total === 0 ) {
+			$this->log_warning(
+				'content',
+				'Content scanner returned 0 items (0 posts, 0 pages, 0 CPT items). The content/ directory will be empty.'
+			);
+		} else {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Digital Lobster Exporter: Content scanner found %d posts, %d pages, %d CPT groups',
+						count( $posts ),
+						count( $pages ),
+						count( $cpts )
+					)
+				);
+			}
+		}
 
 		return $content_data;
 	}

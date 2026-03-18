@@ -73,6 +73,7 @@ class Digital_Lobster_Exporter_Theme_Scanner extends Digital_Lobster_Exporter_Sc
 		$global_styles = $this->export_global_styles();
 		$css_sources = $this->scan_custom_css_sources();
 		$editor_settings = $this->export_editor_settings();
+		$rendered_css = $this->export_rendered_css();
 		
 		// Create assets manifest
 		$assets_manifest = $this->create_assets_manifest();
@@ -86,6 +87,7 @@ class Digital_Lobster_Exporter_Theme_Scanner extends Digital_Lobster_Exporter_Sc
 			'global_styles'       => $global_styles,
 			'css_sources'         => $css_sources,
 			'editor_settings'     => $editor_settings,
+			'rendered_css'        => $rendered_css,
 			'assets_manifest'     => $assets_manifest,
 		);
 	}
@@ -840,6 +842,12 @@ class Digital_Lobster_Exporter_Theme_Scanner extends Digital_Lobster_Exporter_Sc
 		if ( is_array( $theme_options ) ) {
 			foreach ( $theme_options as $key => $value ) {
 				if ( ( strpos( $key, 'css' ) !== false || strpos( $key, 'style' ) !== false ) && is_string( $value ) && ! empty( $value ) ) {
+					// Skip values that are just option names (e.g. "filled", "default")
+					// Real CSS contains selectors, properties, or at-rules
+					if ( ! $this->looks_like_css( $value ) ) {
+						continue;
+					}
+
 					$css_sources[] = array(
 						'source'      => 'theme_options',
 						'option_name' => $key,
@@ -1061,6 +1069,160 @@ class Digital_Lobster_Exporter_Theme_Scanner extends Digital_Lobster_Exporter_Sc
 		return array(
 			'success' => false,
 			'error'   => 'Failed to encode editor settings to JSON',
+		);
+	}
+
+	/**
+	 * Check if a string looks like actual CSS content.
+	 *
+	 * Filters out theme option values (e.g. "filled", "default", "fullheight")
+	 * that are not CSS but get matched by the css/style key name filter.
+	 *
+	 * @param string $value The string to check.
+	 * @return bool True if the value appears to contain CSS rules.
+	 */
+	private function looks_like_css( $value ) {
+		$trimmed = trim( $value );
+		// Must be longer than a single word/token
+		if ( strlen( $trimmed ) < 10 ) {
+			return false;
+		}
+		// Real CSS contains braces, colons with semicolons, or at-rules
+		if ( strpos( $trimmed, '{' ) !== false && strpos( $trimmed, '}' ) !== false ) {
+			return true;
+		}
+		if ( preg_match( '/[a-z-]+\s*:\s*[^;]+;/', $trimmed ) ) {
+			return true;
+		}
+		if ( strpos( $trimmed, '@media' ) !== false || strpos( $trimmed, '@import' ) !== false ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Export the rendered frontend CSS by fetching the site homepage.
+	 *
+	 * Makes a self-request to the site's homepage, extracts all <link rel="stylesheet">
+	 * URLs and <style> blocks, downloads external stylesheets, and saves everything
+	 * into the theme export directory as rendered_*.css files.
+	 *
+	 * This captures the actual CSS that WordPress/themes/plugins output on the frontend,
+	 * which is critical for themes like Kadence that generate CSS dynamically.
+	 *
+	 * @return array Export status.
+	 */
+	private function export_rendered_css() {
+		$site_url = home_url( '/' );
+		$response = wp_remote_get( $site_url, array(
+			'timeout'    => 30,
+			'user-agent' => 'Digital-Lobster-Exporter/1.0',
+			'sslverify'  => false,
+		) );
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'success' => false,
+				'error'   => 'Failed to fetch homepage: ' . $response->get_error_message(),
+			);
+		}
+
+		$html = wp_remote_retrieve_body( $response );
+		if ( empty( $html ) ) {
+			return array(
+				'success' => false,
+				'error'   => 'Empty response from homepage',
+			);
+		}
+
+		$rendered_dir = $this->theme_export_dir . 'rendered/';
+		if ( ! file_exists( $rendered_dir ) ) {
+			wp_mkdir_p( $rendered_dir );
+		}
+
+		$exported_files = array();
+
+		// 1. Extract and download external stylesheets
+		if ( preg_match_all( '/<link[^>]+rel=[\'"]stylesheet[\'"][^>]*>/i', $html, $link_matches ) ) {
+			foreach ( $link_matches[0] as $link_tag ) {
+				if ( preg_match( '/href=[\'"]([^\'"]+)[\'"]/', $link_tag, $href_match ) ) {
+					$css_url = $href_match[1];
+
+					// Extract an id if present for naming
+					$css_id = 'stylesheet_' . count( $exported_files );
+					if ( preg_match( '/id=[\'"]([^\'"]+)[\'"]/', $link_tag, $id_match ) ) {
+						$css_id = sanitize_file_name( str_replace( '-css', '', $id_match[1] ) );
+					}
+
+					$css_response = wp_remote_get( $css_url, array(
+						'timeout'    => 15,
+						'sslverify'  => false,
+					) );
+
+					if ( ! is_wp_error( $css_response ) ) {
+						$css_content = wp_remote_retrieve_body( $css_response );
+						if ( ! empty( $css_content ) && strlen( $css_content ) > 10 ) {
+							$filename = 'rendered_' . $css_id . '.css';
+							file_put_contents( $rendered_dir . $filename, $css_content );
+							$exported_files[] = array(
+								'type'     => 'external',
+								'id'       => $css_id,
+								'url'      => $css_url,
+								'filename' => $filename,
+								'path'     => 'theme/rendered/' . $filename,
+								'size'     => strlen( $css_content ),
+							);
+						}
+					}
+				}
+			}
+		}
+
+		// 2. Extract inline <style> blocks — consolidate into a single file
+		$inline_parts = array();
+		if ( preg_match_all( '/<style[^>]*>(.*?)<\/style>/si', $html, $style_matches, PREG_SET_ORDER ) ) {
+			foreach ( $style_matches as $match ) {
+				$css_content = trim( $match[1] );
+				if ( empty( $css_content ) || strlen( $css_content ) < 10 ) {
+					continue;
+				}
+				$inline_parts[] = $css_content;
+			}
+		}
+
+		if ( ! empty( $inline_parts ) ) {
+			$combined = implode( "\n", $inline_parts );
+			$filename = 'rendered_inline_all.css';
+			file_put_contents( $rendered_dir . $filename, $combined );
+			$exported_files[] = array(
+				'type'     => 'inline',
+				'id'       => 'inline_all',
+				'filename' => $filename,
+				'path'     => 'theme/rendered/' . $filename,
+				'size'     => strlen( $combined ),
+				'parts'    => count( $inline_parts ),
+			);
+		}
+
+		// 3. Save a manifest of all rendered CSS files
+		$manifest = array(
+			'schema_version' => 1,
+			'source_url'     => $site_url,
+			'scan_date'      => current_time( 'mysql' ),
+			'files_count'    => count( $exported_files ),
+			'files'          => $exported_files,
+		);
+
+		$json = wp_json_encode( $manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		if ( $json ) {
+			file_put_contents( $rendered_dir . 'manifest.json', $json );
+		}
+
+		return array(
+			'success'     => ! empty( $exported_files ),
+			'path'        => 'theme/rendered/',
+			'files_count' => count( $exported_files ),
+			'files'       => $exported_files,
 		);
 	}
 

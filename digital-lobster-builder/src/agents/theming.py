@@ -6,6 +6,7 @@ import re
 import time
 from pathlib import PurePosixPath
 from typing import Any
+from urllib.parse import urlparse
 
 from src.agents.base import AgentResult, BaseAgent
 from src.models.inventory import Inventory, ThemeMetadata
@@ -116,6 +117,74 @@ def detect_missing_css_assets(
         if normalised not in available_assets:
             missing.append(normalised)
     return missing
+
+# ---------------------------------------------------------------------------
+# URL rewriting & CSS consolidation
+# ---------------------------------------------------------------------------
+
+
+def rewrite_site_urls(html: str, site_url: str) -> str:
+    """Replace absolute WordPress URLs with relative paths in ``href`` attributes.
+
+    Only rewrites ``href="..."`` links (navigation, anchor links) so that
+    menu items, footer links, and logo links point to local routes instead
+    of the original WordPress domain.
+
+    ``src`` and ``srcset`` attributes are intentionally left untouched —
+    media assets may still be served from the original host or a CDN when
+    they weren't included in the export bundle.
+    """
+    if not site_url or not html:
+        return html
+    base = site_url.rstrip("/")
+    parsed = urlparse(base)
+    variants = [base]
+    if parsed.scheme == "https":
+        variants.append(base.replace("https://", "http://"))
+    elif parsed.scheme == "http":
+        variants.append(base.replace("http://", "https://"))
+
+    def _rewrite_href(match: re.Match) -> str:
+        quote = match.group(1)  # ' or "
+        url = match.group(2)
+        for variant in variants:
+            if url.startswith(variant + "/"):
+                url = url[len(variant):]  # keeps the leading /
+                break
+            elif url == variant:
+                url = "/"
+                break
+        return f"href={quote}{url}{quote}"
+
+    # Match href="..." or href='...'
+    html = re.sub(r"""href=(['"])(.*?)\1""", _rewrite_href, html)
+    return html
+
+
+def consolidate_inline_css(css_files: dict[str, str]) -> dict[str, str]:
+    """Merge individual ``rendered_inline_*.css`` files into one combined file.
+
+    Returns a new dict with inline files replaced by a single
+    ``rendered_inline_all.css`` entry. Non-inline files pass through unchanged.
+    """
+    consolidated: dict[str, str] = {}
+    inline_parts: list[str] = []
+
+    for name, content in css_files.items():
+        if re.match(r"rendered_inline_\d+\.css$", name):
+            inline_parts.append(content)
+        else:
+            consolidated[name] = content
+
+    if inline_parts:
+        consolidated["rendered_inline_all.css"] = "\n".join(inline_parts)
+        logger.info(
+            "Consolidated %d inline CSS fragments into rendered_inline_all.css",
+            len(inline_parts),
+        )
+
+    return consolidated
+
 
 # ---------------------------------------------------------------------------
 # Layout generation helpers
@@ -287,8 +356,9 @@ class ThemingAgent(BaseAgent):
         inventory = _extract_inventory(context)
         export_bundle: dict[str, Any] = context.get("export_bundle", {})
 
-        # 1. Collect theme CSS files from the export bundle
+        # 1. Collect theme CSS files from the export bundle and consolidate
         theme_css = self._collect_theme_css(export_bundle, warnings)
+        theme_css = consolidate_inline_css(theme_css)
 
         # 2. Extract design tokens from theme.json → generate tokens.css
         tokens_css = ""
@@ -318,8 +388,14 @@ class ThemingAgent(BaseAgent):
                 "in theme CSS files."
             )
 
-        # 5. Extract header/footer/nav from HTML snapshots
+        # 5. Extract header/footer/nav from HTML snapshots and rewrite URLs
         snapshot_sections = self._extract_from_snapshots(export_bundle)
+        site_url = inventory.site_url
+        for key in snapshot_sections:
+            if snapshot_sections[key]:
+                snapshot_sections[key] = rewrite_site_urls(
+                    snapshot_sections[key], site_url
+                )
 
         # 6. Generate layout files
         css_filenames = list(theme_css.keys())
@@ -360,18 +436,47 @@ class ThemingAgent(BaseAgent):
     ) -> dict[str, str]:
         """Gather CSS files from the ``theme/`` directory in the bundle.
 
+        Prefers rendered CSS files (``theme/rendered/*.css``) which contain
+        the actual frontend CSS captured from the live site.  Falls back to
+        static ``theme/*.css`` files when rendered CSS is unavailable.
+
         Returns a dict mapping target filename (for ``public/styles/``)
         to CSS content string.
         """
         css_files: dict[str, str] = {}
+
+        # 1. Prefer rendered CSS — these are the actual stylesheets from the frontend
+        rendered_files: dict[str, str] = {}
+        for path, content in export_bundle.items():
+            if not path.startswith("theme/rendered/") or not path.endswith(".css"):
+                continue
+            filename = PurePosixPath(path).name
+            if isinstance(content, bytes):
+                content = content.decode("utf-8", errors="replace")
+            # Skip near-empty files
+            if len(content.strip()) < 20:
+                continue
+            rendered_files[filename] = content
+
+        if rendered_files:
+            logger.info("Using %d rendered CSS file(s) from theme/rendered/", len(rendered_files))
+            return rendered_files
+
+        # 2. Fallback: static theme CSS files
         for path, content in export_bundle.items():
             if not path.startswith("theme/") or not path.endswith(".css"):
                 continue
-            # Use the basename as the target filename
+            # Skip rendered/ subdirectory (already handled above)
+            if "rendered/" in path:
+                continue
             filename = PurePosixPath(path).name
             if isinstance(content, bytes):
                 content = content.decode("utf-8", errors="replace")
             css_files[filename] = content
+
+        if not css_files:
+            warnings.append("No CSS files found in theme/ export directory")
+
         return css_files
 
     @staticmethod

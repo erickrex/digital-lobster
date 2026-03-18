@@ -637,7 +637,7 @@ class TestScaffoldAgentExecute:
             {"inventory": _make_inventory(), "modeling_manifest": manifest}
         )
         project = result.artifacts["astro_project"]
-        assert "Welcome to" in project["src/pages/index.astro"]
+        assert "Test Site" in project["src/pages/index.astro"]
         assert any("Skipped generating collection index for root route pattern" in w for w in result.warnings)
 
     @pytest.mark.asyncio

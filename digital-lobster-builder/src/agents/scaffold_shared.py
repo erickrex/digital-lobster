@@ -93,6 +93,9 @@ def generate_content_config(manifest: ModelingManifest) -> str:
     lines = [
         "import { defineCollection, z } from 'astro:content';",
         "",
+        "// Taxonomy terms come as IDs (numbers) or names (strings) from the exporter",
+        "const taxonomyArray = z.array(z.union([z.string(), z.number()])).optional();",
+        "",
     ]
     collection_defs: list[str] = []
     for coll in manifest.collections:
@@ -113,8 +116,32 @@ def generate_content_config(manifest: ModelingManifest) -> str:
     return "\n".join(lines)
 
 def _build_zod_fields(coll) -> list[str]:
+    # Collect taxonomy field names from the collection for special handling
+    taxonomy_names: set[str] = set()
+    if hasattr(coll, "taxonomies") and coll.taxonomies:
+        taxonomy_names = set(coll.taxonomies) if isinstance(coll.taxonomies, list) else set()
+
     field_lines: list[str] = []
     for field in coll.frontmatter_fields:
+        name = field.name
+
+        # 'slug' is reserved in Astro 5 content collections — always optional
+        if name == "slug":
+            field_lines.append(f"{name}: z.string().optional(),")
+            continue
+
+        # Taxonomy arrays contain mixed string/number IDs — use shared helper
+        if name in taxonomy_names:
+            field_lines.append(f"{name}: taxonomyArray,")
+            continue
+
+        # Fields known to carry serialized JSON or unpredictable shapes.
+        # Covers WordPress meta that stores PHP-serialized or JSON-encoded
+        # values (e.g. _has_fluentform, _kad_post_transparent, etc.)
+        if name.startswith("_has_") or field.type == "any":
+            field_lines.append(f"{name}: z.any().optional(),")
+            continue
+
         if field.type == "string":
             zod_type = "z.string()"
         elif field.type == "number":
@@ -124,11 +151,16 @@ def _build_zod_fields(coll) -> list[str]:
         elif field.type == "date":
             zod_type = "z.string()"
         elif field.type == "list":
-            zod_type = "z.array(z.string())"
+            zod_type = "z.array(z.union([z.string(), z.number()]))"
         else:
             zod_type = "z.any()"
 
         if not field.required:
             zod_type += ".optional()"
-        field_lines.append(f"{field.name}: {zod_type},")
+        field_lines.append(f"{name}: {zod_type},")
+
+    # Ensure legacy_url is always present (content migrator adds it)
+    if not any(line.startswith("legacy_url:") for line in field_lines):
+        field_lines.append("legacy_url: z.string().optional(),")
+
     return field_lines

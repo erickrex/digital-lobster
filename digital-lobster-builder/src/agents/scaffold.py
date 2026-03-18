@@ -145,23 +145,82 @@ const entries = await getCollection('{collection.collection_name}');
 </PageLayout>
 """
 def generate_home_page(site_name: str, collections: list[ContentCollectionSchema]) -> str:
-    """Generate the home ``index.astro`` page."""
-    links = "\n    ".join(
-        f'<li><a href="{_route_prefix(c.route_pattern)}">{c.collection_name.replace("_", " ").title()}</a></li>'
-        for c in collections
-    )
-    return f"""---
-import PageLayout from '../layouts/PageLayout.astro';
----
-<PageLayout title="{site_name}">
-  <h1>Welcome to {site_name}</h1>
-  <nav>
-    <ul>
-    {links}
+    """Generate the home ``index.astro`` page.
+
+    Adapts to whatever collections exist in the manifest:
+    - If a blog-like collection exists (posts, articles, news, blog), show
+      recent entries in a featured section.
+    - All other non-page collections get an explore/browse section.
+    - Sites with only a ``pages`` collection get a simple welcome page.
+    """
+    _BLOG_NAMES = {"posts", "post", "articles", "article", "news", "blog"}
+
+    blog_coll = None
+    browse_colls: list[ContentCollectionSchema] = []
+    for c in collections:
+        if c.collection_name.lower() in _BLOG_NAMES and blog_coll is None:
+            blog_coll = c
+        elif c.collection_name.lower() not in ("pages", "page"):
+            browse_colls.append(c)
+
+    # --- Blog / recent-posts section (only when a blog collection exists) ---
+    posts_section = ""
+    posts_import = ""
+    if blog_coll:
+        coll_name = blog_coll.collection_name
+        blog_route = _route_prefix(blog_coll.route_pattern)
+        label = coll_name.replace("_", " ").title()
+        posts_import = f"""
+import {{ getCollection }} from 'astro:content';
+const recentEntries = (await getCollection('{coll_name}')).slice(0, 6);"""
+        posts_section = f"""
+  <section class="latest-posts">
+    <h2>Latest {label}</h2>
+    <ul class="post-list">
+      {{recentEntries.map((entry) => (
+        <li>
+          <a href={{`{blog_route}/${{entry.slug}}`}}>
+            <h3>{{entry.data.title}}</h3>
+            {{entry.data.excerpt && <p>{{entry.data.excerpt}}</p>}}
+          </a>
+        </li>
+      ))}}
     </ul>
-  </nav>
-</PageLayout>
+  </section>"""
+
+    # --- Browse sections for every non-page, non-blog collection ---
+    explore_sections = ""
+    for c in browse_colls:
+        label = _humanize_collection_name(c.collection_name)
+        route = _route_prefix(c.route_pattern)
+        explore_sections += f"""
+  <section class="explore-section">
+    <h2>Explore {label}</h2>
+    <a href="{route}" class="explore-link">Browse all {label} &rarr;</a>
+  </section>"""
+
+    return f"""---
+import BaseLayout from '../layouts/BaseLayout.astro';{posts_import}
+---
+<BaseLayout title="{site_name}">
+  <section class="hero">
+    <h1>{site_name}</h1>
+  </section>
+{posts_section}
+{explore_sections}
+</BaseLayout>
 """
+
+
+def _humanize_collection_name(name: str) -> str:
+    """Turn a collection slug like ``gd_plugin`` into ``Plugin``.
+
+    Strips common WordPress plugin CPT prefixes so the label reads naturally.
+    Unknown prefixes pass through and get title-cased with the underscore
+    replaced by a space.
+    """
+    cleaned = re.sub(r"^(gd|wp|ct|cpt|wc|edd|tribe|jet|acf)_", "", name)
+    return cleaned.replace("_", " ").title()
 def generate_component(mapping: ComponentMapping) -> str:
     """Generate an Astro component file from a ComponentMapping."""
     if mapping.fallback:
