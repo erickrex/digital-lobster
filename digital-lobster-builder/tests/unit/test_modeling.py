@@ -9,6 +9,7 @@ from src.agents.modeling import (
     build_collection_schemas,
     build_component_mappings,
     build_taxonomy_definitions,
+    infer_route_pattern,
     _post_type_to_collection,
     _infer_field_type,
     _extract_inventory,
@@ -260,9 +261,52 @@ class TestBuildCollectionSchemas:
         assert schemas[0].source_post_type == "gd_place"
         assert schemas[0].route_pattern == "/gd_place/[slug]"
 
+    def test_custom_post_type_route_inferred_from_legacy_permalinks(self):
+        content_types = [
+            ContentTypeSummary(
+                post_type="gd_plugin", count=2, custom_fields=[],
+                taxonomies=[], sample_slugs=[],
+            ),
+        ]
+        content_items = [
+            {
+                "post_type": "gd_plugin",
+                "slug": "plugin-a",
+                "legacy_permalink": "https://example.com/plugins/plugin-a/",
+            },
+            {
+                "post_type": "gd_plugin",
+                "slug": "plugin-b",
+                "legacy_permalink": "https://example.com/plugins/plugin-b/",
+            },
+        ]
+        schemas = build_collection_schemas(content_types, content_items)
+        assert schemas[0].route_pattern == "/plugins/[slug]"
+
     def test_empty_content_types(self):
         schemas = build_collection_schemas([])
         assert schemas == []
+
+
+class TestInferRoutePattern:
+    def test_keeps_standard_post_route(self):
+        assert infer_route_pattern("post", [{"post_type": "post"}]) == "/posts/[slug]"
+
+    def test_uses_shared_permalink_prefix_for_custom_post_type(self):
+        route = infer_route_pattern(
+            "gd_hosting",
+            [
+                {
+                    "post_type": "gd_hosting",
+                    "legacy_permalink": "https://example.com/hosting/aws/",
+                },
+                {
+                    "post_type": "gd_hosting",
+                    "legacy_permalink": "https://example.com/hosting/azure/",
+                },
+            ],
+        )
+        assert route == "/hosting/[slug]"
 
 # ---------------------------------------------------------------------------
 # Tests: build_component_mappings

@@ -71,6 +71,7 @@ override.tf.json
 # =========================
 tasks_completed_reports/
 uploads/
+output/
 
 # =========================
 # Archives & Packages

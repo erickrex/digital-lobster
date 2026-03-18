@@ -101,9 +101,77 @@ def generate_route_page(
     layout_import_path: str = "../../layouts/PostLayout.astro",
 ) -> str:
     """Generate a dynamic route page ``[slug].astro`` for a content collection."""
+    is_page_collection = collection.source_post_type == "page"
+    has_featured = any(f.name == "featured_image" for f in collection.frontmatter_fields)
+    has_date = any(f.name == "date" for f in collection.frontmatter_fields)
+    layout_name = "PageLayout" if is_page_collection else "PostLayout"
+    description_expr = "entry.data.meta_description || entry.data.excerpt || ''"
+
+    image_block = ""
+    if has_featured and not is_page_collection:
+        image_block = """
+  {entry.data.featured_image && (
+    <div class="entry-featured-image">
+      <img src={entry.data.featured_image} alt={entry.data.title} />
+    </div>
+  )}"""
+
+    date_block = ""
+    if has_date and not is_page_collection:
+        date_block = """
+      {entry.data.date && (
+        <time class="entry-date" datetime={entry.data.date}>
+          {new Date(entry.data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </time>
+      )}"""
+
+    page_body = """  <Content />"""
+    if not is_page_collection:
+        page_body = f"""  <article class="single-entry">{image_block}
+    <header class="entry-header">
+      <h1>{{entry.data.title}}</h1>{date_block}
+    </header>
+    <div class="entry-body">
+      <Content />
+    </div>
+  </article>"""
+
+    page_styles = ""
+    if not is_page_collection:
+        page_styles = """
+
+<style>
+  .single-entry {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .entry-featured-image {
+    margin-bottom: 1.5rem;
+    border-radius: .5rem;
+    overflow: hidden;
+  }
+  .entry-featured-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .entry-header {
+    margin-bottom: 1.5rem;
+  }
+  .entry-header h1 {
+    margin: 0 0 .5rem;
+  }
+  .entry-date {
+    display: block;
+    font-size: .9rem;
+    color: var(--global-palette5, #888);
+  }
+</style>
+"""
+
     return f"""---
 import {{ getCollection }} from 'astro:content';
-import PostLayout from '{layout_import_path}';
+import {layout_name} from '{layout_import_path}';
 
 export async function getStaticPaths() {{
   const entries = await getCollection('{collection.collection_name}');
@@ -116,41 +184,185 @@ export async function getStaticPaths() {{
 const {{ entry }} = Astro.props;
 const {{ Content }} = await entry.render();
 ---
-<PostLayout title={{entry.data.title}} description={{entry.data.description || ''}}>
-  <Content />
-</PostLayout>
+<{layout_name}
+  title={{entry.data.seo_title || entry.data.title}}
+  description={{{description_expr}}}
+  bodyClass={{entry.data.body_class || ''}}
+>
+{page_body}
+</{layout_name}>{page_styles}
 """
 def generate_index_page(
     collection: ContentCollectionSchema,
     layout_import_path: str = "../../layouts/PageLayout.astro",
 ) -> str:
-    """Generate an index page listing all entries in a content collection."""
+    """Generate a paginated index page with card layout for a content collection."""
+    label = _humanize_collection_name(collection.collection_name)
+    route_prefix = _friendly_route_prefix(collection)
+    has_excerpt = any(f.name == "excerpt" for f in collection.frontmatter_fields)
+    has_featured = any(f.name == "featured_image" for f in collection.frontmatter_fields)
+    has_date = any(f.name == "date" for f in collection.frontmatter_fields)
+
+    # Build optional card parts
+    image_block = ""
+    if has_featured:
+        image_block = """
+              {entry.data.featured_image && (
+                <div class="card-image">
+                  <img src={entry.data.featured_image} alt={entry.data.title} loading="lazy" />
+                </div>
+              )}"""
+
+    date_block = ""
+    if has_date:
+        date_block = """
+                {entry.data.date && (
+                  <time class="card-date" datetime={entry.data.date}>
+                    {new Date(entry.data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </time>
+                )}"""
+
+    excerpt_block = ""
+    if has_excerpt:
+        excerpt_block = """
+                {entry.data.excerpt && <p class="card-excerpt">{entry.data.excerpt}</p>}"""
+
     return f"""---
 import {{ getCollection }} from 'astro:content';
 import PageLayout from '{layout_import_path}';
 
-const entries = await getCollection('{collection.collection_name}');
+export async function getStaticPaths({{ paginate }}) {{
+  const allEntries = (await getCollection('{collection.collection_name}'))
+    .sort((a, b) => new Date(b.data.date).valueOf() - new Date(a.data.date).valueOf());
+  return paginate(allEntries, {{ pageSize: 12 }});
+}}
+
+const {{ page }} = Astro.props;
 ---
-<PageLayout title="{collection.collection_name.replace('_', ' ').title()}">
-  <h1>{collection.collection_name.replace('_', ' ').title()}</h1>
-  <ul>
-    {{entries.map((entry) => (
-      <li>
-        <a href={{`{_route_prefix(collection.route_pattern)}/${{entry.slug}}`}}>
-          {{entry.data.title}}
+<PageLayout title="{label}">
+  <div class="archive-header">
+    <h1>{label}</h1>
+    <p class="archive-count">{{page.total}} items</p>
+  </div>
+
+  <div class="card-grid">
+    {{page.data.map((entry) => (
+      <article class="card">
+        <a href={{`{route_prefix}/${{entry.slug}}`}} class="card-link">{image_block}
+          <div class="card-body">
+            <h2 class="card-title">{{entry.data.title}}</h2>{date_block}{excerpt_block}
+          </div>
         </a>
-      </li>
+      </article>
     ))}}
-  </ul>
+  </div>
+
+  <nav class="pagination" aria-label="Pagination">
+    {{page.url.prev && <a href={{page.url.prev}} class="pagination-link">&larr; Previous</a>}}
+    <span class="pagination-info">Page {{page.currentPage}} of {{page.lastPage}}</span>
+    {{page.url.next && <a href={{page.url.next}} class="pagination-link">Next &rarr;</a>}}
+  </nav>
 </PageLayout>
+
+<style>
+  .archive-header {{
+    margin-bottom: 2rem;
+  }}
+  .archive-header h1 {{
+    margin: 0 0 .25rem;
+  }}
+  .archive-count {{
+    color: var(--global-palette5, #666);
+    margin: 0;
+  }}
+  .card-grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }}
+  .card {{
+    border: 1px solid var(--global-gray-400, #e0e0e0);
+    border-radius: .5rem;
+    overflow: hidden;
+    transition: box-shadow .2s, transform .2s;
+    background: var(--global-palette9, #fff);
+  }}
+  .card:hover {{
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    transform: translateY(-2px);
+  }}
+  .card-link {{
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }}
+  .card-image {{
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--global-gray-200, #f0f0f0);
+  }}
+  .card-image img {{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }}
+  .card-body {{
+    padding: 1rem;
+  }}
+  .card-title {{
+    font-size: 1.1rem;
+    margin: 0 0 .5rem;
+    line-height: 1.3;
+  }}
+  .card-date {{
+    display: block;
+    font-size: .8rem;
+    color: var(--global-palette5, #888);
+    margin-bottom: .5rem;
+  }}
+  .card-excerpt {{
+    font-size: .9rem;
+    color: var(--global-palette5, #666);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }}
+  .pagination {{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem 0;
+  }}
+  .pagination-link {{
+    padding: .5rem 1rem;
+    border: 1px solid var(--global-palette-btn-bg, var(--global-palette1, #0073aa));
+    border-radius: .25rem;
+    text-decoration: none;
+    color: var(--global-palette-btn-bg, var(--global-palette1, #0073aa));
+    transition: background .2s, color .2s;
+  }}
+  .pagination-link:hover {{
+    background: var(--global-palette-btn-bg, var(--global-palette1, #0073aa));
+    color: #fff;
+  }}
+  .pagination-info {{
+    color: var(--global-palette5, #666);
+    font-size: .9rem;
+  }}
+</style>
 """
 def generate_home_page(site_name: str, collections: list[ContentCollectionSchema]) -> str:
     """Generate the home ``index.astro`` page.
 
     Adapts to whatever collections exist in the manifest:
     - If a blog-like collection exists (posts, articles, news, blog), show
-      recent entries in a featured section.
-    - All other non-page collections get an explore/browse section.
+      recent entries in a featured section with cards.
+    - All other non-page collections get an explore/browse section with
+      preview cards showing the first few items.
     - Sites with only a ``pages`` collection get a simple welcome page.
     """
     _BLOG_NAMES = {"posts", "post", "articles", "article", "news", "blog"}
@@ -168,39 +380,97 @@ def generate_home_page(site_name: str, collections: list[ContentCollectionSchema
     posts_import = ""
     if blog_coll:
         coll_name = blog_coll.collection_name
-        blog_route = _route_prefix(blog_coll.route_pattern)
+        blog_route = _friendly_route_prefix(blog_coll)
         label = coll_name.replace("_", " ").title()
+        has_featured = any(f.name == "featured_image" for f in blog_coll.frontmatter_fields)
+
+        image_block = ""
+        if has_featured:
+            image_block = """
+              {entry.data.featured_image && (
+                <div class="post-card-image">
+                  <img src={entry.data.featured_image} alt={entry.data.title} loading="lazy" />
+                </div>
+              )}"""
+
         posts_import = f"""
 import {{ getCollection }} from 'astro:content';
-const recentEntries = (await getCollection('{coll_name}')).slice(0, 6);"""
+const recentEntries = (await getCollection('{coll_name}'))
+  .sort((a, b) => new Date(b.data.date).valueOf() - new Date(a.data.date).valueOf())
+  .slice(0, 6);"""
         posts_section = f"""
   <section class="latest-posts">
     <h2>Latest {label}</h2>
-    <ul class="post-list">
+    <div class="post-grid">
       {{recentEntries.map((entry) => (
-        <li>
-          <a href={{`{blog_route}/${{entry.slug}}`}}>
-            <h3>{{entry.data.title}}</h3>
-            {{entry.data.excerpt && <p>{{entry.data.excerpt}}</p>}}
+        <article class="post-card">
+          <a href={{`{blog_route}/${{entry.slug}}`}} class="post-card-link">{image_block}
+            <div class="post-card-body">
+              <h3>{{entry.data.title}}</h3>
+              {{entry.data.date && (
+                <time class="post-card-date" datetime={{entry.data.date}}>
+                  {{new Date(entry.data.date).toLocaleDateString('en-US', {{ year: 'numeric', month: 'short', day: 'numeric' }})}}
+                </time>
+              )}}
+              {{entry.data.excerpt && <p class="post-card-excerpt">{{entry.data.excerpt}}</p>}}
+              <span class="read-more">Read More &rarr;</span>
+            </div>
           </a>
-        </li>
+        </article>
       ))}}
-    </ul>
+    </div>
   </section>"""
 
     # --- Browse sections for every non-page, non-blog collection ---
     explore_sections = ""
-    for c in browse_colls:
+    explore_imports = ""
+    for i, c in enumerate(browse_colls):
         label = _humanize_collection_name(c.collection_name)
-        route = _route_prefix(c.route_pattern)
+        route = _friendly_route_prefix(c)
+        var_name = f"browse_{i}"
+        has_featured = any(f.name == "featured_image" for f in c.frontmatter_fields)
+
+        explore_imports += f"""
+const {var_name} = (await getCollection('{c.collection_name}')).slice(0, 6);"""
+
+        image_block = ""
+        if has_featured:
+            image_block = f"""
+                {{item.data.featured_image && (
+                  <div class="browse-card-image">
+                    <img src={{item.data.featured_image}} alt={{item.data.title}} loading="lazy" />
+                  </div>
+                )}}"""
+
         explore_sections += f"""
   <section class="explore-section">
-    <h2>Explore {label}</h2>
-    <a href="{route}" class="explore-link">Browse all {label} &rarr;</a>
+    <div class="explore-header">
+      <h2>Explore {label}</h2>
+      <a href="{route}" class="explore-link">Browse all {label} &rarr;</a>
+    </div>
+    <div class="browse-grid">
+      {{{var_name}.map((item) => (
+        <article class="browse-card">
+          <a href={{`{route}/${{item.slug}}`}} class="browse-card-link">{image_block}
+            <div class="browse-card-body">
+              <h3>{{item.data.title}}</h3>
+            </div>
+          </a>
+        </article>
+      ))}}
+    </div>
   </section>"""
 
+    # If browse collections exist, we need getCollection even without a blog
+    if browse_colls and not blog_coll:
+        explore_imports = f"""
+import {{ getCollection }} from 'astro:content';{explore_imports}"""
+    elif browse_colls and blog_coll:
+        # getCollection already imported via posts_import
+        explore_imports = explore_imports  # just the const lines
+
     return f"""---
-import BaseLayout from '../layouts/BaseLayout.astro';{posts_import}
+import BaseLayout from '../layouts/BaseLayout.astro';{posts_import}{explore_imports}
 ---
 <BaseLayout title="{site_name}">
   <section class="hero">
@@ -209,6 +479,142 @@ import BaseLayout from '../layouts/BaseLayout.astro';{posts_import}
 {posts_section}
 {explore_sections}
 </BaseLayout>
+
+<style>
+  .hero {{
+    text-align: center;
+    padding: var(--global-lg-spacing, 3rem) 0;
+  }}
+  .hero h1 {{
+    font-size: var(--global-font-size-xxlarge, 2.5rem);
+    margin: 0;
+  }}
+  .latest-posts {{
+    padding: 2rem 0;
+  }}
+  .latest-posts h2 {{
+    margin: 0 0 1rem;
+  }}
+  .post-grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }}
+  .post-card {{
+    border: 1px solid var(--global-gray-400, #e0e0e0);
+    border-radius: .5rem;
+    overflow: hidden;
+    transition: box-shadow .2s, transform .2s;
+    background: var(--global-palette9, #fff);
+  }}
+  .post-card:hover {{
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    transform: translateY(-2px);
+  }}
+  .post-card-link {{
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }}
+  .post-card-image {{
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--global-gray-200, #f0f0f0);
+  }}
+  .post-card-image img {{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }}
+  .post-card-body {{
+    padding: 1rem;
+  }}
+  .post-card-body h3 {{
+    margin: 0 0 .5rem;
+    font-size: 1.1rem;
+    line-height: 1.3;
+  }}
+  .post-card-date {{
+    display: block;
+    font-size: .8rem;
+    color: var(--global-palette5, #888);
+    margin-bottom: .5rem;
+  }}
+  .post-card-excerpt {{
+    font-size: .9rem;
+    color: var(--global-palette5, #666);
+    margin: 0 0 .75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }}
+  .read-more {{
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--global-palette-btn-bg, var(--global-palette1, #0073aa));
+  }}
+  .explore-section {{
+    padding: 2rem 0;
+    border-top: 1px solid var(--global-gray-400, #e0e0e0);
+  }}
+  .explore-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }}
+  .explore-header h2 {{
+    margin: 0;
+  }}
+  .explore-link {{
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--global-palette-btn-bg, var(--global-palette1, #0073aa));
+    white-space: nowrap;
+  }}
+  .explore-link:hover {{
+    text-decoration: underline;
+  }}
+  .browse-grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }}
+  .browse-card {{
+    border: 1px solid var(--global-gray-400, #e0e0e0);
+    border-radius: .5rem;
+    overflow: hidden;
+    transition: box-shadow .2s;
+    background: var(--global-palette9, #fff);
+  }}
+  .browse-card:hover {{
+    box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  }}
+  .browse-card-link {{
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }}
+  .browse-card-image {{
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--global-gray-200, #f0f0f0);
+  }}
+  .browse-card-image img {{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }}
+  .browse-card-body {{
+    padding: .75rem;
+  }}
+  .browse-card-body h3 {{
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1.3;
+  }}
+</style>
 """
 
 
@@ -221,6 +627,28 @@ def _humanize_collection_name(name: str) -> str:
     """
     cleaned = re.sub(r"^(gd|wp|ct|cpt|wc|edd|tribe|jet|acf)_", "", name)
     return cleaned.replace("_", " ").title()
+
+
+_CPT_PREFIX_RE = re.compile(r"^(gd|wp|ct|cpt|wc|edd|tribe|jet|acf)_")
+
+
+def _friendly_route_prefix(collection: ContentCollectionSchema) -> str:
+    """Return a URL prefix that prefers the humanized plural when a CPT prefix is detected.
+
+    For ``gd_plugin`` with route ``/gd_plugin/[slug]``, returns ``/plugins``
+    so that links match the WordPress permalink structure.  For collections
+    without a CPT prefix (e.g. ``posts`` → ``/blog``), falls back to the
+    normal ``_route_prefix``.
+    """
+    canonical = _route_prefix(collection.route_pattern)
+    if _CPT_PREFIX_RE.match(collection.collection_name):
+        stem = _CPT_PREFIX_RE.sub("", collection.collection_name)
+        stem = stem.lower().replace("_", "-")
+        # Pluralize naively — add 's' if not already plural
+        if not stem.endswith("s"):
+            stem += "s"
+        return f"/{stem}"
+    return canonical
 def generate_component(mapping: ComponentMapping) -> str:
     """Generate an Astro component file from a ComponentMapping."""
     if mapping.fallback:
@@ -295,9 +723,10 @@ export interface Props {{
   description?: string;
   canonicalUrl?: string;
   ogImage?: string;
+  bodyClass?: string;
 }}
 
-const {{ title = "{site_name}", description = "", canonicalUrl = "", ogImage = "" }} = Astro.props;
+const {{ title = "{site_name}", description = "", canonicalUrl = "", ogImage = "", bodyClass = "" }} = Astro.props;
 const resolvedCanonical = canonicalUrl || Astro.url.href;
 ---
 <!DOCTYPE html>
@@ -313,7 +742,7 @@ const resolvedCanonical = canonicalUrl || Astro.url.href;
     <meta property="og:url" content="{{resolvedCanonical}}" />
     {{ogImage && <meta property="og:image" content={{ogImage}} />}}
   </head>
-  <body>
+  <body class={{bodyClass}}>
     <main>
       <slot />
     </main>
@@ -322,28 +751,40 @@ const resolvedCanonical = canonicalUrl || Astro.url.href;
 """
 def _inject_seo_into_layout(layout: str) -> str:
     """Inject SEO meta tags into an existing BaseLayout.astro ``<head>`` section."""
-    seo_tags = """    <link rel="canonical" href={canonicalUrl || Astro.url.href} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalUrl || Astro.url.href} />"""
-    # Add canonicalUrl and ogImage to the Props interface if not present
-    frontmatter_addition = ""
+    has_canonical = 'rel="canonical"' in layout or "rel='canonical'" in layout
+    has_og_title = 'property="og:title"' in layout or "property='og:title'" in layout
+    has_og_description = 'property="og:description"' in layout or "property='og:description'" in layout
+    has_og_url = 'property="og:url"' in layout or "property='og:url'" in layout
+
+    seo_lines: list[str] = []
+    if not has_canonical:
+        seo_lines.append('    <link rel="canonical" href={canonicalUrl || Astro.url.href} />')
+    if not has_og_title:
+        seo_lines.append('    <meta property="og:title" content={title} />')
+    if not has_og_description:
+        seo_lines.append('    <meta property="og:description" content={description} />')
+    if not has_og_url:
+        seo_lines.append('    <meta property="og:url" content={canonicalUrl || Astro.url.href} />')
+
+    if seo_lines and "</head>" in layout:
+        layout = layout.replace("</head>", "\n".join(seo_lines) + "\n  </head>")
+
+    frontmatter_additions: list[str] = []
     if "canonicalUrl" not in layout:
-        frontmatter_addition = (
-            '\nconst canonicalUrl = Astro.props.canonicalUrl || "";\n'
-            'const ogImage = Astro.props.ogImage || "";'
-        )
+        frontmatter_additions.append('const canonicalUrl = Astro.props.canonicalUrl || "";')
+    if "ogImage" not in layout:
+        frontmatter_additions.append('const ogImage = Astro.props.ogImage || "";')
+    if "bodyClass" not in layout:
+        frontmatter_additions.append('const bodyClass = Astro.props.bodyClass || "";')
 
-    # Insert SEO tags before </head>
-    if "</head>" in layout:
-        layout = layout.replace("</head>", f"{seo_tags}\n  </head>")
-
-    # Insert frontmatter additions before the closing ---
-    if frontmatter_addition:
-        # Find the second --- (closing frontmatter fence)
+    if frontmatter_additions:
         parts = layout.split("---", 2)
         if len(parts) >= 3:
-            layout = parts[0] + "---" + parts[1] + frontmatter_addition + "\n---" + parts[2]
+            injection = "\n" + "\n".join(frontmatter_additions)
+            layout = parts[0] + "---" + parts[1] + injection + "\n---" + parts[2]
+
+    if "<body>" in layout and "class={bodyClass}" not in layout:
+        layout = layout.replace("<body>", '<body class={bodyClass}>', 1)
 
     return layout
 
@@ -958,11 +1399,12 @@ import BaseLayout from "./BaseLayout.astro";
 export interface Props {{
   title?: string;
   description?: string;
+  bodyClass?: string;
 }}
 
-const {{ title = "{site_name}", description = "" }} = Astro.props;
+const {{ title = "{site_name}", description = "", bodyClass = "" }} = Astro.props;
 ---
-<BaseLayout title={{title}} description={{description}}>
+<BaseLayout title={{title}} description={{description}} bodyClass={{bodyClass}}>
   <article class="page-content">
     <slot />
   </article>
@@ -977,11 +1419,12 @@ export interface Props {{
   title?: string;
   description?: string;
   date?: string;
+  bodyClass?: string;
 }}
 
-const {{ title = "{site_name}", description = "", date = "" }} = Astro.props;
+const {{ title = "{site_name}", description = "", date = "", bodyClass = "" }} = Astro.props;
 ---
-<BaseLayout title={{title}} description={{description}}>
+<BaseLayout title={{title}} description={{description}} bodyClass={{bodyClass}}>
   <article class="post-content">
     <header class="post-header">
       <h1>{{title}}</h1>

@@ -13,6 +13,7 @@ from src.agents.blueprint_intake import (
     build_inventory,
     collect_kb_documents,
     detect_plugin_family,
+    extract_media_manifest,
     validate_bundle_structure,
 )
 from src.models.manifest import ExportManifest
@@ -578,6 +579,41 @@ class TestCollectKbDocuments:
         docs = collect_kb_documents(zf)
         file_names = [d["metadata"]["file"] for d in docs]
         assert "site_blueprint.json" in file_names
+
+
+class TestExtractMediaManifest:
+    def test_expands_responsive_variants_from_metadata_sizes(self):
+        zf = _make_zip(
+            {
+                "MANIFEST.json": "{}",
+                "site/site_info.json": "{}",
+                "theme/style.css": "/* theme */",
+                "content/posts.json": "[]",
+                "menus/primary.json": "{}",
+                "media/media_map.json": json.dumps(
+                    [
+                        {
+                            "wp_src": "https://example.com/wp-content/uploads/2024/01/photo.jpg",
+                            "artifact": "media/2024/01/photo.jpg",
+                            "metadata": {
+                                "file": "2024/01/photo.jpg",
+                                "sizes": {
+                                    "medium": {"file": "photo-300x200.jpg"},
+                                },
+                            },
+                        }
+                    ]
+                ),
+                "media/2024/01/photo.jpg": "jpg",
+                "media/2024/01/photo-300x200.jpg": "jpg-medium",
+            }
+        )
+        entries = extract_media_manifest(zf, [])
+        source_urls = {entry.source_url for entry in entries}
+        bundle_paths = {entry.bundle_path for entry in entries}
+        assert "https://example.com/wp-content/uploads/2024/01/photo.jpg" in source_urls
+        assert "https://example.com/wp-content/uploads/2024/01/photo-300x200.jpg" in source_urls
+        assert "media/2024/01/photo-300x200.jpg" in bundle_paths
 
 # ==================================================================
 # BlueprintIntakeAgent.execute (integration-style with mocks)

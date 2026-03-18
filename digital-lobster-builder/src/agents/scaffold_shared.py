@@ -162,5 +162,11 @@ def _build_zod_fields(coll) -> list[str]:
     # Ensure legacy_url is always present (content migrator adds it)
     if not any(line.startswith("legacy_url:") for line in field_lines):
         field_lines.append("legacy_url: z.string().optional(),")
+    if not any(line.startswith("seo_title:") for line in field_lines):
+        field_lines.append("seo_title: z.string().optional(),")
+    if not any(line.startswith("meta_description:") for line in field_lines):
+        field_lines.append("meta_description: z.string().optional(),")
+    if not any(line.startswith("body_class:") for line in field_lines):
+        field_lines.append("body_class: z.string().optional(),")
 
     return field_lines

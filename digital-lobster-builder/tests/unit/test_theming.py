@@ -6,14 +6,15 @@ from typing import Any
 
 from src.agents.theming import (
     ThemingAgent,
-    extract_design_tokens,
-    generate_tokens_css,
+    css_has_responsive_breakpoints,
     detect_missing_css_assets,
+    extract_design_tokens,
+    extract_snapshot_sections,
     generate_base_layout,
     generate_page_layout,
     generate_post_layout,
-    extract_snapshot_sections,
-    css_has_responsive_breakpoints,
+    generate_tokens_css,
+    rewrite_css_asset_urls,
     _extract_inventory,
 )
 from src.models.inventory import (
@@ -201,6 +202,22 @@ class TestDetectMissingCssAssets:
         assert "a.png" in missing
         assert "b.png" in missing
 
+
+class TestRewriteCssAssetUrls:
+    def test_rewrites_relative_urls_against_original_stylesheet(self):
+        css = "@font-face { src: url('../webfonts/fa.woff2'); }"
+        rewritten = rewrite_css_asset_urls(
+            css,
+            css_source_url="https://example.com/wp-content/themes/kadence/assets/css/font-awesome.css",
+            site_url="https://example.com",
+        )
+        assert "https://example.com/wp-content/themes/kadence/assets/webfonts/fa.woff2" in rewritten
+
+    def test_rewrites_site_root_urls_against_site_url(self):
+        css = ".icon { background-image: url('/wp-content/uploads/icon.png'); }"
+        rewritten = rewrite_css_asset_urls(css, site_url="https://example.com")
+        assert "https://example.com/wp-content/uploads/icon.png" in rewritten
+
 # ---------------------------------------------------------------------------
 # extract_snapshot_sections
 # ---------------------------------------------------------------------------
@@ -287,7 +304,7 @@ class TestGenerateBaseLayout:
 
     def test_contains_main_slot(self):
         layout = generate_base_layout([], False, "Test")
-        assert "<main>" in layout
+        assert "<main" in layout
         assert "<slot />" in layout
 
 class TestGeneratePageLayout:

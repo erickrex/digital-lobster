@@ -373,20 +373,29 @@ class PipelineOrchestrator:
         Falls back to writing artifacts to ``output/{run_id}/`` on disk
         when the Spaces upload fails (e.g. invalid credentials).
         """
-        try:
-            for name, value in artifacts.items():
-                key = f"{run_id}/{name}"
-                data = self._serialize_artifact(value)
+        failed: list[str] = []
+        for name, value in artifacts.items():
+            key = f"{run_id}/{name}"
+            data = self._serialize_artifact(value)
+            try:
                 await self._spaces_client.upload(
                     self._artifacts_bucket, key, data
                 )
                 logger.info("Stored artifact %s to %s", name, key)
-        except Exception as exc:
+            except Exception as exc:
+                logger.warning(
+                    "Spaces upload failed for artifact %s (%s)", name, exc
+                )
+                failed.append(name)
+
+        if failed:
             logger.warning(
-                "Spaces upload failed for run %s (%s), saving to disk",
-                run_id, exc,
+                "Spaces upload failed for %d/%d artifact(s) in run %s, saving all to disk",
+                len(failed), len(artifacts), run_id,
             )
-            self._store_artifacts_locally(run_id, artifacts)
+
+        # Always write a local copy to output/{run_id}/ for convenience.
+        self._store_artifacts_locally(run_id, artifacts)
 
     def _store_artifacts_locally(
         self, run_id: str, artifacts: dict[str, Any]

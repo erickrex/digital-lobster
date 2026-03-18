@@ -6,7 +6,7 @@ import re
 import time
 from pathlib import PurePosixPath
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from src.agents.base import AgentResult, BaseAgent
 from src.models.inventory import Inventory, ThemeMetadata
@@ -123,16 +123,21 @@ def detect_missing_css_assets(
 # ---------------------------------------------------------------------------
 
 
-def rewrite_site_urls(html: str, site_url: str) -> str:
-    """Replace absolute WordPress URLs with relative paths in ``href`` attributes.
+def rewrite_site_urls(
+    html: str,
+    site_url: str,
+    media_map: dict[str, str] | None = None,
+) -> str:
+    """Replace absolute WordPress URLs with relative paths in HTML attributes.
 
-    Only rewrites ``href="..."`` links (navigation, anchor links) so that
-    menu items, footer links, and logo links point to local routes instead
-    of the original WordPress domain.
+    Rewrites ``href``, ``src``, and ``srcset`` attributes so that navigation
+    links, images, and responsive image sources point to local routes/assets
+    instead of the original WordPress domain.
 
-    ``src`` and ``srcset`` attributes are intentionally left untouched —
-    media assets may still be served from the original host or a CDN when
-    they weren't included in the export bundle.
+    For ``src``/``srcset``, if a *media_map* is provided (mapping original
+    URLs to local ``/media/...`` paths), matching URLs are rewritten to the
+    local path.  URLs not in the map are still converted to site-relative
+    paths (stripping the domain) so they work if the assets are later added.
     """
     if not site_url or not html:
         return html
@@ -144,20 +149,45 @@ def rewrite_site_urls(html: str, site_url: str) -> str:
     elif parsed.scheme == "http":
         variants.append(base.replace("http://", "https://"))
 
-    def _rewrite_href(match: re.Match) -> str:
-        quote = match.group(1)  # ' or "
-        url = match.group(2)
+    _media = media_map or {}
+
+    def _rewrite_url(url: str) -> str:
+        """Rewrite a single URL: check media map first, then strip domain."""
+        if url in _media:
+            return _media[url]
         for variant in variants:
             if url.startswith(variant + "/"):
-                url = url[len(variant):]  # keeps the leading /
-                break
-            elif url == variant:
-                url = "/"
-                break
-        return f"href={quote}{url}{quote}"
+                return url[len(variant):]
+            if url == variant:
+                return "/"
+        return url
 
-    # Match href="..." or href='...'
-    html = re.sub(r"""href=(['"])(.*?)\1""", _rewrite_href, html)
+    def _rewrite_attr(match: re.Match) -> str:
+        attr = match.group(1)   # href, src, or srcset
+        quote = match.group(2)  # ' or "
+        value = match.group(3)
+        if attr.lower() == "srcset":
+            # srcset contains comma-separated "url size" pairs
+            parts = []
+            for entry in value.split(","):
+                entry = entry.strip()
+                if not entry:
+                    continue
+                tokens = entry.split(None, 1)
+                tokens[0] = _rewrite_url(tokens[0])
+                parts.append(" ".join(tokens))
+            value = ", ".join(parts)
+        else:
+            value = _rewrite_url(value)
+        return f"{attr}={quote}{value}{quote}"
+
+    # Match href="...", src="...", srcset="..." (single or double quotes)
+    html = re.sub(
+        r"""(href|src|srcset)=(['"])(.*?)\2""",
+        _rewrite_attr,
+        html,
+        flags=re.IGNORECASE,
+    )
     return html
 
 
@@ -184,6 +214,67 @@ def consolidate_inline_css(css_files: dict[str, str]) -> dict[str, str]:
         )
 
     return consolidated
+
+
+def rewrite_css_asset_urls(
+    css_content: str,
+    *,
+    css_source_url: str = "",
+    site_url: str = "",
+) -> str:
+    """Rewrite CSS asset references so exported styles remain resolvable.
+
+    Relative references are resolved against the original stylesheet URL when
+    available. Site-root references like ``/wp-content/...`` are resolved
+    against the WordPress site URL.
+    """
+    if not css_content:
+        return css_content
+
+    def _replace(match: re.Match) -> str:
+        raw_ref = match.group(1).strip()
+        if not raw_ref or raw_ref.startswith(("data:", "http://", "https://", "//", "#")):
+            return match.group(0)
+
+        rewritten = raw_ref
+        if raw_ref.startswith("/") and site_url:
+            rewritten = urljoin(site_url.rstrip("/") + "/", raw_ref.lstrip("/"))
+        elif css_source_url:
+            rewritten = urljoin(css_source_url, raw_ref)
+
+        return match.group(0).replace(raw_ref, rewritten, 1)
+
+    return _CSS_URL_RE.sub(_replace, css_content)
+
+
+def _load_rendered_css_sources(export_bundle: dict[str, Any]) -> dict[str, str]:
+    """Map rendered CSS filenames to their original source URLs."""
+    raw_manifest = export_bundle.get("theme/rendered/manifest.json")
+    if raw_manifest is None:
+        return {}
+    if isinstance(raw_manifest, bytes):
+        raw_manifest = raw_manifest.decode("utf-8", errors="replace")
+    if not isinstance(raw_manifest, str):
+        return {}
+
+    try:
+        manifest = json.loads(raw_manifest)
+    except (json.JSONDecodeError, ValueError):
+        return {}
+
+    files = manifest.get("files", [])
+    if not isinstance(files, list):
+        return {}
+
+    sources: dict[str, str] = {}
+    for entry in files:
+        if not isinstance(entry, dict):
+            continue
+        filename = PurePosixPath(str(entry.get("filename", ""))).name
+        source_url = str(entry.get("url", "")).strip()
+        if filename and source_url:
+            sources[filename] = source_url
+    return sources
 
 
 # ---------------------------------------------------------------------------
@@ -227,9 +318,12 @@ def generate_base_layout(
 export interface Props {{
   title?: string;
   description?: string;
+  bodyClass?: string;
 }}
 
-const {{ title = "{site_name}", description = "" }} = Astro.props;
+const {{ title = "{site_name}", description = "", bodyClass = "" }} = Astro.props;
+
+const canonicalUrl = Astro.props.canonicalUrl || "";
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -237,16 +331,32 @@ const {{ title = "{site_name}", description = "" }} = Astro.props;
     <meta charset="UTF-8" />
     {_VIEWPORT_META}
     <title>{{title}}</title>
-    <meta name="description" content="{{description}}" />
+    <meta name="description" content={{description}} />
 {tokens_link}
 {css_links}
+    <link rel="canonical" href={{canonicalUrl || Astro.url.href}} />
+    <meta property="og:title" content={{title}} />
+    <meta property="og:description" content={{description}} />
+    <meta property="og:url" content={{canonicalUrl || Astro.url.href}} />
   </head>
-  <body>
+  <body class={{bodyClass}}>
 {header_block}
 {nav_block}
-    <main>
-      <slot />
-    </main>
+    <div id="inner-wrap" class="wrap hfeed">
+      <div id="content" class="site-content">
+        <div class="site-container">
+          <main id="primary" class="content-area">
+            <div class="content-container site-container">
+              <div class="content-wrap">
+                <section class="entry-content single-content">
+                  <slot />
+                </section>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
 {footer_block}
   </body>
 </html>
@@ -259,11 +369,12 @@ import BaseLayout from "./BaseLayout.astro";
 export interface Props {{
   title?: string;
   description?: string;
+  bodyClass?: string;
 }}
 
-const {{ title = "{site_name}", description = "" }} = Astro.props;
+const {{ title = "{site_name}", description = "", bodyClass = "" }} = Astro.props;
 ---
-<BaseLayout title={{title}} description={{description}}>
+<BaseLayout title={{title}} description={{description}} bodyClass={{bodyClass}}>
   <article class="page-content">
     <slot />
   </article>
@@ -279,11 +390,12 @@ export interface Props {{
   description?: string;
   date?: string;
   author?: string;
+  bodyClass?: string;
 }}
 
-const {{ title = "{site_name}", description = "", date = "", author = "" }} = Astro.props;
+const {{ title = "{site_name}", description = "", date = "", author = "", bodyClass = "" }} = Astro.props;
 ---
-<BaseLayout title={{title}} description={{description}}>
+<BaseLayout title={{title}} description={{description}} bodyClass={{bodyClass}}>
   <article class="post-content">
     <header class="post-header">
       <h1>{{title}}</h1>
@@ -357,7 +469,7 @@ class ThemingAgent(BaseAgent):
         export_bundle: dict[str, Any] = context.get("export_bundle", {})
 
         # 1. Collect theme CSS files from the export bundle and consolidate
-        theme_css = self._collect_theme_css(export_bundle, warnings)
+        theme_css = self._collect_theme_css(export_bundle, inventory.site_url, warnings)
         theme_css = consolidate_inline_css(theme_css)
 
         # 2. Extract design tokens from theme.json → generate tokens.css
@@ -389,12 +501,21 @@ class ThemingAgent(BaseAgent):
             )
 
         # 5. Extract header/footer/nav from HTML snapshots and rewrite URLs
-        snapshot_sections = self._extract_from_snapshots(export_bundle)
+        snapshot_sections = self._extract_from_snapshots(
+            context.get("html_snapshots", {}),
+            export_bundle,
+        )
         site_url = inventory.site_url
+
+        # Build media map from manifest so snapshot images get local paths
+        from src.pipeline_context import extract_media_manifest
+        media_entries = extract_media_manifest(context)
+        media_map = {e.source_url: e.public_url for e in media_entries}
+
         for key in snapshot_sections:
             if snapshot_sections[key]:
                 snapshot_sections[key] = rewrite_site_urls(
-                    snapshot_sections[key], site_url
+                    snapshot_sections[key], site_url, media_map=media_map,
                 )
 
         # 6. Generate layout files
@@ -432,6 +553,7 @@ class ThemingAgent(BaseAgent):
     @staticmethod
     def _collect_theme_css(
         export_bundle: dict[str, Any],
+        site_url: str,
         warnings: list[str],
     ) -> dict[str, str]:
         """Gather CSS files from the ``theme/`` directory in the bundle.
@@ -447,6 +569,7 @@ class ThemingAgent(BaseAgent):
 
         # 1. Prefer rendered CSS — these are the actual stylesheets from the frontend
         rendered_files: dict[str, str] = {}
+        rendered_sources = _load_rendered_css_sources(export_bundle)
         for path, content in export_bundle.items():
             if not path.startswith("theme/rendered/") or not path.endswith(".css"):
                 continue
@@ -456,6 +579,11 @@ class ThemingAgent(BaseAgent):
             # Skip near-empty files
             if len(content.strip()) < 20:
                 continue
+            content = rewrite_css_asset_urls(
+                content,
+                css_source_url=rendered_sources.get(filename, ""),
+                site_url=site_url,
+            )
             rendered_files[filename] = content
 
         if rendered_files:
@@ -472,6 +600,7 @@ class ThemingAgent(BaseAgent):
             filename = PurePosixPath(path).name
             if isinstance(content, bytes):
                 content = content.decode("utf-8", errors="replace")
+            content = rewrite_css_asset_urls(content, site_url=site_url)
             css_files[filename] = content
 
         if not css_files:
@@ -497,9 +626,15 @@ class ThemingAgent(BaseAgent):
 
     @staticmethod
     def _extract_from_snapshots(
+        html_snapshots: dict[str, str],
         export_bundle: dict[str, Any],
     ) -> dict[str, str]:
         """Find the first HTML snapshot and extract header/footer/nav."""
+        if isinstance(html_snapshots, dict):
+            for content in html_snapshots.values():
+                sections = extract_snapshot_sections(content)
+                if any(sections.values()):
+                    return sections
         for path, content in export_bundle.items():
             if not path.endswith(".html"):
                 continue

@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 from src.agents.base import AgentResult, BaseAgent
 from src.models.inventory import ContentTypeSummary, Inventory, TaxonomySummary
@@ -255,6 +256,78 @@ def _post_type_to_collection(post_type: str) -> tuple[str, str]:
     route = f"/{collection}/[slug]"
     return collection, route
 
+
+def _normalize_legacy_path(url_or_path: str) -> str:
+    """Normalize a permalink or URL to a site-relative path."""
+    if not url_or_path:
+        return "/"
+    parsed = urlparse(url_or_path)
+    path = parsed.path if parsed.scheme or parsed.netloc else url_or_path
+    if not path:
+        return "/"
+    if not path.startswith("/"):
+        path = "/" + path
+    normalized = path.rstrip("/")
+    return normalized or "/"
+
+
+def _common_path_segments(paths: list[str]) -> list[str]:
+    """Return the shared leading path segments across all paths."""
+    if not paths:
+        return []
+    split_paths = [
+        [segment for segment in path.strip("/").split("/") if segment]
+        for path in paths
+    ]
+    common = split_paths[0]
+    for parts in split_paths[1:]:
+        shared: list[str] = []
+        for index, segment in enumerate(common):
+            if index >= len(parts) or parts[index] != segment:
+                break
+            shared.append(segment)
+        common = shared
+        if not common:
+            break
+    return common
+
+
+def infer_route_pattern(
+    post_type: str,
+    content_items: list[dict[str, Any]] | None = None,
+) -> str:
+    """Infer a stable route pattern from exported permalinks when possible."""
+    _, default_route = _post_type_to_collection(post_type)
+    if post_type in _STANDARD_POST_TYPE_ROUTES or not content_items:
+        return default_route
+
+    candidate_prefixes: list[str] = []
+    for item in content_items:
+        if not isinstance(item, dict):
+            continue
+        raw_post_type = str(item.get("post_type") or item.get("type") or "")
+        if raw_post_type != post_type:
+            continue
+        permalink = str(
+            item.get("legacy_permalink")
+            or item.get("link")
+            or item.get("permalink")
+            or ""
+        )
+        path = _normalize_legacy_path(permalink)
+        if path == "/":
+            continue
+        segments = [segment for segment in path.strip("/").split("/") if segment]
+        if len(segments) < 2:
+            continue
+        candidate_prefixes.append("/" + "/".join(segments[:-1]))
+
+    shared_segments = _common_path_segments(candidate_prefixes)
+    if not shared_segments:
+        return default_route
+
+    return "/" + "/".join(shared_segments) + "/[slug]"
+
 def _infer_field_type(field_name: str) -> str:
     """Infer a Zod-compatible type from a WordPress custom field name.
 
@@ -296,6 +369,7 @@ _BASE_FRONTMATTER: list[dict[str, Any]] = [
 
 def build_collection_schemas(
     content_types: list[ContentTypeSummary],
+    content_items: list[dict[str, Any]] | None = None,
 ) -> list[ContentCollectionSchema]:
     """Map WordPress post types to Astro content collection schemas.
 
@@ -305,7 +379,8 @@ def build_collection_schemas(
     schemas: list[ContentCollectionSchema] = []
 
     for ct in content_types:
-        collection_name, route_pattern = _post_type_to_collection(ct.post_type)
+        collection_name, _ = _post_type_to_collection(ct.post_type)
+        route_pattern = infer_route_pattern(ct.post_type, content_items)
 
         # Start with base fields
         fields = [FrontmatterField(**f) for f in _BASE_FRONTMATTER]
@@ -537,7 +612,10 @@ class ModelingAgent(BaseAgent):
         all_block_types = sorted(set(block_types_inv) | set(block_types_kb))
 
         # 3. Build content collection schemas from post types
-        collections = build_collection_schemas(inventory.content_types)
+        collections = build_collection_schemas(
+            inventory.content_types,
+            context.get("content_items", []),
+        )
 
         # 4. Build component mappings from block types
         components = build_component_mappings(all_block_types)
@@ -610,22 +688,39 @@ class ModelingAgent(BaseAgent):
         warnings: list[str],
     ) -> ModelingManifest:
         """Use LLM to review and enrich the manifest with KB context."""
-        try:
-            enriched_dict = await self.gradient_client.complete_structured(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": _build_enrichment_user_prompt(
-                            manifest.model_dump(), kb_context
-                        ),
-                    },
-                ],
-                schema=ModelingManifest,
-            )
-            return ModelingManifest.model_validate(enriched_dict)
-        except Exception as exc:
-            logger.warning(
-                "LLM enrichment failed, using base manifest: %s", exc
-            )
-            warnings.append(f"LLM enrichment failed: {exc}")
-            return manifest
+        max_attempts = 2
+        for attempt in range(1, max_attempts + 1):
+            try:
+                enriched_dict = await self.gradient_client.complete_structured(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": _build_enrichment_system_prompt(),
+                        },
+                        {
+                            "role": "user",
+                            "content": _build_enrichment_user_prompt(
+                                manifest.model_dump(), kb_context
+                            ),
+                        },
+                    ],
+                    schema=ModelingManifest,
+                )
+                return ModelingManifest.model_validate(enriched_dict)
+            except json.JSONDecodeError:
+                if attempt < max_attempts:
+                    logger.warning(
+                        "LLM returned empty/invalid JSON (attempt %d/%d), retrying",
+                        attempt, max_attempts,
+                    )
+                    continue
+                logger.warning("LLM enrichment returned invalid JSON after %d attempts, using base manifest", max_attempts)
+                warnings.append("LLM enrichment failed: empty response after retries")
+                return manifest
+            except Exception as exc:
+                logger.warning(
+                    "LLM enrichment failed, using base manifest: %s", exc
+                )
+                warnings.append(f"LLM enrichment failed: {exc}")
+                return manifest
+        return manifest

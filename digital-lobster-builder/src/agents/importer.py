@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from src.agents.base import AgentResult, BaseAgent
 from src.agents.scaffold import package_as_zip
+from src.agents.theming import rewrite_site_urls
 from src.models.content import SerializedContent, WordPressContentItem
 from src.models.modeling_manifest import (
     ComponentMapping,
@@ -51,6 +52,17 @@ def _extract_redirect_rules(context: dict[str, Any]) -> list[dict]:
 def _extract_media_manifest(context: dict[str, Any]) -> list[MediaManifestEntry]:
     """Extract normalized media manifest entries from pipeline context."""
     return shared_extract_media_manifest(context)
+
+def _extract_html_snapshots(context: dict[str, Any]) -> dict[str, str]:
+    """Extract normalized HTML snapshots keyed by URL path."""
+    raw = context.get("html_snapshots", {})
+    if isinstance(raw, dict):
+        return {
+            str(key): value
+            for key, value in raw.items()
+            if isinstance(value, str)
+        }
+    return {}
 
 def _extract_astro_project(context: dict[str, Any]) -> dict[str, str | bytes]:
     """Extract the current Astro project scaffold from context."""
@@ -149,43 +161,63 @@ _MEDIA_URL_RE = re.compile(
     r'https?://[^\s"\'<>]+\.(?:jpg|jpeg|png|gif|svg|webp|mp4|mp3|pdf|ico)',
     re.IGNORECASE,
 )
+_BODY_CLASS_RE = re.compile(
+    r'<body\b[^>]*class=(["\'])(.*?)\1',
+    re.IGNORECASE | re.DOTALL,
+)
+_SNAPSHOT_CONTENT_PATTERNS = (
+    re.compile(
+        r'<(?:section|div)\b[^>]*class=(["\']).*?\bentry-content\b.*?\1[^>]*>(.*?)</(?:section|div)>',
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(r"<main\b[^>]*>(.*?)</main>", re.IGNORECASE | re.DOTALL),
+    re.compile(r"<article\b[^>]*>(.*?)</article>", re.IGNORECASE | re.DOTALL),
+    re.compile(r"<body\b[^>]*>(.*?)</body>", re.IGNORECASE | re.DOTALL),
+)
 
-def scan_media_urls(content_items: list[WordPressContentItem]) -> dict[str, str]:
+def scan_media_urls(
+    content_items: list[WordPressContentItem],
+    html_snapshots: dict[str, str] | None = None,
+) -> dict[str, str]:
     """Scan all content items for media URLs and build a media map.
 
     Returns a dict mapping original WordPress media URLs to local
     ``/media/{path}`` URLs.
     """
     media_map: dict[str, str] = {}
-    for item in content_items:
-        # Scan blocks
-        for block in item.blocks:
-            for url in _MEDIA_URL_RE.findall(block.html):
-                if url not in media_map:
-                    filename = _safe_filename(url)
-                    media_map[url] = f"/media/{filename}"
-        # Scan raw_html
-        for url in _MEDIA_URL_RE.findall(item.raw_html):
+
+    def _record_urls(html: str) -> None:
+        for url in _MEDIA_URL_RE.findall(html):
             if url not in media_map:
                 filename = _safe_filename(url)
                 media_map[url] = f"/media/{filename}"
+
+    for item in content_items:
+        # Scan blocks
+        for block in item.blocks:
+            _record_urls(block.html)
+        # Scan raw_html
+        _record_urls(item.raw_html)
         # Featured media
         if item.featured_media:
             fm_url = item.featured_media.get("url", "")
             if fm_url and fm_url not in media_map:
                 filename = _safe_filename(fm_url)
                 media_map[fm_url] = f"/media/{filename}"
+    for snapshot_html in (html_snapshots or {}).values():
+        _record_urls(snapshot_html)
     return media_map
 
 def build_media_map(
     content_items: list[WordPressContentItem],
     media_manifest: list[MediaManifestEntry],
+    html_snapshots: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Build a media map only for assets present in the normalized bundle manifest."""
     if not media_manifest:
         return {}
 
-    referenced_urls = set(scan_media_urls(content_items).keys())
+    referenced_urls = set(scan_media_urls(content_items, html_snapshots).keys())
     media_map: dict[str, str] = {}
     for entry in media_manifest:
         if entry.source_url in referenced_urls:
@@ -207,6 +239,62 @@ def rewrite_media_urls(body: str, media_map: dict[str, str]) -> str:
     for wp_url, local_path in media_map.items():
         body = body.replace(wp_url, local_path)
     return body
+
+
+def _normalize_route_path(url_or_path: str) -> str:
+    """Normalize a permalink or URL to a site-relative path."""
+    if not url_or_path:
+        return "/"
+    parsed = urlparse(url_or_path)
+    path = parsed.path if parsed.scheme or parsed.netloc else url_or_path
+    if not path:
+        return "/"
+    if not path.startswith("/"):
+        path = "/" + path
+    normalized = path.rstrip("/")
+    return normalized or "/"
+
+
+def _extract_snapshot_body(snapshot_html: str) -> str:
+    """Extract the main content region from an HTML snapshot."""
+    if not snapshot_html:
+        return ""
+    for pattern in _SNAPSHOT_CONTENT_PATTERNS:
+        match = pattern.search(snapshot_html)
+        if match:
+            body = match.group(match.lastindex or 1).strip()
+            if body:
+                return body
+    return ""
+
+
+def _extract_body_class(snapshot_html: str) -> str:
+    """Extract the ``class`` attribute value from the snapshot body."""
+    if not snapshot_html:
+        return ""
+    match = _BODY_CLASS_RE.search(snapshot_html)
+    if not match:
+        return ""
+    return " ".join(match.group(2).split())
+
+
+def _snapshot_for_item(
+    item: WordPressContentItem,
+    html_snapshots: dict[str, str],
+) -> str:
+    """Find the HTML snapshot that corresponds to a content item."""
+    if not html_snapshots:
+        return ""
+    candidates = [
+        _normalize_route_path(item.legacy_permalink),
+        f"/{item.slug}",
+        f"/{item.slug}/",
+    ]
+    for candidate in candidates:
+        snapshot = html_snapshots.get(_normalize_route_path(candidate))
+        if snapshot:
+            return snapshot
+    return ""
 
 # ---------------------------------------------------------------------------
 # Navigation JSON generation
@@ -300,10 +388,12 @@ def generate_redirects(
         new_route = _build_astro_route(schema, item.slug)
         legacy = item.legacy_permalink
         # Only add if the paths differ
-        if legacy != new_route:
+        legacy_path = _normalize_route_path(legacy)
+        new_route_path = _normalize_route_path(new_route)
+        if legacy_path != "/" and legacy_path != new_route_path:
             redirects.append({
-                "source": legacy,
-                "destination": new_route,
+                "source": legacy_path,
+                "destination": new_route_path,
                 "status": 301,
             })
 
@@ -331,6 +421,9 @@ def convert_content_item(
     manifest: ModelingManifest,
     media_map: dict[str, str],
     warnings: list[str],
+    *,
+    html_snapshots: dict[str, str] | None = None,
+    site_url: str = "",
 ) -> SerializedContent | None:
     """Convert a single WordPress content item to a SerializedContent object.
 
@@ -349,13 +442,22 @@ def convert_content_item(
 
     # Convert blocks to body content
     use_mdx = _has_component_mappings(manifest)
+    snapshot_html = _snapshot_for_item(item, html_snapshots or {})
+    body_class = ""
 
-    if use_mdx:
-        body = blocks_to_mdx(item.blocks, manifest.components)
+    if item.post_type == "page" and snapshot_html:
+        body = _extract_snapshot_body(snapshot_html) or item.raw_html
+        body = rewrite_site_urls(body, site_url, media_map=media_map)
+        body = rewrite_media_urls(body, media_map)
+        body_class = _extract_body_class(snapshot_html)
         ext = "mdx"
     else:
-        body = blocks_to_markdown(item.blocks)
-        ext = "md"
+        if use_mdx:
+            body = blocks_to_mdx(item.blocks, manifest.components)
+            ext = "mdx"
+        else:
+            body = blocks_to_markdown(item.blocks)
+            ext = "md"
 
     # Check for unsupported blocks and log warnings
     known_block_types = {m.wp_block_type for m in manifest.components}
@@ -372,6 +474,8 @@ def convert_content_item(
     # Rewrite media URLs in frontmatter (featured image)
     if "featured_image" in fm and fm["featured_image"] in media_map:
         fm["featured_image"] = media_map[fm["featured_image"]]
+    if body_class:
+        fm["body_class"] = body_class
 
     return SerializedContent(
         collection=schema.collection_name,
@@ -409,6 +513,7 @@ class ImporterAgent(BaseAgent):
         menus = _extract_menus(context)
         redirect_rules = _extract_redirect_rules(context)
         media_manifest = _extract_media_manifest(context)
+        html_snapshots = _extract_html_snapshots(context)
 
         # Parse content items, skipping malformed ones
         content_items: list[WordPressContentItem] = []
@@ -425,14 +530,27 @@ class ImporterAgent(BaseAgent):
                 logger.error("Malformed content item at index %d: %s", i, exc)
 
         # Generate media map
-        media_map = build_media_map(content_items, media_manifest)
+        site_url = ""
+        inv = context.get("inventory")
+        if inv is not None:
+            if hasattr(inv, "site_url"):
+                site_url = inv.site_url
+            elif isinstance(inv, dict):
+                site_url = inv.get("site_url", "")
+
+        media_map = build_media_map(content_items, media_manifest, html_snapshots)
 
         # Convert each content item
         content_files: dict[str, str] = {}
         for item in content_items:
             try:
                 serialized = convert_content_item(
-                    item, manifest, media_map, warnings
+                    item,
+                    manifest,
+                    media_map,
+                    warnings,
+                    html_snapshots=html_snapshots,
+                    site_url=site_url,
                 )
                 if serialized is not None:
                     file_path = (
@@ -447,15 +565,6 @@ class ImporterAgent(BaseAgent):
                 logger.error(
                     "Error converting content item '%s': %s", item.slug, exc
                 )
-
-        # Get site_url from inventory if available
-        site_url = ""
-        inv = context.get("inventory")
-        if inv is not None:
-            if hasattr(inv, "site_url"):
-                site_url = inv.site_url
-            elif isinstance(inv, dict):
-                site_url = inv.get("site_url", "")
 
         # Generate navigation JSON
         navigation = generate_navigation(menus, site_url)

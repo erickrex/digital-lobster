@@ -7,6 +7,7 @@ import time
 import zipfile
 from pathlib import PurePosixPath
 from typing import Any
+from urllib.parse import urljoin
 
 from pydantic import ValidationError as PydanticValidationError
 
@@ -795,42 +796,50 @@ def extract_media_manifest(
 
     entries: list[MediaManifestEntry] = []
     names = set(zf.namelist())
+    seen: set[tuple[str, str]] = set()
     for raw in raw_entries:
         if not isinstance(raw, dict):
             continue
-        source_url = _coerce_text(
-            raw.get("url") or raw.get("wp_src") or raw.get("source_url")
-        )
-        bundle_path = _resolve_media_bundle_path(raw, names)
-        if not source_url or not bundle_path:
-            continue
-        artifact_path = bundle_path.lstrip("/")
-        if artifact_path.startswith("public/"):
-            artifact_path = artifact_path[len("public/"):]
-        entries.append(
-            MediaManifestEntry(
-                source_url=source_url,
-                bundle_path=bundle_path,
-                artifact_path=artifact_path,
-                filename=PurePosixPath(bundle_path).name,
-                alt_text=_coerce_text(
-                    raw.get("alt_text")
-                    or raw.get("alt")
-                    or (raw.get("metadata") or {}).get("alt")
-                ),
-                caption=_coerce_text(
-                    raw.get("caption")
-                    or (raw.get("metadata") or {}).get("caption")
-                ),
-                mime_type=_coerce_text(
-                    raw.get("mime_type")
-                    or (raw.get("metadata") or {}).get("mime_type")
-                ),
-                metadata=raw.get("metadata")
-                if isinstance(raw.get("metadata"), dict)
-                else None,
+        for candidate in _expand_media_entries(raw, names):
+            source_url = _coerce_text(
+                candidate.get("url")
+                or candidate.get("wp_src")
+                or candidate.get("source_url")
             )
-        )
+            bundle_path = _resolve_media_bundle_path(candidate, names)
+            if not source_url or not bundle_path:
+                continue
+            dedupe_key = (source_url, bundle_path)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            artifact_path = bundle_path.lstrip("/")
+            if artifact_path.startswith("public/"):
+                artifact_path = artifact_path[len("public/"):]
+            entries.append(
+                MediaManifestEntry(
+                    source_url=source_url,
+                    bundle_path=bundle_path,
+                    artifact_path=artifact_path,
+                    filename=PurePosixPath(bundle_path).name,
+                    alt_text=_coerce_text(
+                        candidate.get("alt_text")
+                        or candidate.get("alt")
+                        or (candidate.get("metadata") or {}).get("alt")
+                    ),
+                    caption=_coerce_text(
+                        candidate.get("caption")
+                        or (candidate.get("metadata") or {}).get("caption")
+                    ),
+                    mime_type=_coerce_text(
+                        candidate.get("mime_type")
+                        or (candidate.get("metadata") or {}).get("mime_type")
+                    ),
+                    metadata=candidate.get("metadata")
+                    if isinstance(candidate.get("metadata"), dict)
+                    else None,
+                )
+            )
     return entries
 
 def extract_html_snapshots(
@@ -1817,3 +1826,66 @@ def _resolve_media_bundle_path(raw: dict[str, Any], names: set[str]) -> str:
             if candidate.startswith("media/") and PurePosixPath(candidate).name == filename:
                 return candidate
     return ""
+
+
+def _expand_media_entries(
+    raw: dict[str, Any],
+    names: set[str],
+) -> list[dict[str, Any]]:
+    """Expand a media manifest row with any bundled responsive derivatives."""
+    entries = [raw]
+    metadata = raw.get("metadata")
+    if not isinstance(metadata, dict):
+        return entries
+
+    sizes = metadata.get("sizes")
+    if not isinstance(sizes, dict):
+        return entries
+
+    original_source = _coerce_text(
+        raw.get("url") or raw.get("wp_src") or raw.get("source_url")
+    )
+    original_bundle_path = _resolve_media_bundle_path(raw, names)
+    if not original_source or not original_bundle_path:
+        return entries
+
+    bundle_dir = str(PurePosixPath(original_bundle_path).parent)
+    metadata_file = _coerce_text(metadata.get("file"))
+    metadata_dir = (
+        str(PurePosixPath(metadata_file).parent)
+        if metadata_file
+        else ""
+    )
+
+    for size_data in sizes.values():
+        if not isinstance(size_data, dict):
+            continue
+        variant_name = _coerce_text(size_data.get("file"))
+        if not variant_name:
+            continue
+
+        variant_candidates = [
+            str(PurePosixPath(bundle_dir) / variant_name),
+        ]
+        if metadata_dir and metadata_dir != ".":
+            variant_candidates.append(
+                str(PurePosixPath("media") / metadata_dir / variant_name)
+            )
+        variant_bundle_path = next(
+            (candidate for candidate in variant_candidates if candidate in names),
+            "",
+        )
+        if not variant_bundle_path:
+            continue
+
+        entries.append({
+            "source_url": urljoin(original_source, variant_name),
+            "bundle_path": variant_bundle_path,
+            "filename": variant_name,
+            "metadata": size_data,
+            "alt_text": raw.get("alt_text") or raw.get("alt"),
+            "caption": raw.get("caption"),
+            "mime_type": raw.get("mime_type"),
+        })
+
+    return entries

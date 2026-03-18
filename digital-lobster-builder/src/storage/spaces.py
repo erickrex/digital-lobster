@@ -150,7 +150,8 @@ class SpacesClient:
         )
         headers["Content-Type"] = "application/octet-stream"
 
-        async with httpx.AsyncClient() as client:
+        timeout = httpx.Timeout(30.0, write=120.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.put(url, content=data, headers=headers)
             response.raise_for_status()
 

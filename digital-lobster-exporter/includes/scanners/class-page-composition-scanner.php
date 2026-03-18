@@ -411,9 +411,16 @@ class Digital_Lobster_Exporter_Page_Composition_Scanner extends Digital_Lobster_
 			return null;
 		}
 
-		$snapshot_path = $this->export_dir . '/snapshots/' . $post->post_type . '-' . $post->ID . '.html';
-		if ( file_exists( $snapshot_path ) ) {
-			return 'snapshots/' . $post->post_type . '-' . $post->ID . '.html';
+		$slug_snapshot = 'snapshots/' . sanitize_file_name( $post->post_name ) . '.html';
+		$slug_path     = $this->export_dir . '/' . $slug_snapshot;
+		if ( file_exists( $slug_path ) ) {
+			return $slug_snapshot;
+		}
+
+		$legacy_snapshot = 'snapshots/' . $post->post_type . '-' . $post->ID . '.html';
+		$legacy_path     = $this->export_dir . '/' . $legacy_snapshot;
+		if ( file_exists( $legacy_path ) ) {
+			return $legacy_snapshot;
 		}
 
 		return null;

@@ -100,6 +100,7 @@ def _make_context(
     redirect_rules: list | None = None,
     inventory: dict | None = None,
     media_manifest: list[dict[str, Any]] | None = None,
+    html_snapshots: dict[str, str] | None = None,
     astro_project: dict[str, str | bytes] | None = None,
 ) -> dict[str, Any]:
     m = manifest or _make_manifest()
@@ -110,6 +111,7 @@ def _make_context(
         "redirect_rules": redirect_rules or [],
         "inventory": inventory or {"site_url": "https://example.com"},
         "media_manifest": media_manifest or [],
+        "html_snapshots": html_snapshots or {},
         "astro_project": astro_project or {},
     }
 
@@ -441,7 +443,7 @@ class TestGenerateRedirects:
         manifest = _make_manifest()
         redirects = generate_redirects([item], manifest, [])
         assert len(redirects) == 1
-        assert redirects[0]["source"] == "/2024/01/hello-world/"
+        assert redirects[0]["source"] == "/2024/01/hello-world"
         assert redirects[0]["destination"] == "/blog/hello-world"
         assert redirects[0]["status"] == 301
 
@@ -491,6 +493,11 @@ class TestGenerateRedirects:
         item = _make_content_item(legacy_permalink="")
         redirects = generate_redirects([item], _make_manifest(), [])
         assert len(redirects) == 0
+
+    def test_root_legacy_permalink_skipped(self):
+        item = _make_content_item(legacy_permalink="/")
+        redirects = generate_redirects([item], _make_manifest(), [])
+        assert redirects == []
 
 # ---------------------------------------------------------------------------
 # Tests: _build_astro_route
@@ -641,6 +648,41 @@ class TestConvertContentItem:
         assert result is not None
         assert result.frontmatter["featured_image"] == "/media/thumb.jpg"
 
+    def test_page_snapshot_body_and_body_class_preserved(self):
+        item = _make_content_item(
+            post_type="page",
+            slug="plugins",
+            title="Plugins",
+            blocks=[],
+            raw_html="",
+            legacy_permalink="/plugins/",
+        )
+        schema = _make_schema(
+            collection_name="pages",
+            source_post_type="page",
+            route_pattern="/[slug]",
+        )
+        manifest = _make_manifest(collections=[schema])
+        snapshot_html = (
+            '<html><body class="archive plugin-page">'
+            '<main><div class="entry-content"><img src="https://example.com/wp-content/uploads/plugins.png" />'
+            '<a href="https://example.com/contact/">Contact</a></div></main>'
+            "</body></html>"
+        )
+        result = convert_content_item(
+            item,
+            manifest,
+            {"https://example.com/wp-content/uploads/plugins.png": "/media/plugins.png"},
+            [],
+            html_snapshots={"/plugins": snapshot_html},
+            site_url="https://example.com",
+        )
+        assert result is not None
+        assert result.file_extension == "mdx"
+        assert 'src="/media/plugins.png"' in result.body
+        assert 'href="/contact/"' in result.body
+        assert result.frontmatter["body_class"] == "archive plugin-page"
+
 # ---------------------------------------------------------------------------
 # Tests: ImporterAgent.execute
 # ---------------------------------------------------------------------------
@@ -754,6 +796,39 @@ class TestImporterAgentExecute:
         assert "/media/uploads/pic.jpg" in content
 
     @pytest.mark.asyncio
+    async def test_page_snapshot_used_during_agent_execution(self):
+        agent = ImporterAgent(gradient_client=_make_gradient_client())
+        item = _make_content_item(
+            post_type="page",
+            slug="plugins",
+            title="Plugins",
+            blocks=[],
+            raw_html="",
+            legacy_permalink="/plugins/",
+        )
+        manifest = _make_manifest(
+            collections=[
+                _make_schema(
+                    collection_name="pages",
+                    source_post_type="page",
+                    route_pattern="/[slug]",
+                )
+            ]
+        )
+        result = await agent.execute(
+            _make_context(
+                manifest=manifest,
+                content_items=[item.model_dump()],
+                html_snapshots={
+                    "/plugins": '<html><body class="archive geodir"><main><div class="entry-content"><p>Snapshot body</p></div></main></body></html>'
+                },
+            )
+        )
+        content = result.artifacts["content_files"]["src/content/pages/plugins.mdx"]
+        assert "Snapshot body" in content
+        assert "body_class: archive geodir" in content
+
+    @pytest.mark.asyncio
     async def test_media_urls_left_unchanged_when_manifest_missing(self):
         agent = ImporterAgent(gradient_client=_make_gradient_client())
         item = _make_content_item(
@@ -801,7 +876,7 @@ class TestImporterAgentExecute:
         result = await agent.execute(ctx)
         redirects = result.artifacts["redirects"]
         assert len(redirects) >= 1
-        assert redirects[0]["source"] == "/2024/01/hello-world/"
+        assert redirects[0]["source"] == "/2024/01/hello-world"
 
     @pytest.mark.asyncio
     async def test_redirect_plugin_rules_included(self):

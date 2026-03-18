@@ -301,10 +301,11 @@ class TestGenerateIndexPage:
         page = generate_index_page(coll)
         assert "posts" in page
 
-    def test_contains_list(self):
+    def test_contains_card_grid(self):
         coll = _make_manifest().collections[0]
         page = generate_index_page(coll)
-        assert "<ul>" in page
+        assert "card-grid" in page
+        assert "card-title" in page
 
     def test_uses_page_layout(self):
         coll = _make_manifest().collections[0]
@@ -590,9 +591,9 @@ class TestScaffoldAgentExecute:
         result = await agent.execute(context)
         project = result.artifacts["astro_project"]
         assert "src/pages/blog/[slug].astro" in project
-        assert "src/pages/blog/index.astro" in project
+        assert "src/pages/blog/[...page].astro" in project
         assert "src/pages/places/[slug].astro" in project
-        assert "src/pages/places/index.astro" in project
+        assert "src/pages/places/[...page].astro" in project
 
     @pytest.mark.asyncio
     async def test_root_slug_route_uses_correct_layout_import(self):
@@ -616,7 +617,7 @@ class TestScaffoldAgentExecute:
         result = await agent.execute(context)
         project = result.artifacts["astro_project"]
         route_file = project["src/pages/[slug].astro"]
-        assert "import PostLayout from '../layouts/PostLayout.astro';" in route_file
+        assert "import PageLayout from '../layouts/PageLayout.astro';" in route_file
 
     @pytest.mark.asyncio
     async def test_root_collection_does_not_overwrite_home_page(self):
@@ -639,6 +640,81 @@ class TestScaffoldAgentExecute:
         project = result.artifacts["astro_project"]
         assert "Test Site" in project["src/pages/index.astro"]
         assert any("Skipped generating collection index for root route pattern" in w for w in result.warnings)
+
+    @pytest.mark.asyncio
+    async def test_front_page_uses_exported_page_entry_when_present(self):
+        manifest = _make_manifest(
+            collections=[
+                ContentCollectionSchema(
+                    collection_name="pages",
+                    source_post_type="page",
+                    frontmatter_fields=[
+                        FrontmatterField(name="title", type="string", required=True, description="Title"),
+                    ],
+                    route_pattern="/[slug]",
+                )
+            ]
+        )
+        agent = ScaffoldAgent(gradient_client=_make_gradient_client())
+        result = await agent.execute(
+            {
+                "inventory": _make_inventory(),
+                "modeling_manifest": manifest,
+                "content_items": [
+                    {
+                        "post_type": "page",
+                        "slug": "home",
+                        "legacy_permalink": "/",
+                    }
+                ],
+            }
+        )
+        project = result.artifacts["astro_project"]
+        index_page = project["src/pages/index.astro"]
+        assert "getEntry('pages', 'home')" in index_page
+        assert "PageLayout" in index_page
+
+    @pytest.mark.asyncio
+    async def test_real_page_path_blocks_archive_index_collision(self):
+        manifest = _make_manifest(
+            collections=[
+                ContentCollectionSchema(
+                    collection_name="pages",
+                    source_post_type="page",
+                    frontmatter_fields=[
+                        FrontmatterField(name="title", type="string", required=True, description="Title"),
+                    ],
+                    route_pattern="/[slug]",
+                ),
+                ContentCollectionSchema(
+                    collection_name="gd_plugin",
+                    source_post_type="gd_plugin",
+                    frontmatter_fields=[
+                        FrontmatterField(name="title", type="string", required=True, description="Title"),
+                    ],
+                    route_pattern="/plugins/[slug]",
+                ),
+            ]
+        )
+        agent = ScaffoldAgent(gradient_client=_make_gradient_client())
+        result = await agent.execute(
+            {
+                "inventory": _make_inventory(),
+                "modeling_manifest": manifest,
+                "content_items": [
+                    {
+                        "post_type": "page",
+                        "slug": "plugins",
+                        "legacy_permalink": "/plugins/",
+                    }
+                ],
+            }
+        )
+        project = result.artifacts["astro_project"]
+        assert "src/pages/plugins/index.astro" in project
+        assert "src/pages/plugins/[slug].astro" in project
+        assert "src/pages/plugins/[...page].astro" not in project
+        assert any("already owns that path" in warning for warning in result.warnings)
 
     @pytest.mark.asyncio
     async def test_theme_assets_written_to_public_styles(self):
@@ -936,9 +1012,9 @@ const { title = "Site" } = Astro.props;
         project = result.artifacts["astro_project"]
         # Blog routes
         assert "src/pages/blog/[slug].astro" in project
-        assert "src/pages/blog/index.astro" in project
+        assert "src/pages/blog/[...page].astro" in project
         # Root-level pages routes
         assert "src/pages/[slug].astro" in project
         # Places routes
         assert "src/pages/places/[slug].astro" in project
-        assert "src/pages/places/index.astro" in project
+        assert "src/pages/places/[...page].astro" in project
