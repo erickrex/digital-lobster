@@ -57,34 +57,7 @@ flowchart TD
     SchemC -. "critical finding" .-> Abort
     PresC -. "critical finding" .-> Abort
     BehC -. "critical finding" .-> Abort
-
-    style WP fill:#e8f4f8,stroke:#2196F3
-    style Plugin fill:#e8f4f8,stroke:#2196F3
-    style ZIP fill:#e8f4f8,stroke:#2196F3
-    style Builder fill:#fff3e0,stroke:#FF9800
-    style ArtifactsOut fill:#e8f5e9,stroke:#4CAF50
-    style Live fill:#e8f5e9,stroke:#4CAF50
-    style Abort fill:#ffcdd2,stroke:#E91E63
-    style StrapiProv fill:#fce4ec,stroke:#E91E63
-    style Deploy fill:#fce4ec,stroke:#E91E63
-    style CMig fill:#fce4ec,stroke:#E91E63
-    style CTGen fill:#fce4ec,stroke:#E91E63
-    style Qual fill:#ede7f6,stroke:#673AB7
-    style CapRes fill:#ede7f6,stroke:#673AB7
-    style SchemC fill:#ede7f6,stroke:#673AB7
-    style PresC fill:#ede7f6,stroke:#673AB7
-    style BehC fill:#ede7f6,stroke:#673AB7
-    style ManRev fill:#ede7f6,stroke:#673AB7
-    style CTGen2 fill:#ede7f6,stroke:#673AB7
-    style Theme2 fill:#ede7f6,stroke:#673AB7
-    style Scaffold2 fill:#ede7f6,stroke:#673AB7
-    style Import2 fill:#ede7f6,stroke:#673AB7
-    style CMig2 fill:#ede7f6,stroke:#673AB7
-    style ParityQA fill:#ede7f6,stroke:#673AB7
-    style Deploy2 fill:#ede7f6,stroke:#673AB7
 ```
-
-Color key: 🔵 export · 🟠 builder · 🟢 output · 🔴 CMS-mode agents · 🟣 production-mode agents · 🔴⛔ abort gate
 
 ## Deployment Architecture
 
@@ -130,13 +103,6 @@ flowchart TD
     User["End User"] -->|"https://domain"| Nginx
 
     CLI -->|"GET /migrations/{run_id}/artifacts\n(static mode)"| ArtBucket
-
-    style Operator fill:#fff3e0,stroke:#FF9800
-    style DO fill:#e8f4f8,stroke:#2196F3
-    style Gradient fill:#ede7f6,stroke:#673AB7
-    style Spaces fill:#e8f5e9,stroke:#4CAF50
-    style Droplet fill:#fce4ec,stroke:#E91E63
-    style User fill:#e8f5e9,stroke:#4CAF50
 ```
 
 In static mode, the operator downloads artifacts from the Artifacts Bucket and hosts the Astro site wherever they choose. In CMS mode, Terraform provisions a Droplet with Nginx and Strapi, the Deployment Pipeline agent SCPs the built Astro files to `/var/www/astro`, and the site is live at `https://{domain}`. Strapi webhooks trigger automatic rebuilds when content changes.
@@ -157,7 +123,7 @@ See [`digital-lobster-exporter/README.md`](digital-lobster-exporter/README.md) f
 
 ### Digital Lobster Builder
 
-A Python service that receives the export bundle and runs it through a sequential agent pipeline powered by DigitalOcean Gradient AI Platform. Each agent handles one concern (analysis, modeling, theming, scaffolding, etc.) and passes artifacts to the next.
+A Python service that receives the export bundle and runs it through a sequential agent pipeline powered by DigitalOcean Gradient AI Platform. Each agent handles one concern (analysis, modeling, theming, scaffolding, etc.) and passes artifacts to the next. The builder includes an HTMX browser UI for uploading bundles and monitoring runs alongside the REST API.
 
 Three pipeline modes:
 
@@ -237,6 +203,8 @@ cd digital-lobster-builder
 uv run uvicorn src.api.app:app --host 0.0.0.0 --port 8000
 ```
 
+Open `http://localhost:8000` in a browser for the HTMX UI, or use the REST API directly.
+
 ### 4. Trigger a migration
 
 ```bash
@@ -269,6 +237,8 @@ curl http://localhost:8000/migrations/<run_id>
 | `DO_SPACES_REGION` | Spaces region |
 | `DO_SPACES_INGESTION_BUCKET` | Bucket for uploaded bundles |
 | `DO_SPACES_ARTIFACTS_BUCKET` | Bucket for pipeline output artifacts |
+| `DO_KB_REGION` | Knowledge Base region (e.g. `nyc1`) |
+| `DO_KB_READY_TIMEOUT` | Seconds to wait for KB vector database to reach ONLINE status (default: 600) |
 
 ### Exporter settings
 
@@ -285,7 +255,7 @@ Configurable via the inline settings panel on the **🧠 Migrate with AI Agents*
 ```bash
 cd digital-lobster-builder
 uv sync
-uv run python -m pytest
+uv run pytest
 # convenience wrapper
 sh scripts/test.sh
 ```
@@ -307,23 +277,32 @@ vendor/bin/phpunit
 │   │   ├── scanners/            # 32 scanner classes
 │   │   ├── class-exporter.php
 │   │   ├── class-packager.php
-│   │   └── class-scanner.php
+│   │   ├── class-scanner.php
+│   │   ├── class-scanner-base.php
+│   │   ├── class-callback-resolver.php
+│   │   ├── class-security-filters.php
+│   │   ├── class-source-identifier.php
+│   │   └── trait-error-logger.php
 │   ├── templates/
 │   └── tests/
 │
 ├── digital-lobster-builder/     # Agent pipeline (Python)
 │   ├── src/
-│   │   ├── adapters/             # Plugin-specific adapters (blocks, forms, SEO)
-│   │   ├── agents/              # Pipeline agent implementations
-│   │   ├── api/                 # FastAPI routes and schemas
-│   │   ├── gradient_sdk/        # Gradient inference client and tracing
-│   │   ├── models/              # Pydantic data models
-│   │   ├── orchestrator/        # Pipeline orchestration and state
-│   │   ├── serialization/       # Markdown/MDX/frontmatter output
-│   │   ├── storage/             # DigitalOcean Spaces client
-│   │   └── utils/               # Credential scrubbing, helpers
+│   │   ├── adapters/            # Plugin-specific adapters (blocks, forms, SEO, custom fields)
+│   │   ├── agents/              # Pipeline agent implementations (21 agents)
+│   │   ├── api/                 # FastAPI routes, schemas, and HTMX UI (templates + static)
+│   │   ├── gradient_sdk/        # Gradient inference client, knowledge base, and tracing
+│   │   ├── models/              # Pydantic data models (manifests, reports, findings)
+│   │   ├── orchestrator/        # Pipeline orchestration, state, and error types
+│   │   ├── serialization/       # Markdown, MDX, and frontmatter output
+│   │   ├── storage/             # DigitalOcean Spaces client and local upload store
+│   │   └── utils/               # Credential scrubbing, SSH, Strapi helpers
+│   ├── scripts/                 # Utility scripts (model checks, artifact downloads)
 │   ├── terraform/               # Strapi infrastructure (CMS mode)
 │   └── tests/
+│       ├── unit/                # Unit tests
+│       ├── property/            # Hypothesis property-based tests
+│       └── fixtures/            # Sample export bundles (blog, brochure, CPT)
 │
 └── README.md
 ```
