@@ -21,6 +21,7 @@ REQUIRED_SECTIONS = (
     "theming mode",
     "seo scope",
     "acceptance metrics",
+    "impact metrics",
 )
 
 def _build_system_prompt() -> str:
@@ -39,9 +40,15 @@ def _build_system_prompt() -> str:
         "## Impact Metrics\n\n"
         "Rules:\n"
         "- The entire document MUST be 1500 words or fewer.\n"
+        "- Base statements only on the provided inventory and KB context. "
+        "If evidence is missing, state a short assumption instead of presenting it as fact.\n"
         "- In the Information Architecture section, list EVERY custom post "
         "type with its proposed Astro content collection name and route "
         "pattern (e.g., `places` → collection `places`, route `/places/[slug]`).\n"
+        "- Do NOT invent integrations, content types, plugin capabilities, "
+        "or migration guarantees that are not supported by the input.\n"
+        "- Prefer preserving the site's existing permalink families when the "
+        "input provides slug or route evidence.\n"
         "- The Impact Metrics section MUST state: baseline 30–60 engineer "
         "hours, target approximately 2 hours.\n"
         "- Use markdown formatting. Be specific and actionable.\n"
@@ -65,9 +72,11 @@ def _build_user_prompt(
     lines.append("Content types:")
     for ct in inventory.content_types:
         fields_str = ", ".join(ct.custom_fields[:10]) if ct.custom_fields else "none"
+        samples = ", ".join(ct.sample_slugs[:3]) if ct.sample_slugs else "none"
         lines.append(
             f"  - {ct.post_type} ({ct.count} items, fields: {fields_str}, "
-            f"taxonomies: {', '.join(ct.taxonomies) or 'none'})"
+            f"taxonomies: {', '.join(ct.taxonomies) or 'none'}, "
+            f"sample slugs: {samples})"
         )
 
     # Plugins
@@ -109,6 +118,13 @@ def _build_user_prompt(
         flags.append("SEO data available")
     if flags:
         lines.append(f"\nAdditional data: {', '.join(flags)}")
+
+    lines.append(
+        "\nPrompting guardrails:"
+        "\n  - Treat the inventory and KB excerpts as the only reliable evidence."
+        "\n  - Call out assumptions briefly when route structure or theme behavior is unclear."
+        "\n  - Preserve legacy URL families in the proposed sitemap when the evidence supports them."
+    )
 
     # KB context
     if kb_context:

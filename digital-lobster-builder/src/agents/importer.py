@@ -450,7 +450,10 @@ def convert_content_item(
         body = rewrite_site_urls(body, site_url, media_map=media_map)
         body = rewrite_media_urls(body, media_map)
         body_class = _extract_body_class(snapshot_html)
-        ext = "mdx"
+        # Raw HTML snapshots are not valid MDX (self-closing tags like
+        # <img />, <br />, <hr /> cause JSX parse errors), so always
+        # emit plain Markdown which passes HTML through unchanged.
+        ext = "md"
     else:
         if use_mdx:
             body = blocks_to_mdx(item.blocks, manifest.components)

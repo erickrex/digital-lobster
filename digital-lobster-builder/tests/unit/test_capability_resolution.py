@@ -8,7 +8,11 @@ import pytest
 
 from src.adapters.custom_fields import AcfAdapter
 from src.adapters.registry import default_adapters
-from src.agents.capability_resolution import CapabilityResolutionAgent
+from src.agents.capability_resolution import (
+    CapabilityResolutionAgent,
+    _build_capability_review_system_prompt,
+    _build_capability_review_user_prompt,
+)
 from src.models.bundle_artifacts import (
     ContentRelationshipsArtifact,
     EditorialWorkflowsArtifact,
@@ -219,6 +223,16 @@ class TestUnsupportedPluginFinding:
 # ---------------------------------------------------------------------------
 
 class TestLlmFallback:
+    def test_capability_review_prompt_has_non_speculative_guardrails(self):
+        system_prompt = _build_capability_review_system_prompt()
+        user_prompt = _build_capability_review_user_prompt(
+            "https://example.com",
+            [{"construct": "shortcode:gallery", "evidence_refs": ["shortcode:gallery"]}],
+        )
+        assert "Do NOT invent new constructs" in system_prompt
+        assert "prefer the existing deterministic outcome" in system_prompt
+        assert '"require_evidence_refs_from_payload": true' in user_prompt
+
     def test_low_confidence_shortcode_triggers_structured_ai_review(self):
         """Low-confidence capabilities should invoke structured AI review."""
         bundle = _clean_bundle(
@@ -247,6 +261,10 @@ class TestLlmFallback:
         result = _run(agent.execute({"bundle_manifest": bundle}))
 
         gradient_client.complete_structured.assert_awaited_once()
+        call = gradient_client.complete_structured.await_args
+        messages = call.kwargs["messages"]
+        assert "Do NOT invent new constructs" in messages[0]["content"]
+        assert '"review_only_input_constructs": true' in messages[1]["content"]
         manifest = result.artifacts["capability_manifest"]
         shortcode_caps = [
             c for c in manifest.capabilities if c.capability_type == "shortcode"

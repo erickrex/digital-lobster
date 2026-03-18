@@ -546,12 +546,17 @@ def _extract_block_types_from_kb(kb_results: list[dict]) -> list[str]:
 def _build_enrichment_system_prompt() -> str:
     """System prompt for LLM-assisted manifest enrichment."""
     return (
-        "You are a WordPress-to-Astro migration expert. You will receive a "
-        "modeling manifest (JSON) and additional context from a Knowledge Base. "
-        "Your job is to review and enrich the manifest:\n\n"
-        "1. Verify that component mappings are sensible.\n"
-        "2. Suggest any missing frontmatter fields based on the KB context.\n"
-        "3. Confirm taxonomy definitions are appropriate.\n\n"
+        "You are reviewing a deterministic WordPress-to-Astro modeling manifest. "
+        "The manifest already contains the canonical collection names, source post "
+        "types, and route patterns derived by code. Your job is limited to cautious "
+        "enrichment, not redesign.\n\n"
+        "Non-negotiable rules:\n"
+        "1. Preserve every existing collection_name, source_post_type, and route_pattern.\n"
+        "2. Do NOT remove existing entries.\n"
+        "3. Do NOT invent Astro components for unknown blocks; uncertain blocks must remain fallback mappings.\n"
+        "4. Add frontmatter fields only when the KB clearly names the field or data shape.\n"
+        "5. Add or adjust taxonomy definitions only when the KB explicitly supports it.\n"
+        "6. If evidence is ambiguous, return the manifest unchanged.\n\n"
         "Return ONLY a valid JSON object conforming to the ModelingManifest schema. "
         "Do not add explanatory text outside the JSON."
     )
@@ -574,8 +579,9 @@ def _build_enrichment_user_prompt(
 
     lines.append(
         "\n\nPlease review and return the enriched manifest as JSON. "
-        "Keep all existing entries. Only add or adjust fields if the KB "
-        "context clearly supports it."
+        "Keep all existing entries and preserve all collection_name, "
+        "source_post_type, and route_pattern values exactly as provided. "
+        "Only add or adjust fields if the KB context clearly supports it."
     )
     return "\n".join(lines)
 

@@ -678,7 +678,8 @@ class TestConvertContentItem:
             site_url="https://example.com",
         )
         assert result is not None
-        assert result.file_extension == "mdx"
+        # Snapshot-based pages use .md (raw HTML breaks MDX's JSX parser)
+        assert result.file_extension == "md"
         assert 'src="/media/plugins.png"' in result.body
         assert 'href="/contact/"' in result.body
         assert result.frontmatter["body_class"] == "archive plugin-page"
@@ -824,7 +825,7 @@ class TestImporterAgentExecute:
                 },
             )
         )
-        content = result.artifacts["content_files"]["src/content/pages/plugins.mdx"]
+        content = result.artifacts["content_files"]["src/content/pages/plugins.md"]
         assert "Snapshot body" in content
         assert "body_class: archive geodir" in content
 

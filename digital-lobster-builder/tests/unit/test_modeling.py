@@ -6,6 +6,8 @@ from typing import Any
 
 from src.agents.modeling import (
     ModelingAgent,
+    _build_enrichment_system_prompt,
+    _build_enrichment_user_prompt,
     build_collection_schemas,
     build_component_mappings,
     build_taxonomy_definitions,
@@ -307,6 +309,32 @@ class TestInferRoutePattern:
             ],
         )
         assert route == "/hosting/[slug]"
+
+
+class TestEnrichmentPrompts:
+    def test_system_prompt_preserves_deterministic_routes(self):
+        prompt = _build_enrichment_system_prompt()
+        assert "Preserve every existing collection_name" in prompt
+        assert "Do NOT invent Astro components" in prompt
+        assert "return the manifest unchanged" in prompt
+
+    def test_user_prompt_repeats_route_preservation_rule(self):
+        prompt = _build_enrichment_user_prompt(
+            {
+                "collections": [
+                    {
+                        "collection_name": "posts",
+                        "source_post_type": "post",
+                        "route_pattern": "/posts/[slug]",
+                    }
+                ],
+                "components": [],
+                "taxonomies": [],
+            },
+            [{"content": "Field: subtitle"}],
+        )
+        assert '"route_pattern": "/posts/[slug]"' in prompt
+        assert "preserve all collection_name" in prompt
 
 # ---------------------------------------------------------------------------
 # Tests: build_component_mappings

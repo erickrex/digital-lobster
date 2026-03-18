@@ -46,6 +46,41 @@ class _CapabilityReviewDecisionPayload(BaseModel):
 class _CapabilityReviewResponse(BaseModel):
     decisions: list[_CapabilityReviewDecisionPayload] = Field(default_factory=list)
 
+
+def _build_capability_review_system_prompt() -> str:
+    """Return the system prompt for structured capability review."""
+    return (
+        "You are reviewing ambiguous WordPress migration capabilities. "
+        "For each construct, choose the most plausible target classification "
+        "using ONLY these values: strapi_native, astro_runtime, unsupported.\n\n"
+        "Rules:\n"
+        "- Review only constructs present in the input payload.\n"
+        "- Do NOT invent new constructs, plugins, integrations, or evidence references.\n"
+        "- Use evidence_refs only from the supplied payload.\n"
+        "- Increase confidence only when the supplied evidence clearly supports it.\n"
+        "- If the evidence is weak or mixed, prefer the existing deterministic outcome."
+    )
+
+
+def _build_capability_review_user_prompt(
+    site_url: str,
+    payload: list[dict[str, Any]],
+) -> str:
+    """Return the user payload for structured capability review."""
+    return json.dumps(
+        {
+            "site_url": site_url,
+            "capabilities": payload,
+            "instructions": {
+                "review_only_input_constructs": True,
+                "allowed_classifications": sorted(_VALID_AI_CLASSIFICATIONS),
+                "require_evidence_refs_from_payload": True,
+                "avoid_speculative_reclassification": True,
+            },
+        },
+        indent=2,
+    )
+
 class CapabilityResolutionAgent(BaseAgent):
     """Produces the Capability_Manifest from raw bundle data.
 
@@ -476,22 +511,13 @@ class CapabilityResolutionAgent(BaseAgent):
             messages = [
                 {
                     "role": "system",
-                    "content": (
-                        "You are reviewing ambiguous WordPress migration capabilities. "
-                        "For each construct, choose the most plausible target "
-                        "classification using ONLY these values: "
-                        "strapi_native, astro_runtime, unsupported. "
-                        "Increase confidence only when the evidence clearly supports it."
-                    ),
+                    "content": _build_capability_review_system_prompt(),
                 },
                 {
                     "role": "user",
-                    "content": json.dumps(
-                        {
-                            "site_url": bundle.site_url,
-                            "capabilities": payload,
-                        },
-                        indent=2,
+                    "content": _build_capability_review_user_prompt(
+                        bundle.site_url,
+                        payload,
                     ),
                 },
             ]

@@ -3,7 +3,11 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-from src.agents.manifest_review import ManifestReviewAgent
+from src.agents.manifest_review import (
+    ManifestReviewAgent,
+    _build_manifest_review_system_prompt,
+    _build_manifest_review_user_prompt,
+)
 from src.models.behavior_manifest import BehaviorManifest, IntegrationBoundary
 from src.models.bundle_artifacts import (
     ContentRelationshipsArtifact,
@@ -209,6 +213,17 @@ def _build_context() -> dict:
 
 
 class TestManifestReviewAgent:
+    def test_manifest_review_prompt_has_additive_guardrails(self) -> None:
+        system_prompt = _build_manifest_review_system_prompt()
+        user_prompt = _build_manifest_review_user_prompt(
+            "https://example.com",
+            "schema",
+            [{"construct": "collection:resource", "evidence_refs": ["collection:resource"]}],
+        )
+        assert "non-destructive" in system_prompt
+        assert "Cite evidence_refs only from the supplied candidates" in system_prompt
+        assert '"prefer_additive_changes": true' in user_prompt
+
     def test_returns_visible_reports_without_model(self) -> None:
         agent = ManifestReviewAgent(gradient_client=None)
         result = _run(agent.execute(_build_context()))
@@ -276,6 +291,10 @@ class TestManifestReviewAgent:
         result = _run(agent.execute(_build_context()))
 
         assert gradient_client.complete_structured.await_count == 3
+        first_call = gradient_client.complete_structured.await_args_list[0]
+        messages = first_call.kwargs["messages"]
+        assert "non-destructive" in messages[0]["content"]
+        assert '"require_candidate_backed_evidence_refs": true' in messages[1]["content"]
         assert result.artifacts["schema_enrichment_report"].ai_review_completed is True
         assert result.artifacts["presentation_risk_report"].ai_review_completed is True
         assert result.artifacts["behavior_decision_log"].ai_review_completed is True

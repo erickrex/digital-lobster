@@ -158,6 +158,7 @@ class TestValidateSections:
         assert "theming mode" in missing
         assert "seo scope" in missing
         assert "acceptance metrics" in missing
+        assert "impact metrics" in missing
 
     def test_case_insensitive(self):
         prd = _good_prd_body().replace("## Goals", "## goals")
@@ -181,6 +182,7 @@ class TestBuildUserPrompt:
         assert "post" in prompt
         assert "50 items" in prompt
         assert "page" in prompt
+        assert "hello-world" in prompt
 
     def test_includes_plugins(self):
         inv = _make_inventory()
@@ -208,6 +210,12 @@ class TestBuildUserPrompt:
         prompt = _build_user_prompt(inv, [])
         assert "HTML snapshots available" in prompt
         assert "SEO data available" in prompt
+
+    def test_includes_prompting_guardrails(self):
+        inv = _make_inventory()
+        prompt = _build_user_prompt(inv, [])
+        assert "Prompting guardrails:" in prompt
+        assert "only reliable evidence" in prompt
 
     def test_includes_kb_context(self):
         inv = _make_inventory()
@@ -249,6 +257,11 @@ class TestBuildSystemPrompt:
         prompt = _build_system_prompt()
         assert "30–60" in prompt
         assert "2 hours" in prompt
+
+    def test_forbids_invented_scope(self):
+        prompt = _build_system_prompt()
+        assert "Do NOT invent integrations" in prompt
+        assert "state a short assumption" in prompt
 
 class TestExtractInventory:
     def test_from_inventory_instance(self):

@@ -52,6 +52,46 @@ class _ReviewResponse(BaseModel):
     recommendations: list[_ReviewRecommendationPayload] = Field(default_factory=list)
 
 
+def _build_manifest_review_system_prompt() -> str:
+    """Return the system prompt for manifest review recommendations."""
+    return (
+        "You are reviewing a deterministic WordPress migration manifest. "
+        "Return focused, implementation-ready recommendations only for the "
+        "riskiest issues.\n\n"
+        "Rules:\n"
+        "- Do not restate the input.\n"
+        "- Keep recommendations additive and non-destructive.\n"
+        "- Do NOT rename or rewrite deterministic manifests unless the candidate explicitly identifies that risk.\n"
+        "- Cite evidence_refs only from the supplied candidates.\n"
+        "- Avoid generic advice; prioritize concrete steps that reduce manual migration risk."
+    )
+
+
+def _build_manifest_review_user_prompt(
+    site_url: str,
+    review_area: str,
+    candidates: list[dict[str, Any]],
+) -> str:
+    """Return the user payload for manifest review recommendations."""
+    return json.dumps(
+        {
+            "site_url": site_url,
+            "review_area": review_area,
+            "candidates": candidates,
+            "instructions": {
+                "max_recommendations": 4,
+                "goal": (
+                    "prioritize suggestions that reduce manual migration "
+                    "risk without rewriting deterministic manifests"
+                ),
+                "require_candidate_backed_evidence_refs": True,
+                "prefer_additive_changes": True,
+            },
+        },
+        indent=2,
+    )
+
+
 class ManifestReviewAgent(BaseAgent):
     """Review deterministic manifests and emit visible AI guidance artifacts."""
 
@@ -163,28 +203,14 @@ class ManifestReviewAgent(BaseAgent):
         messages = [
             {
                 "role": "system",
-                "content": (
-                    "You are reviewing a deterministic WordPress migration manifest. "
-                    "Return focused, implementation-ready recommendations only for "
-                    "the riskiest issues. Do not restate the input."
-                ),
+                "content": _build_manifest_review_system_prompt(),
             },
             {
                 "role": "user",
-                "content": json.dumps(
-                    {
-                        "site_url": bundle_manifest.site_url,
-                        "review_area": review_area,
-                        "candidates": candidates,
-                        "instructions": {
-                            "max_recommendations": 4,
-                            "goal": (
-                                "prioritize suggestions that reduce manual migration "
-                                "risk without rewriting deterministic manifests"
-                            ),
-                        },
-                    },
-                    indent=2,
+                "content": _build_manifest_review_user_prompt(
+                    bundle_manifest.site_url,
+                    review_area,
+                    candidates,
                 ),
             },
         ]
